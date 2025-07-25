@@ -39,10 +39,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-d#0!h7gce58p*+azc3!q197qwfa37^o#jjx1hn6oxb*#av%zbw'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
-
+# DEBUG = config('DEBUG', default=False, cast=bool)
+# Ensure DEBUG is properly set
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # ALLOWED_HOSTS =  os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+
+# ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS = [
+#     '127.0.0.1', 
+#     'localhost', 
+#     'job-portal-23qb.onrender.com',  # Your actual Render URL
+#     '.onrender.com'  # Allow all Render subdomains
+# ]
 
 
 # Application definition
@@ -130,7 +138,30 @@ WSGI_APPLICATION = 'job_platform.wsgi.application'
 # DATABASES = {
 #     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 # }
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [
+    '127.0.0.1', 
+    'localhost', 
+    'job-portal-23qb.onrender.com',  # Your actual Render URL
+    '.onrender.com'  # Allow all Render subdomains
+]
+
+
+
 import dj_database_url
+
+
+# ALLOWED_HOSTS from environment variable
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
+
+# Clean up any whitespace
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
+
+# Add CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://job-portal-23qb.onrender.com',
+    'https://*.onrender.com',
+]
 
 
 # For development fallback
@@ -142,7 +173,15 @@ DATABASES = {
     )
 }
         
+# CSRF settings for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://job-portal-23qb.onrender.com',
+    'https://*.onrender.com',
+]
 
+# Security settings
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # Render handles SSL
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

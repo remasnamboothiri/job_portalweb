@@ -13,7 +13,7 @@ import os
 
 from pathlib import Path
 from decouple import config
-SECRET_KEY = config('SECRET_KEY')
+import dj_database_url
 
 
 #based on Smtp
@@ -36,21 +36,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-d#0!h7gce58p*+azc3!q197qwfa37^o#jjx1hn6oxb*#av%zbw'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-d#0!h7gce58p*+azc3!q197qwfa37^o#jjx1hn6oxb*#av%zbw')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = config('DEBUG', default=False, cast=bool)
-# Ensure DEBUG is properly set
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-# ALLOWED_HOSTS =  os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
-
-# ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-# ALLOWED_HOSTS = [
-#     '127.0.0.1', 
-#     'localhost', 
-#     'job-portal-23qb.onrender.com',  # Your actual Render URL
-#     '.onrender.com'  # Allow all Render subdomains
-# ]
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 
 # Application definition
@@ -134,45 +123,23 @@ WSGI_APPLICATION = 'job_platform.wsgi.application'
 #      }
 #  }
 
-# import dj_database_url
-# DATABASES = {
-#     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
-# }
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = [
-    '127.0.0.1', 
-    'localhost', 
-    'job-portal-23qb.onrender.com',  # Your actual Render URL
-    '.onrender.com'  # Allow all Render subdomains
-]
-
-
-
-import dj_database_url
-
-
-# ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
-
-# Clean up any whitespace
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
-# Add CSRF trusted origins
-CSRF_TRUSTED_ORIGINS = [
-    'https://job-portal-23qb.onrender.com',
-    'https://*.onrender.com',
-]
+# Add Render domain if not in environment variable
+if 'job-portal-23qb.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend(['job-portal-23qb.onrender.com', '.onrender.com'])
 
-
-# For development fallback
+# Database configuration
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
-        
+
 # CSRF settings for production
 CSRF_TRUSTED_ORIGINS = [
     'https://job-portal-23qb.onrender.com',
@@ -182,6 +149,28 @@ CSRF_TRUSTED_ORIGINS = [
 # Security settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False  # Render handles SSL
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -279,8 +268,8 @@ REST_FRAMEWORK = {
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': config('GOOGLE_CLIENT_ID'),
-            'secret': config('GOOGLE_SECRET_KEY'),
+            'client_id': config('GOOGLE_CLIENT_ID', default=''),
+            'secret': config('GOOGLE_SECRET_KEY', default=''),
             'key': ''
         }
     }

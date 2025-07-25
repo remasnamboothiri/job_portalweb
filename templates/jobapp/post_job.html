@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Post a New Job</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  {% comment %} <link rel="stylesheet" href="{% static 'css/jobs.css' %}"> {% endcomment %}
+
+  <style>
+    body {
+      background: #f5f8fa;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .card {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ✅ Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{% url 'home' %}">JobPortal</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'job_list' %}">Jobs</a></li>
+        {% if user.is_authenticated %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'Profile_update' %}">Profile</a></li>
+          <li class="nav-item"><a class="nav-link text-danger" href="{% url 'logout' %}">Logout</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ✅ Page Content -->
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card">
+        <h2 class="text-center mb-4">📄 Post a New Job</h2>
+
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+
+          <div class="d-grid mt-3">
+            <button type="submit" class="btn btn-primary">Submit Job</button>
+          </div>
+        </form>
+
+        <div class="text-center mt-4">
+          <a href="{% url 'job_list' %}" class="text-decoration-none">← Back to Job Listings</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Post a Job</title>
+  <link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+</head>
+<body>
+  <div class="container">
+    <h2>Post a New Job</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Submit Job</button>
+    </form>
+    <a href="{% url 'job_list' %}">← Back to Job Listings</a>
+  </div>
+</body>
+</html> {% endcomment %}

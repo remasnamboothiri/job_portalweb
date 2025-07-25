@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Apply for {{ job.title }}</title>
+  <link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+</head>
+<body>
+  <div class="container">
+    <h2>Apply for {{ job.title }}</h2>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Submit Application</button>
+
+      {% comment %} <div class="form-group">
+        <label for="id_resume">Upload Your Resume</label>
+        {{ form.resume }}
+      </div>
+
+      <button type="submit" class="btn-apply">Submit Application</button> {% endcomment %}
+    </form>
+
+    <br>
+    <a href="{% url 'job_detail' job.id %}">← Back to Job Detail</a>
+  </div>
+</body>
+</html>
+
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apply for {{ job.title }}</title>
+  <link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+</head>
+<body>
+  <h2>Apply for {{ job.title }}</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Submit Application</button>
+  </form>
+</body>
+</html> {% endcomment %}

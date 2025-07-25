@@ -1,0 +1,264 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: url("{% static 'images/job-bg.jpg' %}") no-repeat center center/cover;
+ 
+
+  background-attachment: scroll;        /* ✅ This is optional; default is scroll */
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+
+/* body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f8f9fa;
+}
+
+a {
+  text-decoration: none;
+  color: white;
+}
+
+.navbar.transparent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 25px 40px;
+  background: transparent;
+  color: white;
+}  */
+
+/* ✅ Left-aligned links (Jobs, Register, Login) */
+/* .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+} */
+
+/* ✅ Right-aligned logo */
+/* .nav-left .logo {
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+} */
+
+/* ✅ All nav links */
+/* .nav-left a,
+.nav-right a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  margin-left: 15px;
+  
+  
+} */
+
+/* .nav-left a:hover,
+.nav-right a:hover {
+  color: #ffd700;
+} */
+
+/* 🖼️ Hero */
+/* .hero {
+  background: url("../images/job-bg.jpg") no-repeat center center/cover;
+  height: 100vh;  */
+  /* ✅ Full screen */
+  /* position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+} */
+
+/* .overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 60px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.hero-content h1 {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.search-box {
+  margin-top: 20px;
+}
+
+.search-box input {
+  padding: 10px;
+  width: 300px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: none;
+}
+
+.search-box button {
+  padding: 10px 15px;
+  font-size: 16px;
+  margin-left: 10px;
+  background: #00796b;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+} */
+
+/* 📊 Stats */
+/* .stats {
+  display: flex;
+  justify-content: space-around;
+  background: #ffffff;
+  padding: 30px;
+  text-align: center;
+}
+
+.stat span {
+  display: block;
+  font-size: 36px;
+  font-weight: bold;
+  color: #1e3a8a;
+}
+
+.stat p {
+  margin-top: 5px;
+  font-size: 16px;
+  color: #444;
+} */
+
+/* 🏢 Companies */
+/* .companies {
+  padding: 40px;
+  text-align: center;
+}
+
+.company-logos {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.company-logos img {
+  width: 100px;
+  height: auto;
+  opacity: 0.9;
+  transition: transform 0.3s;
+}
+
+.company-logos img:hover {
+  transform: scale(1.1);
+} */
+
+/* 💬 Testimonials */
+/* .testimonials {
+  background: #f1f5fb;
+  padding: 40px;
+  text-align: center;
+}
+
+.carousel {
+  position: relative;
+  max-width: 600px;
+  margin: auto;
+}
+
+.testimonial {
+  display: none;
+  font-style: italic;
+  font-size: 18px;
+}
+
+.testimonial.active {
+  display: block;
+  animation: fadeIn 1s;
+}
+
+.testimonial span {
+  display: block;
+  margin-top: 10px;
+  color: #00796b;
+  font-weight: bold;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+} */
+
+
+/* 🔻 Footer Styling */
+/* .footer {
+  background-color: #1e1e2f;
+  color: #f1f1f1;
+  padding: 40px 0 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: auto;
+  padding: 0 20px;
+}
+
+.footer-column {
+  flex: 1 1 300px;
+  margin: 10px 20px;
+}
+
+.footer-column h3,
+.footer-column h4 {
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+.footer-column p,
+.footer-column ul,
+.footer-column li {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 5px 0;
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-column ul li a {
+  color: #cccccc;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-column ul li a:hover {
+  color: #ffffff;
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #333;
+  font-size: 14px;
+  color: #999;
+} */
+
+
+
+
+

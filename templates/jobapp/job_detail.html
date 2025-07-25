@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ job.title }}</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .section-title {
+      color: #7BB701;
+      font-weight: 600;
+      font-size: 1.3rem;
+      margin-top: 30px;
+    }
+    .section-icon {
+      margin-right: 8px;
+    }
+    .icon-check {
+      color: gray;
+      margin-right: 5px;
+    }
+        .footer {
+      background: #343a40;
+      color: white;
+      padding: 40px 0 20px;
+    }
+
+    .footer a {
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+  <div class="container py-5">
+    <div class="bg-white p-5 rounded shadow">
+      <h2 class="text-dark mb-4">{{ job.title }}</h2>
+
+      <p><strong>🏢 Company:</strong> {{ job.company }}</p>
+      <p><strong>📍 Location:</strong> {{ job.location }}</p>
+      <p><strong>👤 Posted by:</strong> {{ job.posted_by.username }}</p>
+
+      <!-- Job Description -->
+      <h5 class="section-title">
+        <span class="section-icon">💼</span> Job Description
+      </h5>
+      <p>{{ job.description }}</p>
+
+      <!-- Responsibilities -->
+      <h5 class="section-title">
+        <span class="section-icon">🚀</span> Responsibilities
+      </h5>
+      <ul class="list-unstyled">
+        <li><span class="icon-check">✔</span> Collaborate with team to define project goals</li>
+        <li><span class="icon-check">✔</span> Write clean and efficient code</li>
+        <li><span class="icon-check">✔</span> Fix bugs and optimize applications</li>
+        <li><span class="icon-check">✔</span> Communicate with clients and stakeholders</li>
+      </ul>
+
+      <!-- Education + Experience -->
+      <h5 class="section-title">
+        <span class="section-icon">📘</span> Education + Experience
+      </h5>
+      <ul class="list-unstyled">
+        <li><span class="icon-check">✔</span> Bachelor's degree in related field</li>
+        <li><span class="icon-check">✔</span> 1+ years of relevant work experience</li>
+        <li><span class="icon-check">✔</span> Familiarity with web development tools</li>
+      </ul>
+
+      <!-- Other Benefits -->
+      <h5 class="section-title">
+        <span class="section-icon">🏆</span> Other Benefits
+      </h5>
+      <ul class="list-unstyled">
+        <li><span class="icon-check">✔</span> Flexible working hours</li>
+        <li><span class="icon-check">✔</span> Remote work option</li>
+        <li><span class="icon-check">✔</span> Annual bonus and incentives</li>
+      </ul>
+
+      <!-- Action Buttons -->
+      <div class="d-flex justify-content-between align-items-center mt-5">
+        <a href="#" class="btn btn-outline-secondary"><span>♡</span> Save Job</a>
+        <a href="{% url 'apply_to_job' job.id %}" class="btn btn-success px-4">Apply Now</a>
+      </div>
+
+      <!-- Back Link -->
+      <div class="text-end mt-3">
+        <a href="{% url 'job_list' %}" class="text-decoration-none">&larr; Back to Job Listings</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4">
+          <h5>JobPortal</h5>
+          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+        </div>
+        <div class="col-md-4">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'job_list' %}">Jobs</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h6>Contact</h6>
+          <p>Email: support@jobportal.com</p>
+          <p>Phone: +91-9876543210</p>
+          <p>Kochi, Kerala</p>
+        </div>
+      </div>
+      <div class="text-center pt-3 border-top">
+        <p>&copy; 2025 JobPortal. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+  
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ job.title }}</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional: Your own CSS -->
+  <link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+</head>
+<body class="bg-light">
+
+  <div class="container py-5">
+    <div class="card shadow p-4 mx-auto" style="max-width: 700px;">
+      <h2 class="mb-3">{{ job.title }}</h2>
+
+      <p><strong>🏢 Company:</strong> {{ job.company }}</p>
+      <p><strong>📍 Location:</strong> {{ job.location }}</p>
+      <p><strong>📝 Description:</strong> {{ job.description }}</p>
+      <p><strong>👤 Posted by:</strong> {{ job.posted_by.username }}</p>
+
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <a href="{% url 'apply_to_job' job.id %}" class="btn btn-success">✅ Apply Now</a>
+        <a href="{% url 'job_list' %}" class="btn btn-outline-secondary">← Back to Job Listings</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> {% endcomment %}
+
+
+
+
+
+

@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: job-portal
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn job_portal.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      # Database Configuration
+      - key: DATABASE_URL
+        value: postgresql://job_platform_db_user:Zb8C7GofSaCH97AzfQ7a28RgZ8gXzY6E@dpg-d1utkpndiees73b3c5ng-a.oregon-postgres.render.com/job_platform_db
+      - key: DB_NAME
+        value: job_platform_db
+      - key: DB_USER
+        value: job_platform_db_user
+      - key: DB_PASSWORD
+        value: Zb8C7GofSaCH97AzfQ7a28RgZ8gXzY6E
+      - key: DB_HOST
+        value: dpg-d1utkpndiees73b3c5ng-a
+      - key: DB_PORT
+        value: 5432
+      
+      # Django Configuration
+      - key: SECRET_KEY
+        value: jvaq=3hqcrvdi^sbmorqdi3*2@k2fe@3x-%)z6=k+=w3o+&dm!
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: 127.0.0.1,localhost,job-portal.onrender.com
+      
+      # Email Configuration (Set these as secrets in Render Dashboard)
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        value: True
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      
+      # Google OAuth Configuration (Set these as secrets in Render Dashboard)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_SECRET_KEY
+        sync: false
+      
+      # NVIDIA API Configuration (Set as secret in Render Dashboard)
+      - key: NVIDIA_API_KEY
+        sync: false

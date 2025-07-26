@@ -13,8 +13,15 @@ from django.urls import reverse
 import os
 
 #for Ai interview
-from .utils.interview_ai_nvidia import ask_ai_question 
-from jobapp.utils.resume_reader import extract_resume_text
+try:
+    from .utils.interview_ai_nvidia import ask_ai_question 
+    from jobapp.utils.resume_reader import extract_resume_text
+except ImportError as e:
+    print(f"Import error: {e}")
+    def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None):
+        return "AI service is currently unavailable. Please try again later."
+    def extract_resume_text(resume_file):
+        return "Resume processing is currently unavailable."
 
 from gtts import gTTS
 
@@ -227,93 +234,113 @@ def schedule_interview(request, job_id, applicant_id):
 
 
 def start_interview_by_uuid(request, interview_uuid):
-    # Get the interview record
-    interview = get_object_or_404(Interview, uuid = interview_uuid)
-    
-    
-    candidate_name = interview.candidate.get_full_name() or "the candidate"
-    interview.job.title or "Software Developer"
-    # company_name = company_name or "Our Company"
-    
-    # Handle if company object or name is missing
     try:
-        company_name = interview.job.company.name
-    except AttributeError:
-        company_name = "Our Company"
-    
-    
-    # Get resume file from candidate's profile
-    # resume_file = interview.candidate.profile.resume
-    profile = getattr(interview.candidate, 'profile', None)
-    resume_file = profile.resume if profile and profile.resume else None
-
-    if not resume_file:
-        return HttpResponse("Resume file not found in user profile.", status=400)
-
-
-    resume_text = extract_resume_text(resume_file)
-    # job_description = interview.job.description
-    
-    
-    if request.method == "POST":
-        user_text = request.POST.get("text")
-        prompt = f"""
-        candidate Resume:
-        {resume_text}
-    
-        Job Role: {interview.job.title}
-        job_description: {interview.job.description}
-        Location : {interview.job.location}
+        # Get the interview record
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
         
-        The candidate replied: "{user_text}"
-        Please give the next question.
+        candidate_name = interview.candidate.get_full_name() or "the candidate"
+        job_title = interview.job.title or "Software Developer"
+        
+        # Handle company name safely
+        try:
+            company_name = interview.job.company
+        except AttributeError:
+            company_name = "Our Company"
+        
+        # Get resume file from candidate's profile with error handling
+        profile = getattr(interview.candidate, 'profile', None)
+        resume_file = profile.resume if profile and profile.resume else None
+
+        if not resume_file:
+            return HttpResponse("Resume file not found. Please upload your resume in your profile.", status=400)
+
+        try:
+            resume_text = extract_resume_text(resume_file)
+        except Exception as e:
+            resume_text = "Resume could not be processed."
+            print(f"Resume extraction error: {e}")
+        
+        if request.method == "POST":
+            user_text = request.POST.get("text", "")
+            
+            if not user_text.strip():
+                return JsonResponse({
+                    'error': 'Please provide a response.',
+                    'response': 'I didn\'t receive your answer. Could you please respond?'
+                })
+            
+            prompt = f"""
+            Candidate Resume: {resume_text}
+            Job Role: {job_title}
+            Job Description: {interview.job.description}
+            Location: {interview.job.location}
+            
+            The candidate replied: "{user_text}"
+            Please give the next question.
+            """
+            
+            try:
+                ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+            except Exception as e:
+                print(f"AI API Error: {e}")
+                ai_response = "I'm having technical difficulties. Let me ask you: Can you tell me about your experience with this type of role?"
+            
+            # Safe audio generation with error handling
+            audio_url = None
+            try:
+                if ai_response and ai_response.strip():
+                    audio_filename = f"ai_reply_{uuid.uuid4().hex[:8]}.mp3"
+                    audio_path = f'media/tts/{audio_filename}'
+                    os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+                    
+                    tts = gTTS(ai_response.strip())
+                    tts.save(audio_path)
+                    audio_url = f'/media/tts/{audio_filename}'
+            except Exception as e:
+                print(f"TTS Error: {e}")
+                # Continue without audio if TTS fails
+                pass
+
+            return JsonResponse({
+                'response': ai_response,
+                'audio': audio_url
+            })
+
+        # GET: show interview UI
+        first_prompt = f"""
+        Candidate Resume: {resume_text}
+        Job Title: {job_title}
+        Job Description: {interview.job.description}
+        Company: {company_name}
+
+        Start the interview with a greeting and ask the first question.
         """
         
-        ai_response = ask_ai_question(prompt)
+        try:
+            ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
+        except Exception as e:
+            print(f"AI API Error on initial question: {e}")
+            ai_question = f"Hello {candidate_name}, I'm Alex, your AI interviewer for the {job_title} position. Let's begin - can you briefly introduce yourself?"
         
-        
-        # Safe audio generation
-        if ai_response and ai_response.strip():
-            audio_path = 'media/tts/ai_reply.mp3'
-            tts = gTTS(ai_response.strip())
-            os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-            tts.save(audio_path)
-        else:
-            ai_response = "Sorry, I could not generate a response. Please try again."
-            audio_path = 'media/tts/ai_reply.mp3'
-            tts = gTTS(ai_response)
-            os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-            tts.save(audio_path)
+        # Generate initial audio with error handling
+        try:
+            tts = gTTS(ai_question)
+            tts_path = 'media/tts/initial_question.mp3'
+            os.makedirs(os.path.dirname(tts_path), exist_ok=True)
+            tts.save(tts_path)
+        except Exception as e:
+            print(f"Initial TTS Error: {e}")
+            # Continue without audio if TTS fails
+            pass
 
-        # Convert to voice
-        audio_path = 'media/tts/ai_reply.mp3'
-        tts = gTTS(ai_response)
-        os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-        tts.save(audio_path)
-
-        return JsonResponse({
-            'response': ai_response,
-            'audio': f'/media/tts/ai_reply.mp3'
+        return render(request, 'jobapp/interview_ai.html', {
+            'interview': interview,
+            'ai_question': ai_question
         })
-
-    # GET: show interview UI
-    first_prompt = f"""
-    Candidate Resume: {resume_text}
-    Job Title: {interview.job.title}
-    Job Description: {interview.job.description}
-
-    Ask the first interview question.
-    """
-    ai_question = ask_ai_question(first_prompt)
-    tts = gTTS(ai_question)
-    tts_path = 'media/tts/audio.mp3'
-    os.makedirs(os.path.dirname(tts_path), exist_ok=True)
-    tts.save(tts_path)
-
-    return render(request, 'jobapp/interview_ai.html', {
-        'interview': interview,
-        'ai_question': ai_question
-    })
+        
+    except Exception as e:
+        print(f"Interview Error: {e}")
+        return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
         
         
     
@@ -367,21 +394,31 @@ def ai_chat_response(request):
             """
         
 
-        ai_reply = ask_ai_question(prompt)
+        try:
+            ai_reply = ask_ai_question(prompt)
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            ai_reply = "I'm experiencing technical difficulties. Could you please repeat your response?"
 
-        # Save voice file
-        tts = gTTS(ai_reply)
-        tts_path = f"media/tts/{uuid.uuid4()}.mp3"
-        os.makedirs(os.path.dirname(tts_path), exist_ok=True)
-        tts.save(tts_path)
+        # Save voice file with error handling
+        audio_url = None
+        try:
+            tts = gTTS(ai_reply)
+            audio_filename = f"{uuid.uuid4().hex[:8]}.mp3"
+            tts_path = f"media/tts/{audio_filename}"
+            os.makedirs(os.path.dirname(tts_path), exist_ok=True)
+            tts.save(tts_path)
+            audio_url = f'/{tts_path}'
+        except Exception as e:
+            print(f"TTS Error: {e}")
+            pass
         
-         # Increment question count for next round
+        # Increment question count for next round
         request.session['question_count'] = question_count + 1
 
         return JsonResponse({
             'response': ai_reply,
-            'audio': f'/{tts_path}'
-            # 'audio': '/media/tts/audio.mp3'
+            'audio': audio_url
         })    
     
 

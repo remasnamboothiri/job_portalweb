@@ -1,18 +1,30 @@
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
+from decouple import config
 
 def ask_ai_question(prompt,candidate_name=None, job_title=None, company_name=None):
-    client = OpenAI(
-        base_url = "https://integrate.api.nvidia.com/v1",
-        api_key = os.getenv("NVIDIA_API_KEY")
-    )
+    try:
+        api_key = config('NVIDIA_API_KEY')
+    except:
+        raise Exception("NVIDIA_API_KEY not found in environment variables")
+    
+    if not api_key:
+        raise Exception("NVIDIA_API_KEY is empty")
+    
+    try:
+        client = OpenAI(
+            base_url = "https://integrate.api.nvidia.com/v1",
+            api_key = api_key
+        )
+    except Exception as e:
+        raise Exception(f"Failed to initialize OpenAI client: {str(e)}")
     
     candidate_name = candidate_name or "the candidate"
     job_title = job_title or "Software Developer" 
     company_name = company_name or "Our Company"
+    
+    if not prompt or not prompt.strip():
+        raise Exception("Empty prompt provided to AI function")
     
     
     system_prompt = f"""
@@ -48,28 +60,33 @@ def ask_ai_question(prompt,candidate_name=None, job_title=None, company_name=Non
     # After each user response, provide short feedback and ask the next relevant question based on the job description and resume.
     # """
     
-    completion = client.chat.completions.create(
-        model = "nvidia/llama-3.3-nemotron-super-49b-v1",
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": prompt  # dynamically passed input
-            }
-        ],
-        temperature=0.6,
-        max_tokens=512,
-        stream=False
-    )
-    # return completion.choices[0].message.content
-    def clean_text(text):
-        import re
-        text = re.sub(r'[*#`_>\\-]+', '', text)  # remove markdown
-        return re.sub(r'\s+', ' ', text).strip()
+    try:
+        completion = client.chat.completions.create(
+            model = "nvidia/llama-3.3-nemotron-super-49b-v1",
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": prompt  # dynamically passed input
+                }
+            ],
+            temperature=0.6,
+            max_tokens=512,
+            stream=False
+        )
+    except Exception as e:
+        raise Exception(f"NVIDIA API call failed: {str(e)}")
+    try:
+        def clean_text(text):
+            import re
+            text = re.sub(r'[*#`_>\\-]+', '', text)  # remove markdown
+            return re.sub(r'\s+', ' ', text).strip()
 
-    raw_response = completion.choices[0].message.content
-    cleaned_response = clean_text(raw_response)
-    return cleaned_response
+        raw_response = completion.choices[0].message.content
+        cleaned_response = clean_text(raw_response)
+        return cleaned_response
+    except Exception as e:
+        raise Exception(f"Failed to process AI response: {str(e)}")

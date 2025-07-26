@@ -112,14 +112,9 @@
     <source src="/media/tts/audio.mp3" type="audio/mpeg">
   </audio>  {% endcomment %}
 
-  <audio controls class="mb-3 w-100" id="aiAudio"> 
+  <audio controls class="mb-3 w-100" id="aiAudio">
     <source src="{{ audio_url }}" type="audio/mpeg">
-    Your browser does not support the audio element.
   </audio>
-  
-  <div class="text-center mb-3">
-    <button class="btn btn-info" id="playQuestionBtn">🔊 Play Question</button>
-  </div>
 
   {% comment %} <audio id="aiAudio" controls hidden class="mt-3 w-100"></audio> {% endcomment %}
 </div>
@@ -133,20 +128,18 @@
   const chatBox = document.getElementById("chatBox");
   const aiAudio = document.getElementById("aiAudio");
   
-  // Play question button
-  document.getElementById('playQuestionBtn').onclick = () => {
-    aiAudio.play();
-  };
-  
-  // Auto-play question when page loads (with fallback)
-  window.addEventListener('load', () => {
+  // Auto-start interview when page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    // Small delay to ensure audio is loaded
     setTimeout(() => {
-      aiAudio.play().catch(() => {
-        // If autoplay fails, show play button prominently
-        document.getElementById('playQuestionBtn').classList.add('btn-warning');
-        document.getElementById('playQuestionBtn').innerHTML = '🔊 Click to Hear Question';
+      aiAudio.play().catch(e => {
+        console.log('Autoplay blocked, user must interact first');
+        // Force play on first user interaction
+        document.body.addEventListener('click', () => {
+          aiAudio.play();
+        }, { once: true });
       });
-    }, 500);
+    }, 1000);
   });
 
   let recognition;

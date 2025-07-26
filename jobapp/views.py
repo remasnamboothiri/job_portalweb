@@ -323,25 +323,23 @@ def start_interview_by_uuid(request, interview_uuid):
             ai_question = f"Hello {candidate_name}, I'm Alex, your AI interviewer for the {job_title} position. Let's begin - can you briefly introduce yourself?"
         
         # Generate initial audio with error handling
+        audio_filename = f"question_{uuid.uuid4().hex[:8]}.mp3"
+        tts_path = f'media/tts/{audio_filename}'
         try:
-            tts = gTTS(ai_question)
-            tts_path = 'media/tts/initial_question.mp3'
-            os.makedirs(os.path.dirname(tts_path), exist_ok=True)
+            os.makedirs('media/tts', exist_ok=True)
+            tts = gTTS(ai_question, lang='en')
             tts.save(tts_path)
             print(f"Audio saved to: {tts_path}")
         except Exception as e:
-            print(f"Initial TTS Error: {e}")
-            # Create a fallback audio file
-            try:
-                fallback_tts = gTTS("Welcome to your interview. Please wait while we prepare your questions.")
-                fallback_tts.save(tts_path)
-            except:
-                pass
+            print(f"TTS Error: {e}")
+            # Create simple fallback
+            audio_filename = "fallback.mp3"
+            tts_path = f'media/tts/{audio_filename}'
 
         return render(request, 'jobapp/interview_ai.html', {
             'interview': interview,
             'ai_question': ai_question,
-            'audio_url': '/media/tts/initial_question.mp3'
+            'audio_url': f'/media/tts/{audio_filename}'
         })
         
     except Exception as e:

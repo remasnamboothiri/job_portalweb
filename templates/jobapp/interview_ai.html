@@ -103,8 +103,8 @@
     </div>
   </div>
 
-  <div class="controls">
-    <button class="btn btn-success" id="startBtn">🎙️ Start Speaking</button>
+  <div class="controls" id="voiceControls" style="display:none;">
+    <button class="btn btn-success" id="speakBtn">🎙️ Start Speaking</button>
     <button class="btn btn-danger" id="stopBtn">🛑 Stop</button>
   </div>
 
@@ -112,7 +112,11 @@
     <source src="/media/tts/audio.mp3" type="audio/mpeg">
   </audio>  {% endcomment %}
 
-  <audio controls autoplay class="mb-3 w-100" id="aiAudio"> 
+  <div class="text-center mb-3" id="startInterview">
+    <button class="btn btn-success btn-lg" id="startBtn">🎤 Start Interview</button>
+  </div>
+  
+  <audio controls class="mb-3 w-100" id="aiAudio" style="display:none;"> 
     <source src="{{ audio_url }}" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
@@ -129,15 +133,13 @@
   const chatBox = document.getElementById("chatBox");
   const aiAudio = document.getElementById("aiAudio");
   
-  // Auto-play initial question when page loads
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      aiAudio.play().catch(e => {
-        console.log("Autoplay blocked, user interaction required");
-        aiAudio.controls = true;
-      });
-    }, 500);
-  });
+  // Start interview on button click
+  document.getElementById('startBtn').onclick = () => {
+    document.getElementById('startInterview').style.display = 'none';
+    document.getElementById('voiceControls').style.display = 'block';
+    aiAudio.style.display = 'block';
+    aiAudio.play();
+  };
 
   let recognition;
   if ('webkitSpeechRecognition' in window) {
@@ -187,8 +189,8 @@
     alert("Voice input not supported in your browser. Use Google Chrome.");
   }
 
-  startBtn.onclick = () => recognition && recognition.start();
-  stopBtn.onclick = () => recognition && recognition.stop();
+  document.getElementById('speakBtn').onclick = () => recognition && recognition.start();
+  document.getElementById('stopBtn').onclick = () => recognition && recognition.stop();
 </script>
 
 </body>

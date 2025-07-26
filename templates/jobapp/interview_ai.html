@@ -138,7 +138,14 @@
     document.getElementById('startInterview').style.display = 'none';
     document.getElementById('voiceControls').style.display = 'block';
     aiAudio.style.display = 'block';
-    aiAudio.play();
+    
+    console.log('Audio source:', aiAudio.src);
+    aiAudio.play().then(() => {
+      console.log('Audio playing successfully');
+    }).catch(e => {
+      console.error('Audio play failed:', e);
+      alert('Audio failed to play. Please check your browser settings.');
+    });
   };
 
   let recognition;

@@ -103,8 +103,8 @@
     </div>
   </div>
 
-  <div class="controls" id="voiceControls" style="display:none;">
-    <button class="btn btn-success" id="speakBtn">🎙️ Start Speaking</button>
+  <div class="controls">
+    <button class="btn btn-success" id="startBtn">🎙️ Start Speaking</button>
     <button class="btn btn-danger" id="stopBtn">🛑 Stop</button>
   </div>
 
@@ -112,11 +112,7 @@
     <source src="/media/tts/audio.mp3" type="audio/mpeg">
   </audio>  {% endcomment %}
 
-  <div class="text-center mb-3" id="startInterview">
-    <button class="btn btn-success btn-lg" id="startBtn">🎤 Start Interview</button>
-  </div>
-  
-  <audio controls class="mb-3 w-100" id="aiAudio" style="display:none;"> 
+  <audio controls autoplay class="mb-3 w-100" id="aiAudio"> 
     <source src="{{ audio_url }}" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
@@ -133,20 +129,12 @@
   const chatBox = document.getElementById("chatBox");
   const aiAudio = document.getElementById("aiAudio");
   
-  // Start interview on button click
-  document.getElementById('startBtn').onclick = () => {
-    document.getElementById('startInterview').style.display = 'none';
-    document.getElementById('voiceControls').style.display = 'block';
-    aiAudio.style.display = 'block';
-    
-    console.log('Audio source:', aiAudio.src);
-    aiAudio.play().then(() => {
-      console.log('Audio playing successfully');
-    }).catch(e => {
-      console.error('Audio play failed:', e);
-      alert('Audio failed to play. Please check your browser settings.');
-    });
-  };
+  // Auto-play when page loads
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      aiAudio.play().catch(e => console.log('Autoplay blocked'));
+    }, 1000);
+  });
 
   let recognition;
   if ('webkitSpeechRecognition' in window) {
@@ -196,8 +184,11 @@
     alert("Voice input not supported in your browser. Use Google Chrome.");
   }
 
-  document.getElementById('speakBtn').onclick = () => recognition && recognition.start();
-  document.getElementById('stopBtn').onclick = () => recognition && recognition.stop();
+  startBtn.onclick = () => {
+    aiAudio.play().catch(e => console.log('Audio play failed'));
+    recognition && recognition.start();
+  };
+  stopBtn.onclick = () => recognition && recognition.stop();
 </script>
 
 </body>

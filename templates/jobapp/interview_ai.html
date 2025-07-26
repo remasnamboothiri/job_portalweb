@@ -112,13 +112,10 @@
     <source src="/media/tts/audio.mp3" type="audio/mpeg">
   </audio>  {% endcomment %}
 
-  <audio controls class="mb-3 w-100" id="aiAudio" style="display:none;"> 
+  <audio controls autoplay class="mb-3 w-100" id="aiAudio"> 
+    <source src="/media/tts/initial_question.mp3" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
-  
-  <div class="text-center mb-3">
-    <button class="btn btn-primary" id="playAudioBtn">🔊 Play Question</button>
-  </div>
 
   {% comment %} <audio id="aiAudio" controls hidden class="mt-3 w-100"></audio> {% endcomment %}
 </div>
@@ -131,14 +128,16 @@
   const stopBtn = document.getElementById("stopBtn");
   const chatBox = document.getElementById("chatBox");
   const aiAudio = document.getElementById("aiAudio");
-  const playAudioBtn = document.getElementById("playAudioBtn");
   
-  // Play initial question audio
-  playAudioBtn.onclick = () => {
-    aiAudio.src = "/media/tts/initial_question.mp3";
-    aiAudio.style.display = "block";
-    aiAudio.play().catch(e => console.log("Audio play failed:", e));
-  };
+  // Auto-play initial question when page loads
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      aiAudio.play().catch(e => {
+        console.log("Autoplay blocked, user interaction required");
+        aiAudio.controls = true;
+      });
+    }, 500);
+  });
 
   let recognition;
   if ('webkitSpeechRecognition' in window) {
@@ -178,9 +177,7 @@
           </div>`;
 
         if (data.audio) {
-          const aiAudio = document.getElementById("aiAudio");
           aiAudio.src = data.audio;
-          aiAudio.style.display = "block";
           aiAudio.play().catch(e => console.log("Audio play failed:", e));
         }
         chatBox.scrollTop = chatBox.scrollHeight;

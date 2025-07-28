@@ -112,7 +112,7 @@
     <source src="/media/tts/audio.mp3" type="audio/mpeg">
   </audio>  {% endcomment %}
 
-  <audio controls class="mb-3 w-100" id="aiAudio">
+  <audio controls autoplay muted class="mb-3 w-100" id="aiAudio">
     <source src="{{ audio_url }}" type="audio/mpeg">
   </audio>
 
@@ -130,17 +130,17 @@
   
   // Auto-start interview when page loads
   document.addEventListener('DOMContentLoaded', () => {
-    // Small delay to ensure audio is loaded
     setTimeout(() => {
-      aiAudio.play().catch(e => {
-        console.log('Autoplay blocked, user must interact first');
-        // Force play on first user interaction
-        document.body.addEventListener('click', () => {
-          aiAudio.play();
-        }, { once: true });
-      });
-    }, 1000);
+      aiAudio.muted = false;
+      aiAudio.play();
+    }, 500);
   });
+  
+  // Unmute on any user interaction
+  document.body.addEventListener('click', () => {
+    aiAudio.muted = false;
+    aiAudio.play();
+  }, { once: true });
 
   let recognition;
   if ('webkitSpeechRecognition' in window) {

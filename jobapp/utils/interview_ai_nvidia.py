@@ -52,13 +52,7 @@ def ask_ai_question(prompt,candidate_name=None, job_title=None, company_name=Non
     """
 
     
-    # system_prompt = f"""
-    # You are Alex, an AI-powered technical interviewer. Your task is to conduct structured, friendly interviews for the role of {job_title} at {company_name}.
-    # Start with a simple greeting like:
-    # "Hello {candidate_name}, I'm Alex, your AI interviewer. Let's begin. Can you briefly describe your technical background?"
-    # Ask one question at a time. Wait for the user's answer before continuing. Do not read any formatting or markdown symbols. Keep your tone neutral, professional, and clear.
-    # After each user response, provide short feedback and ask the next relevant question based on the job description and resume.
-    # """
+
     
     try:
         completion = client.chat.completions.create(

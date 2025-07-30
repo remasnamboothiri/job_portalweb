@@ -418,14 +418,36 @@ def start_interview_by_uuid(request, interview_uuid):
             })
 
         # GET: show interview UI
-        first_prompt = f"""
-        Candidate Resume: {resume_text}
-        Job Title: {job_title}
-        Job Description: {interview.job.description}
-        Company: {company_name}
+        # first_prompt = f"""
+        # Candidate Resume: {resume_text}
+        # Job Title: {job_title}
+        # Job Description: {interview.job.description}
+        # Company: {company_name}
 
-        Start the interview with a greeting and ask the first question.
-        """
+        # Start the interview with a greeting and ask the first question.
+        # """
+        
+        first_prompt = f"""
+You are Alex, an experienced HR interviewer conducting an online interview. Communicate naturally like a real human - use casual language, show genuine interest, and let the conversation flow organically.
+
+CANDIDATE INFO:
+- Resume: {resume_text}
+- Position: {job_title} at {company_name}
+- Job Details: {interview.job.description}
+
+YOUR COMMUNICATION STYLE:
+- Be conversational and warm, not robotic
+- Use natural speech patterns with occasional "um," "well," "actually"
+- Show genuine curiosity about their experiences
+- Ask follow-up questions based on what they say
+- Reference specific details from their resume naturally
+- Keep responses concise but engaging
+
+START THE INTERVIEW:
+Begin with a simple 2-sentence greeting: check audio and ask how they're doing. Then naturally transition into your first question about why they're interested in this role at {company_name}.
+
+Remember: You're having a real conversation, not conducting a formal interrogation. Be human.
+"""
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
@@ -496,7 +518,8 @@ def ai_chat_response(request):
             prompt = f"""
             The interview is complete.
 
-            Based on the candidate’s full responses, provide overall feedback and selection status.
+            Do NOT give any feedback, summary, or evaluation.
+Say a general thank you message and end the interview.
             Keep it short: max 2-3 sentences.
             """
         

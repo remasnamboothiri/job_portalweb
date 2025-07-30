@@ -33,6 +33,7 @@ class Job(models.Model):
     company = models.CharField(max_length=200)
     location = models.CharField(max_length=200)
     description = models.CharField(max_length=2000)
+    featured_image = models.ImageField(upload_to='job_images/', blank=True, null=True)  # Add this
     posted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date_posted = models.DateTimeField(auto_now_add=True)
     tags = TaggableManager()
@@ -77,7 +78,18 @@ class Interview(models.Model):
         return f"Interview for {self.candidate.username} - {self.job.title} "
     
 
-        
+
+class Candidate(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='candidates')
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    resume = models.FileField(upload_to='candidate_resumes/', blank=True, null=True)
+    added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.job.title}"        
  
         
     

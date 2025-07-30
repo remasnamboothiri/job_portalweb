@@ -26,7 +26,10 @@ class JobForm(forms.ModelForm):
     
     class Meta:
         model = Job
-        fields = ['title', 'company', 'location', 'description']          
+        fields = ['title', 'company', 'location', 'description' , 'featured_image']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 6}),
+        }          
         
 class ApplicationForm(forms.ModelForm):
     

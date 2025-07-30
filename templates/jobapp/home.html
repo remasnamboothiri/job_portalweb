@@ -26,15 +26,14 @@
     }
     .navbar {
       padding: 10px 20px;
-      fixed: top;
+      
     }
 
 
     .navbar.transparent {
       background-color: transparent !important;
 
-      {% comment %} background-color: rgba(0, 0, 0, 0.4) !important; {% endcomment %}
-      {% comment %} backdrop-filter: blur(5px); {% endcomment %}
+
     }
 
     .hero {
@@ -98,10 +97,10 @@
       margin: 15px;
     }
 
-    .testimonial {
+    {% comment %} .testimonial {
       max-width: 600px;
       margin: auto;
-    }
+    } {% endcomment %}
 
     .footer {
       background: #343a40;
@@ -317,40 +316,7 @@
 
 
 
-  {% comment %} <!-- ✅ Testimonials -->
-  <section class="testimonials">
-    <div class="container">
-      <h2>What Our Users Say</h2>
-      <div class="carousel slide" id="testimonialCarousel" data-bs-ride="carousel">
-        <div class="carousel-inner">
-          <div class="carousel-item active">
-            <div class="testimonial">
-              <p>"This platform helped me land a job in just 2 weeks!"</p>
-              <footer class="blockquote-footer">Akhil S, Frontend Developer</footer>
-            </div>
-          </div>
-          <div class="carousel-item">
-            <div class="testimonial">
-              <p>"As a recruiter, it's the easiest tool to find quality candidates."</p>
-              <footer class="blockquote-footer">Meena R, HR Manager</footer>
-            </div>
-          </div>
-          <div class="carousel-item">
-            <div class="testimonial">
-              <p>"Clean, professional, and effective. Love the experience!"</p>
-              <footer class="blockquote-footer">Ravi P, Python Developer</footer>
-            </div>
-          </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-          <span class="carousel-control-prev-icon"></span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-          <span class="carousel-control-next-icon"></span>
-        </button>
-      </div>
-    </div>
-  </section>  {% endcomment %}
+
 
   <!-- ✅ Footer -->
   <footer class="footer">

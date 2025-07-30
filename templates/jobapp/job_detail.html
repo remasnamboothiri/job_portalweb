@@ -86,10 +86,26 @@
       </ul>
 
       <!-- Action Buttons -->
-      <div class="d-flex justify-content-between align-items-center mt-5">
+      {% comment %} <div class="d-flex justify-content-between align-items-center mt-5">
         <a href="#" class="btn btn-outline-secondary"><span>♡</span> Save Job</a>
         <a href="{% url 'apply_to_job' job.id %}" class="btn btn-success px-4">Apply Now</a>
-      </div>
+      </div> {% endcomment %}
+
+      <!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mt-5">
+  <a href="#" class="btn btn-outline-secondary"><span>♡</span> Save Job</a>
+  
+  {% if is_job_owner %}
+    <!-- Show Add Candidates button if recruiter owns this job -->
+    <a href="{% url 'add_candidates' job.id %}" class="btn btn-primary px-4">Add Candidates</a>
+  {% elif user.is_authenticated %}
+    <!-- Show Apply Now button for other logged-in users -->
+    <a href="{% url 'apply_to_job' job.id %}" class="btn btn-success px-4">Apply Now</a>
+  {% else %}
+    <!-- Show login prompt for non-authenticated users -->
+    <a href="{% url 'login' %}" class="btn btn-success px-4">Login to Apply</a>
+  {% endif %}
+</div>
 
       <!-- Back Link -->
       <div class="text-end mt-3">

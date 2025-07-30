@@ -1,7 +1,7 @@
 from django.shortcuts import render,redirect, get_object_or_404 , HttpResponse
 from django.contrib.auth import login, authenticate, logout
 from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm
-from .models import CustomUser , Profile, Job, Application , Interview 
+from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.http import HttpResponseForbidden , JsonResponse
 from django.db.models import Q
@@ -11,6 +11,11 @@ from datetime import datetime
 from django.contrib.auth import get_backends
 from django.urls import reverse
 import os
+import uuid
+import base64
+import tempfile
+from gtts import gTTS
+
 
 #for Ai interview
 try:
@@ -62,6 +67,22 @@ def register_view(request):
     
     
     
+# def login_view(request):
+#     if request.method == 'POST':
+#         form = LoginForm(request.POST)
+#         if form.is_valid():
+#             username = form.cleaned_data.get('username')
+#             password = form.cleaned_data.get('password')
+#             user = authenticate(request, username=username, password=password)
+#             if user:
+#                 login(request, user)
+#                 return redirect('Profile_update')
+#             else:
+#                 form.add_error(None, 'invalid credentials')
+                
+#     else:
+#         form = LoginForm()
+#     return render(request, 'registration/login.html', {'form': form})  
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -71,14 +92,17 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
-                return redirect('Profile_update')
+                # Redirect based on user type
+                if user.is_recruiter:
+                    return redirect('recruiter_dashboard')  # or create a recruiter dashboard
+                else:
+                    return redirect('Profile_update')
             else:
                 form.add_error(None, 'invalid credentials')
                 
     else:
         form = LoginForm()
-    return render(request, 'registration/login.html', {'form': form})  
-
+    return render(request, 'registration/login.html', {'form': form})
 
 def logout_view(request):
     logout(request)
@@ -102,23 +126,40 @@ def update_profile(request):
     return render(request, 'jobapp/profile_update.html', {'form': form})    
 
 
+# @login_required
+# def post_job(request):
+#     if not request.user.is_recruiter:
+#         return render(request, 'jobapp/post_job.html')  # Better UX
+    
+#     if request.method == 'POST':
+#         form = JobForm(request.POST)
+#         if form.is_valid:
+#             job = form.save(commit=False)
+#             job.posted_by = request.user
+#             job.save()
+#             return redirect('job_list')   # redirect to job listings
+#     else:
+#         form = JobForm()
+        
+#     return render(request, 'jobapp/post_job.html', {'form': form})   
 @login_required
 def post_job(request):
     if not request.user.is_recruiter:
-        return render(request, 'jobapp/post_job.html')  # Better UX
+        messages.error(request, 'Only recruiters can post jobs.')
+        return redirect('login')
     
     if request.method == 'POST':
-        form = JobForm(request.POST)
-        if form.is_valid:
+        form = JobForm(request.POST, request.FILES)  # Add request.FILES
+        if form.is_valid():
             job = form.save(commit=False)
             job.posted_by = request.user
             job.save()
-            return redirect('job_list')   # redirect to job listings
+            messages.success(request, 'Job posted successfully!')
+            return redirect('job_list')
     else:
         form = JobForm()
-        
-    return render(request, 'jobapp/post_job.html', {'form': form})   
-
+    
+    return render(request, 'jobapp/post_job.html', {'form': form})
 
 
 def job_list(request):
@@ -140,10 +181,65 @@ def job_list(request):
 
 
 
+# def job_detail(request, job_id):
+#     job = get_object_or_404(Job, id=job_id)
+#     return render(request, 'jobapp/job_detail.html', {'job': job})
 def job_detail(request, job_id):
     job = get_object_or_404(Job, id=job_id)
-    return render(request, 'jobapp/job_detail.html', {'job': job})
+    
+    # Check if the logged-in user is a recruiter and owns this job
+    is_recruiter = request.user.is_recruiter if request.user.is_authenticated else False
+    is_job_owner = request.user.is_authenticated and job.posted_by == request.user
+    
+    context = {
+        'job': job,
+        'is_recruiter': is_recruiter,
+        'is_job_owner': is_job_owner
+    }
+    return render(request, 'jobapp/job_detail.html', context)
 
+
+
+#is loged in as a recruiter only 
+from django.contrib import messages
+
+
+def add_candidates(request, job_id):
+    # Ensure only recruiters can access this page
+    if not request.user.is_authenticated or not request.user.is_recruiter:
+        messages.error(request, 'Only recruiters can access this page.')
+        return redirect('login')
+    
+    # Get the job and ensure the recruiter owns it
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    
+    if request.method == 'POST':
+        # Handle candidate addition form submission
+        candidate_name = request.POST.get('candidate_name')
+        candidate_email = request.POST.get('candidate_email')
+        candidate_phone = request.POST.get('candidate_phone')
+        candidate_resume = request.FILES.get('candidate_resume')
+        
+        # Create and save the candidate
+        candidate = Candidate.objects.create(
+            job=job,
+            name=candidate_name,
+            email=candidate_email,
+            phone=candidate_phone,
+            resume=candidate_resume,
+            added_by=request.user
+        )
+        
+        messages.success(request, f'Candidate {candidate_name} added successfully!')
+        return redirect('add_candidates', job_id=job_id)
+    
+    # Get all candidates for this job to display
+    candidates = Candidate.objects.filter(job=job)
+    
+    return render(request, 'jobapp/add_candidates.html', {
+        'job': job,
+        'candidates': candidates
+    })
 
 
 
@@ -214,13 +310,7 @@ def schedule_interview(request, job_id, applicant_id):
             scheduled_at=dt,
         )
         
-        # ✅ Auto-generate interview URL with UUID
         
-        # generated_link = request.build_absolute_uri(
-        #     reverse('start_interview', args=[Interview.uuid])
-        # )
-        # Interview.link = generated_link
-        # Interview.save()
         
         return redirect('recruiter_dashboard')
 
@@ -233,129 +323,12 @@ def schedule_interview(request, job_id, applicant_id):
 
 
 
-# def start_interview_by_uuid(request, interview_uuid):
-#     try:
-#         # Get the interview record
-#         interview = get_object_or_404(Interview, uuid=interview_uuid)
-        
-#         candidate_name = interview.candidate.get_full_name() or "the candidate"
-#         job_title = interview.job.title or "Software Developer"
-        
-#         # Handle company name safely
-#         try:
-#             company_name = interview.job.company
-#         except AttributeError:
-#             company_name = "Our Company"
-        
-#         # Get resume file from candidate's profile with error handling
-#         profile = getattr(interview.candidate, 'profile', None)
-#         resume_file = profile.resume if profile and profile.resume else None
 
-#         if not resume_file:
-#             return HttpResponse("Resume file not found. Please upload your resume in your profile.", status=400)
-
-#         try:
-#             resume_text = extract_resume_text(resume_file)
-#         except Exception as e:
-#             resume_text = "Resume could not be processed."
-#             print(f"Resume extraction error: {e}")
-        
-#         if request.method == "POST":
-#             user_text = request.POST.get("text", "")
-            
-#             if not user_text.strip():
-#                 return JsonResponse({
-#                     'error': 'Please provide a response.',
-#                     'response': 'I didn\'t receive your answer. Could you please respond?'
-#                 })
-            
-#             prompt = f"""
-#             Candidate Resume: {resume_text}
-#             Job Role: {job_title}
-#             Job Description: {interview.job.description}
-#             Location: {interview.job.location}
-            
-#             The candidate replied: "{user_text}"
-#             Please give the next question.
-#             """
-            
-#             try:
-#                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
-#             except Exception as e:
-#                 print(f"AI API Error: {e}")
-#                 ai_response = "I'm having technical difficulties. Let me ask you: Can you tell me about your experience with this type of role?"
-            
-#             # Safe audio generation with error handling
-#             audio_url = None
-#             try:
-#                 if ai_response and ai_response.strip():
-#                     audio_filename = f"ai_reply_{uuid.uuid4().hex[:8]}.mp3"
-#                     audio_path = f'media/tts/{audio_filename}'
-#                     os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-                    
-#                     tts = gTTS(ai_response.strip())
-#                     tts.save(audio_path)
-#                     audio_url = f'/media/tts/{audio_filename}'
-#             except Exception as e:
-#                 print(f"TTS Error: {e}")
-#                 # Continue without audio if TTS fails
-#                 pass
-
-#             return JsonResponse({
-#                 'response': ai_response,
-#                 'audio': audio_url
-#             })
-
-#         # GET: show interview UI
-#         first_prompt = f"""
-#         Candidate Resume: {resume_text}
-#         Job Title: {job_title}
-#         Job Description: {interview.job.description}
-#         Company: {company_name}
-
-#         Start the interview with a greeting and ask the first question.
-#         """
-        
-#         try:
-#             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
-#         except Exception as e:
-#             print(f"AI API Error on initial question: {e}")
-#             ai_question = f"Hello {candidate_name}, I'm Alex, your AI interviewer for the {job_title} position. Let's begin - can you briefly introduce yourself?"
-        
-#         # Generate initial audio with error handling
-#         audio_filename = f"question_{uuid.uuid4().hex[:8]}.mp3"
-#         tts_path = f'media/tts/{audio_filename}'
-#         try:
-#             os.makedirs('media/tts', exist_ok=True)
-#             tts = gTTS(ai_question, lang='en')
-#             tts.save(tts_path)
-#             print(f"Audio saved to: {tts_path}")
-#         except Exception as e:
-#             print(f"TTS Error: {e}")
-#             # Create simple fallback
-#             audio_filename = "fallback.mp3"
-#             tts_path = f'media/tts/{audio_filename}'
-
-#         return render(request, 'jobapp/interview_ai.html', {
-#             'interview': interview,
-#             'ai_question': ai_question,
-#             'audio_url': f'/media/tts/{audio_filename}'
-#         })
-        
-#     except Exception as e:
-#         print(f"Interview Error: {e}")
-#         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
         
         
     
 
-import os
-import uuid
-import base64
-import tempfile
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse, JsonResponse
-from gtts import gTTS
+
 
 def start_interview_by_uuid(request, interview_uuid):
     try:

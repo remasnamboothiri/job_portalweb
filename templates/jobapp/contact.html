@@ -31,8 +31,7 @@
     .navbar.transparent {
       background-color: transparent !important;
 
-      {% comment %} background-color: rgba(0, 0, 0, 0.4) !important; {% endcomment %}
-      {% comment %} backdrop-filter: blur(5px); {% endcomment %}
+     
     }
     .footer {
       background: #343a40;
@@ -73,14 +72,13 @@
     </div> <!-- .site-mobile-menu -->
 
 
-    <nav class="navbar navbar-expand-xl navbar-dark bg-transparent fixed-top py-3">
+<nav class="navbar navbar-expand-xl navbar-dark bg-transparent fixed-top py-3">
   <div class="container">
     <div class="row w-100 align-items-center">
       <!-- Left: Logo -->
       <div class="col-3">
         <a class="navbar-brand fw-bold text-white" href="{% url 'home' %}">JOBBOARD</a>
       </div>
-
       <!-- Center: Navigation Links -->
       <div class="col-6 d-none d-xl-block">
         <ul class="navbar-nav justify-content-center d-flex gap-3">
@@ -105,7 +103,7 @@
               <li><a class="dropdown-item" href="#">FAQ</a></li>
             </ul>
           </li>
-
+        
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'contact' %}">Contact</a></li>
         </ul>
       </div>
@@ -123,8 +121,6 @@
         </button>
       </div>
     </div>
-
-
   </div>
 </nav>
     

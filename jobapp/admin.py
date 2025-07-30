@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser , Profile, Job, Application , Interview
+from .models import CustomUser , Profile, Job, Application , Interview , Candidate
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 
@@ -22,6 +22,7 @@ admin.site.register(Profile)
 admin.site.register(Job)
 admin.site.register(Application)
 admin.site.register(Interview) 
+admin.site.register(Candidate)
 
 
 

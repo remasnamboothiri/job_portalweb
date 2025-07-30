@@ -535,6 +535,9 @@ def ai_chat_response(request):
 def contact_view(request):
     return render(request, 'jobapp/contact.html')
 
+
+
+
         
             
 def debug_db(request):

@@ -80,7 +80,7 @@
 
     <div class="text-center mt-3">
       <a href="{% url 'jobseeker_dashboard' %}">← Back to Jobseeker Dashboard</a><br>
-      <a href="{% url 'recruiter_dashboard' %}">← Back to Recruiter Dashboard</a>
+      
     </div>
   </div>
 
@@ -92,25 +92,3 @@
 
 
 
-{% comment %} {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Update Profile</title>
-  <link rel="stylesheet" type="text/css" href="{% static 'css/profile.css' %}">
-</head>
-<body>
-  <div class="profile-container">
-    <h2>Update Your Profile</h2>
-
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Save Profile</button>
-    </form>
-
-    <a href="{% url 'jobseeker_dashboard' %}">← Back to user Dashboard</a> <br>
-    <a href="{% url  'recruiter_dashboard' %}">← Back to Recruiter Dashboard</a>
-  </div>
-</body>
-</html> {% endcomment %}

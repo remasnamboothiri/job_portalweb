@@ -464,6 +464,7 @@ CANDIDATE INFO:
 
 INSTRUCTIONS:
 - Output ONLY the exact words you would speak
+- Speak only using TTS
 - NO quotation marks, labels, or descriptions
 - NO stage directions or narrations like "Waiting for response" or "AI Interviewer says"
 - Just speak naturally as Alex would spea

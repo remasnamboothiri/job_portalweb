@@ -29,7 +29,7 @@ urlpatterns = [
     
      # 🗣️ Interview Start + AI Response
     path('interview/start/<uuid:interview_uuid>/', views.start_interview_by_uuid, name='start_interview'),
-    path('interview/response/', views.ai_chat_response, name='ai_chat_response'),
+    # path('interview/response/', views.ai_chat_response, name='ai_chat_response'),
     
     
     # contact 

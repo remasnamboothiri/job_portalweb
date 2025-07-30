@@ -2,15 +2,15 @@ import os
 from openai import OpenAI
 from decouple import config
 
-def ask_ai_question(prompt,candidate_name=None, job_title=None, company_name=None):
+def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None):
     try:
         api_key = config('NVIDIA_API_KEY')
     except:
         raise Exception("NVIDIA_API_KEY not found in environment variables")
-    
+        
     if not api_key:
         raise Exception("NVIDIA_API_KEY is empty")
-    
+        
     try:
         client = OpenAI(
             base_url = "https://integrate.api.nvidia.com/v1",
@@ -18,59 +18,35 @@ def ask_ai_question(prompt,candidate_name=None, job_title=None, company_name=Non
         )
     except Exception as e:
         raise Exception(f"Failed to initialize OpenAI client: {str(e)}")
-    
+        
     candidate_name = candidate_name or "the candidate"
     job_title = job_title or "Software Developer" 
     company_name = company_name or "Our Company"
-    
+        
     if not prompt or not prompt.strip():
         raise Exception("Empty prompt provided to AI function")
-    
-    
+              
+    # Simplified system prompt focused on natural conversation
     system_prompt = f"""
-    Human-Like AI Interviewer Prompt
-You are Alex, an experienced HR professional conducting job interviews.
+You are Alex, an experienced and friendly HR professional conducting a job interview for a {job_title} position at {company_name}.
 
-You are interviewing a {candidate_name} for a {job_title} position at {company_name}.
+COMMUNICATION STYLE:
+- Be natural, warm, and conversational like a real human interviewer
+- Use simple, clear language - avoid corporate jargon
+- Keep responses concise (2-3 sentences maximum)
+- Show genuine interest in the candidate's responses
+- Ask one question at a time
+- Use natural transitions like "That's interesting," "I see," "Tell me more about..."
 
-Use natural speech patterns with occasional filler words like "um," "well," "you know," "actually"
-Show genuine curiosity and interest in responses
-React authentically to answers with follow-up questions or comments
-Use conversational transitions like "That's interesting," "I see," "Tell me more about that"
-Occasionally pause or rephrase questions mid-sentence as humans naturally do
+INTERVIEW APPROACH:
+- Focus on having a natural conversation, not interrogation
+- Ask follow-up questions based on what the candidate says
+- Be encouraging and supportive
+- Keep the flow smooth and engaging
 
-Interview Behavior
-
-Start with warm, casual conversation to put the candidate at ease
-Ask follow-up questions based on specific details the candidate mentions
-Share brief, relevant personal insights or company anecdotes when appropriate
-Show empathy and understanding when discussing challenges or setbacks
-Use the candidate's name naturally throughout the conversation
-Reference previous answers to create continuity: "Earlier you mentioned..."
-
-Question Flow
-
-Don't rigidly stick to a script - let the conversation evolve organically
-Ask clarifying questions when something isn't clear
-Show genuine surprise or interest when learning something unexpected
-Use phrases like "I'm curious about..." or "What I'm really trying to understand is..."
-Admit when you need to think about an answer or consult notes
-
-Human Touches
-
-Occasionally check audio/video: "Can you still hear me okay?" "Your video froze for a second there"
-Make brief small talk about connection or setup
-Show slight hesitation before difficult questions
-Use humor appropriately and laugh at candidate's jokes
-Reference the time: "I know we only have about 10 minutes left, but..."
-
-Example Opening
-"Hi [Name], how are you doing today? Can you hear me okay?" 
+Remember: You're having a friendly professional conversation, not giving speeches.
 """
-
-    
-
-    
+                
     try:
         completion = client.chat.completions.create(
             model = "nvidia/llama-3.3-nemotron-super-49b-v1",
@@ -81,23 +57,40 @@ Example Opening
                 },
                 {
                     "role": "user",
-                    "content": prompt  # dynamically passed input
+                    "content": prompt
                 }
             ],
-            temperature=0.6,
-            max_tokens=512,
+            temperature=0.7,  # Slightly higher for more natural responses
+            max_tokens=150,   # Reduced to encourage shorter responses
             stream=False
         )
     except Exception as e:
         raise Exception(f"NVIDIA API call failed: {str(e)}")
+    
     try:
         def clean_text(text):
             import re
-            text = re.sub(r'[*#`_>\\-]+', '', text)  # remove markdown
-            return re.sub(r'\s+', ' ', text).strip()
-
+            # Remove markdown and excessive formatting
+            text = re.sub(r'[*#`_>\\-]+', '', text)
+            # Remove extra whitespace and newlines
+            text = re.sub(r'\s+', ' ', text).strip()
+            # Remove bullet points or numbered lists
+            text = re.sub(r'^\d+\.\s*', '', text)
+            text = re.sub(r'^[-•]\s*', '', text)
+            return text
+            
         raw_response = completion.choices[0].message.content
         cleaned_response = clean_text(raw_response)
+        
+        # Additional check to ensure response isn't too long
+        sentences = cleaned_response.split('. ')
+        if len(sentences) > 3:
+            cleaned_response = '. '.join(sentences[:3]) + '.'
+            
         return cleaned_response
     except Exception as e:
         raise Exception(f"Failed to process AI response: {str(e)}")
+
+
+
+

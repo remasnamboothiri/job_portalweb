@@ -325,11 +325,6 @@ def schedule_interview(request, job_id, applicant_id):
 
 
         
-        
-    
-
-
-
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
@@ -357,6 +352,17 @@ def start_interview_by_uuid(request, interview_uuid):
             resume_text = "Resume could not be processed."
             print(f"Resume extraction error: {e}")
         
+        # Store interview context in session for consistency
+        request.session['interview_context'] = {
+            'candidate_name': candidate_name,
+            'job_title': job_title,
+            'company_name': company_name,
+            'resume_text': resume_text,
+            'job_description': interview.job.description,
+            'job_location': interview.job.location,
+            'question_count': 0
+        }
+        
         if request.method == "POST":
             user_text = request.POST.get("text", "")
             
@@ -366,44 +372,74 @@ def start_interview_by_uuid(request, interview_uuid):
                     'response': 'I didn\'t receive your answer. Could you please respond?'
                 })
             
-            prompt = f"""
-            Candidate Resume: {resume_text}
-            Job Role: {job_title}
-            Job Description: {interview.job.description}
-            Location: {interview.job.location}
+            # Get context from session
+            context = request.session.get('interview_context', {})
+            question_count = context.get('question_count', 0) + 1
             
-            The candidate replied: "{user_text}"
-            Please give the next question.
-            """
+            # Update question count
+            context['question_count'] = question_count
+            request.session['interview_context'] = context
+            
+            # Create contextual prompt based on question number
+            if question_count <= 8:
+                prompt = f"""
+You are Alex, a friendly HR interviewer. Keep your responses natural and conversational.
+
+CONTEXT:
+- Candidate: {context.get('candidate_name', 'the candidate')}
+- Position: {context.get('job_title')} at {context.get('company_name')}
+- Job Description: {context.get('job_description', '')}
+- Resume Summary: {context.get('resume_text', '')[:500]}...
+
+The candidate just said: "{user_text}"
+
+INSTRUCTIONS:
+- Give a brief, natural acknowledgment of their answer (1 sentence max)
+- Ask ONE follow-up question related to their response OR move to the next interview topic
+- Keep it conversational - use "That's interesting," "I see," etc.
+- Maximum 2-3 sentences total
+- Don't give lengthy explanations or multiple questions
+
+Current question #{question_count} of 8.
+"""
+            else:
+                prompt = f"""
+You are Alex, a friendly HR interviewer wrapping up the interview.
+
+The candidate just said: "{user_text}"
+
+INSTRUCTIONS:
+- Briefly acknowledge their final answer
+- Thank them for their time
+- Let them know next steps will be communicated soon
+- Keep it warm but concise (2-3 sentences max)
+- End the interview naturally
+
+This was the final question.
+"""
             
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
             except Exception as e:
                 print(f"AI API Error: {e}")
-                ai_response = "I'm having technical difficulties. Let me ask you: Can you tell me about your experience with this type of role?"
+                ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
-            # FIX: Generate base64 audio data instead of file
+            # Generate audio (keeping your existing TTS logic)
             audio_data = None
             if ai_response and ai_response.strip():
                 try:
-                    # Create temporary file for TTS
                     with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
                         temp_path = temp_file.name
                     
-                    # Generate TTS
                     tts = gTTS(text=ai_response.strip(), lang='en', slow=False)
                     tts.save(temp_path)
                     
-                    # Read file and convert to base64
                     if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
                         with open(temp_path, 'rb') as audio_file:
                             audio_content = audio_file.read()
                             audio_base64 = base64.b64encode(audio_content).decode('utf-8')
                             audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                        
-                        print(f"Audio generated successfully as base64")
                     
-                    # Clean up temp file
                     try:
                         os.unlink(temp_path)
                     except:
@@ -414,69 +450,49 @@ def start_interview_by_uuid(request, interview_uuid):
 
             return JsonResponse({
                 'response': ai_response,
-                'audio': audio_data  # Now contains base64 data URL
+                'audio': audio_data
             })
 
-        # GET: show interview UI
-        # first_prompt = f"""
-        # Candidate Resume: {resume_text}
-        # Job Title: {job_title}
-        # Job Description: {interview.job.description}
-        # Company: {company_name}
-
-        # Start the interview with a greeting and ask the first question.
-        # """
-        
+        # GET: Show interview UI with first question
         first_prompt = f"""
-You are Alex, an experienced HR interviewer conducting an online interview. Communicate naturally like a real human - use casual language, show genuine interest, and let the conversation flow organically.
+You are Alex, a friendly HR interviewer starting an interview.
 
 CANDIDATE INFO:
-- Resume: {resume_text}
+- Name: {candidate_name}
 - Position: {job_title} at {company_name}
-- Job Details: {interview.job.description}
+- Key skills from resume: {resume_text[:300]}...
 
-YOUR COMMUNICATION STYLE:
-- Be conversational and warm, not robotic
-- Use natural speech patterns with occasional "um," "well," "actually"
-- Show genuine curiosity about their experiences
-- Ask follow-up questions based on what they say
-- Reference specific details from their resume naturally
-- Keep responses concise but engaging
+INSTRUCTIONS:
+- Start with a warm 1-sentence greeting
+- Ask them to briefly introduce themselves and why they're interested in this role
+- Keep it natural and conversational
+- Maximum 2-3 sentences total
 
-START THE INTERVIEW:
-Begin with a simple 2-sentence greeting: check audio and ask how they're doing. Then naturally transition into your first question about why they're interested in this role at {company_name}.
-
-Remember: You're having a real conversation, not conducting a formal interrogation. Be human.
+This is the opening question.
 """
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
         except Exception as e:
             print(f"AI API Error on initial question: {e}")
-            ai_question = f"Hello {candidate_name}, I'm Alex, your AI interviewer for the {job_title} position. Let's begin - can you briefly introduce yourself?"
+            ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
-        # Generate initial audio as base64
+        # Generate initial audio
         audio_data = None
         if ai_question and ai_question.strip():
             try:
-                # Create temporary file for TTS
                 with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
                     temp_path = temp_file.name
                 
-                # Generate TTS
                 tts = gTTS(text=ai_question.strip(), lang='en', slow=False)
                 tts.save(temp_path)
                 
-                # Read file and convert to base64
                 if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
                     with open(temp_path, 'rb') as audio_file:
                         audio_content = audio_file.read()
                         audio_base64 = base64.b64encode(audio_content).decode('utf-8')
                         audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                    
-                    print(f"Initial audio generated successfully as base64")
                 
-                # Clean up temp file
                 try:
                     os.unlink(temp_path)
                 except:
@@ -488,69 +504,15 @@ Remember: You're having a real conversation, not conducting a formal interrogati
         return render(request, 'jobapp/interview_ai.html', {
             'interview': interview,
             'ai_question': ai_question,
-            'audio_url': audio_data  # Now contains base64 data URL
+            'audio_url': audio_data
         })
         
     except Exception as e:
         print(f"Interview Error: {e}")
-        return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)   
-    
+        return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
 
-    
-@csrf_exempt
-def ai_chat_response(request):
-    if request.method == 'POST':
-        user_text = request.POST.get('text')
-        
-        # Get question count from session, default to 1
-        question_count = request.session.get('question_count', 1)
 
-           # Set prompt based on question number
-        if question_count <= 10:
-            prompt = f"""
-            The candidate said: "{user_text}"
-            
-            Now ask only the next interview question.
-            Do NOT give any feedback, summary, or evaluation.
-            Only ask one question at a time.
-            """
-        else:
-            prompt = f"""
-            The interview is complete.
 
-            Do NOT give any feedback, summary, or evaluation.
-Say a general thank you message and end the interview.
-            Keep it short: max 2-3 sentences.
-            """
-        
-
-        try:
-            ai_reply = ask_ai_question(prompt)
-        except Exception as e:
-            print(f"AI API Error: {e}")
-            ai_reply = "I'm experiencing technical difficulties. Could you please repeat your response?"
-
-        # Save voice file with error handling
-        audio_url = None
-        try:
-            tts = gTTS(ai_reply)
-            audio_filename = f"{uuid.uuid4().hex[:8]}.mp3"
-            tts_path = f"media/tts/{audio_filename}"
-            os.makedirs(os.path.dirname(tts_path), exist_ok=True)
-            tts.save(tts_path)
-            audio_url = f'/{tts_path}'
-        except Exception as e:
-            print(f"TTS Error: {e}")
-            pass
-        
-        # Increment question count for next round
-        request.session['question_count'] = question_count + 1
-
-        return JsonResponse({
-            'response': ai_reply,
-            'audio': audio_url
-        })    
-    
 
 
 # contact view

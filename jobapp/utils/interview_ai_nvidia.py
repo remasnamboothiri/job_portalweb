@@ -70,7 +70,7 @@ Remember: You're having a friendly professional conversation, not giving speeche
                 }
             ],
             temperature=0.7,
-            max_tokens=250,  # Sweet spot for interview responses
+            max_tokens=1000,  # Sweet spot for interview responses
             stream=False,
             stop=["\n\n", "Candidate:", "You:"]  # Stop at natural conversation breaks
 

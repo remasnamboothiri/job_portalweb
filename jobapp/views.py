@@ -455,36 +455,22 @@ This was the final question.
 
         # GET: Show interview UI with first question
         first_prompt = f"""
-You are Alex, an HR interviewer for {company_name}. You're conducting an online interview for the {job_title} position.
+        
 
-CANDIDATE INFO:
-- Name: {candidate_name}
-- Position: {job_title} at {company_name}
-- Key skills from resume: {resume_text[:300]}...
+You are Alex interviewing {candidate_name} for {job_title} at {company_name}.
 
-INSTRUCTIONS:
-- Output ONLY the exact words you would speak
-- Speak only using TTS
-- NO quotation marks, labels, or descriptions
-- NO stage directions or narrations like "Waiting for response" or "AI Interviewer says"
-- Just speak naturally as Alex would spea
-- NO formatting or explanations
-- Maximum 2-3 sentences total
+Resume highlights: {resume_text[:300]}
 
-Your communication style:
-- Conversational and warm
-- Use natural speech with occasional "um," "well," "actually"  
-- Show genuine interest in their answers
-- Ask follow-ups based on what they say
-- Keep responses concise
+RULES:
+- Only output what you say - no quotes, labels, or descriptions
+- Maximum 2 sentences per response
+- Sound natural and conversational
+- Show interest in their answers
+
+START: Say hello, ask "can you hear me clearly?"
+"""        
 
 
-START: Greet them with audio check, then ask your first question about their interest in this role.
-
-Remember: Output only what should be converted to speech - nothing else.
-
-
-"""
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
@@ -534,6 +520,14 @@ Remember: Output only what should be converted to speech - nothing else.
 
 def contact_view(request):
     return render(request, 'jobapp/contact.html')
+
+
+
+# testimonials
+
+def testimonials_view(request):
+    return render(request, 'jobapp/testimonials.html')
+
 
 
 

@@ -34,6 +34,10 @@ urlpatterns = [
     
     # contact 
     path('contact/', views.contact_view, name='contact'),
+    
+    # testimonials 
+    path('testimonials/', views.testimonials_view, name='testimonials'),
+    
     # debugging
     path('debug/', views.debug_db, name='debug'),
 ]

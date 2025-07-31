@@ -467,7 +467,7 @@ RULES:
 - Sound natural and conversational
 - Show interest in their answers
 
-START: Say hello, ask "can you hear me clearly?"
+START: Say hello, ask "can you hear me clearly?" then ask why they want this role.
 """        
 
 

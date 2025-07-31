@@ -69,9 +69,11 @@ Remember: You're having a friendly professional conversation, not giving speeche
                     "content": prompt
                 }
             ],
-            temperature=0.7,  # Slightly higher for more natural responses
-            max_tokens=150,   # Reduced to encourage shorter responses
-            stream=False
+            temperature=0.7,
+            max_tokens=250,  # Sweet spot for interview responses
+            stream=False,
+            stop=["\n\n", "Candidate:", "You:"]  # Stop at natural conversation breaks
+
         )
     except Exception as e:
         raise Exception(f"NVIDIA API call failed: {str(e)}")

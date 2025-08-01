@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
     <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
-    {% comment %} <link rel="stylesheet" href="fonts/icomoon/style.css">
-    <link rel="stylesheet" href="fonts/line-icons/style.css"> {% endcomment %}
+    <link rel="stylesheet" href="fonts/icomoon/style.css">
+    <link rel="stylesheet" href="fonts/line-icons/style.css"> 
     <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
@@ -37,18 +37,7 @@
       color: white;
       text-decoration: underline;
     }
-    .navbar {
-      padding: 10px 20px;
-      fixed: top;
-    }
-
-
-    .navbar.transparent {
-      background-color: transparent !important;
-
-      {% comment %} background-color: rgba(0, 0, 0, 0.4) !important; {% endcomment %}
-      {% comment %} backdrop-filter: blur(5px); {% endcomment %}
-    }
+    
 
     .hero {
       background: url("{% static 'images/hero_1.jpg' %}") no-repeat center center/cover;
@@ -92,71 +81,67 @@
   </style>  
   </head>
   <body id="top">
-{% comment %} 
-  <div id="overlayer"></div>
-  <div class="loader">
-    <div class="spinner-border text-primary" role="status">
-      <span class="sr-only">Loading...</span>
-    </div>
-  </div> {% endcomment %}
+    <div class="site-wrap">
+
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close mt-3">
+          <span class="icon-close2 js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div> <!-- .site-mobile-menu -->
     
 
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
 
-    
-<nav class="navbar navbar-expand-xl navbar-dark bg-transparent fixed-top py-3">
-  <div class="container">
-    <div class="row w-100 align-items-center">
-      <!-- Left: Logo -->
-      <div class="col-3">
-        <a class="navbar-brand fw-bold text-white" href="{% url 'home' %}">JOBBOARD</a>
-      </div>
-
-      <!-- Center: Navigation Links -->
-      <div class="col-6 d-none d-xl-block">
-        <ul class="navbar-nav justify-content-center d-flex gap-3">
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'home' %}">Home</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="#">About</a></li>
-
-          <!-- Dropdown: Job Listings -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Job Listings</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
-              <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  
+                  
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  
+                </ul>
+              </li>
+              
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
             </ul>
-          </li>
+          </nav>
+          
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
+          </div>
 
-          <!-- Dropdown: Pages -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Pages</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Blog</a></li>
-              <li><a class="dropdown-item" href="#">Testimonials</a></li>
-              <li><a class="dropdown-item" href="#">FAQ</a></li>
-            </ul>
-          </li>
-
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'contact' %}">Contact</a></li>
-        </ul>
+        </div>
       </div>
-
-      <!-- Right: CTA Buttons -->
-      <div class="col-3 d-none d-xl-flex justify-content-end">
-        <a href="{% url 'post_job' %}" class="btn btn-outline-light me-2"><span class="me-1">+</span> Post Job</a>
-        <a href="{% url 'login' %}" class="btn btn-success"><span class="me-1">🔐</span> Log In</a>
-      </div>
-
-      <!-- Mobile: Toggler -->
-      <div class="col-9 d-xl-none text-end">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMobile">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-    </div>
+    </header>
 
 
-  </div>
-</nav>
 
 
 <!-- HOME -->

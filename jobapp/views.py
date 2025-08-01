@@ -67,22 +67,7 @@ def register_view(request):
     
     
     
-# def login_view(request):
-#     if request.method == 'POST':
-#         form = LoginForm(request.POST)
-#         if form.is_valid():
-#             username = form.cleaned_data.get('username')
-#             password = form.cleaned_data.get('password')
-#             user = authenticate(request, username=username, password=password)
-#             if user:
-#                 login(request, user)
-#                 return redirect('Profile_update')
-#             else:
-#                 form.add_error(None, 'invalid credentials')
-                
-#     else:
-#         form = LoginForm()
-#     return render(request, 'registration/login.html', {'form': form})  
+
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -126,22 +111,7 @@ def update_profile(request):
     return render(request, 'jobapp/profile_update.html', {'form': form})    
 
 
-# @login_required
-# def post_job(request):
-#     if not request.user.is_recruiter:
-#         return render(request, 'jobapp/post_job.html')  # Better UX
-    
-#     if request.method == 'POST':
-#         form = JobForm(request.POST)
-#         if form.is_valid:
-#             job = form.save(commit=False)
-#             job.posted_by = request.user
-#             job.save()
-#             return redirect('job_list')   # redirect to job listings
-#     else:
-#         form = JobForm()
-        
-#     return render(request, 'jobapp/post_job.html', {'form': form})   
+  
 @login_required
 def post_job(request):
     if not request.user.is_recruiter:
@@ -161,7 +131,7 @@ def post_job(request):
     
     return render(request, 'jobapp/post_job.html', {'form': form})
 
-
+# Job List view
 def job_list(request):
     search_query = request.GET.get('search', '')
     if search_query:
@@ -181,9 +151,7 @@ def job_list(request):
 
 
 
-# def job_detail(request, job_id):
-#     job = get_object_or_404(Job, id=job_id)
-#     return render(request, 'jobapp/job_detail.html', {'job': job})
+# Job Detail view
 def job_detail(request, job_id):
     job = get_object_or_404(Job, id=job_id)
     
@@ -289,7 +257,7 @@ def recruiter_dashboard(request):
     })
 
 
-
+# schedule interview view for recruiter only
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def schedule_interview(request, job_id, applicant_id):
@@ -324,7 +292,7 @@ def schedule_interview(request, job_id, applicant_id):
 
 
 
-        
+# interview starting view      
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
@@ -527,6 +495,23 @@ def contact_view(request):
 
 def testimonials_view(request):
     return render(request, 'jobapp/testimonials.html')
+
+
+
+# About View
+def about_view(request):
+    return render(request, 'jobapp/about.html')
+
+
+
+# FAQ view
+def faq_view(request):
+    return render(request, 'jobapp/faq.html')
+
+
+# Blog
+def blog_view(request):
+    return render(request, 'jobapp/blog.html')
 
 
 

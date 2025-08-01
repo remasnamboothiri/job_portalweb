@@ -4,9 +4,561 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post A Job</title>
+
+  <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
+  <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
+  <link rel="stylesheet" href="fonts/icomoon/style.css">
+  <link rel="stylesheet" href="fonts/line-icons/style.css"> 
+  <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  
+  <style>
+    .hero-section {
+      background-image: url('{% static 'images/hero_1.jpg' %}');
+      background-size: cover;
+      background-position: center;
+    }
+    
+    .post-job-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    .post-job-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .post-job-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .post-job-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .btn-preview {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      color: #6c757d;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-preview:hover {
+      background: #e9ecef;
+      border-color: #adb5bd;
+      color: #495057;
+      text-decoration: none;
+    }
+    
+    .btn-save {
+      background: #89c442;
+      border: 2px solid #89c442;
+      color: white;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-save:hover {
+      background: #7ab839;
+      border-color: #7ab839;
+      transform: translateY(-2px);
+    }
+    
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 40px;
+      margin-bottom: 30px;
+    }
+    
+    .form-section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f1f3f4;
+    }
+    
+    .form-group {
+      margin-bottom: 25px;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      background: #fafbfc;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: #89c442;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(137, 196, 66, 0.1);
+    }
+    
+    .form-select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #fafbfc;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .form-select:focus {
+      outline: none;
+      border-color: #89c442;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(137, 196, 66, 0.1);
+    }
+    
+    .file-upload-area {
+      border: 2px dashed #89c442;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #f8fdf5;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .file-upload-area:hover {
+      background: #f0fbea;
+      border-color: #7ab839;
+    }
+    
+    .file-upload-icon {
+      font-size: 48px;
+      color: #89c442;
+      margin-bottom: 15px;
+    }
+    
+    .file-upload-text {
+      color: #6c757d;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    
+    .file-upload-browse {
+      color: #89c442;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    
+    .file-upload-input {
+      display: none;
+    }
+    
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+    
+    @media (max-width: 768px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+      
+      .post-job-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .btn-preview,
+      .btn-save {
+        text-align: center;
+        justify-content: center;
+      }
+      
+      .form-card {
+        padding: 25px;
+      }
+      
+      .post-job-header h1 {
+        font-size: 2rem;
+      }
+    }
+
+    .footer {
+      background: #343a40;
+      color: white;
+      padding: 40px 0 20px;
+    }
+
+    .footer a {
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+    
+
+  </style>
+</head>
+<body class="bg-gray-50">
+
+
+  <div class="site-wrap">
+
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close mt-3">
+          <span class="icon-close2 js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div> <!-- .site-mobile-menu -->
+    
+
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
+
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  
+                  
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  
+                </ul>
+              </li>
+              
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
+            </ul>
+          </nav>
+          
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-7">
+            <h1 class="text-white font-weight-bold">Apply Job</h1>
+            <div class="custom-breadcrumbs">
+              <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
+              <span class="text-white"><strong>Apply Job</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+ 
+
+    <!-- POST JOB FORM -->
+    <div class="post-job-container">
+      {% comment %} <!-- Header -->
+      <div class="post-job-header">
+        <h1>Apply Job</h1>
+      </div> {% endcomment %}
+
+      {% comment %} <!-- Action Buttons -->
+      <div class="post-job-actions">
+        <a href="#" class="btn-preview">
+          <i class="fas fa-eye"></i> Preview
+        </a>
+        <button type="submit" form="post-job-form" class="btn-save">
+          Save Job
+        </button>
+      </div> {% endcomment %}
+
+      <!-- Form -->
+      <form id="post-job-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-card">
+          <h2 class="form-section-title">Apply Job</h2>
+          
+          <!-- Featured Image Upload -->
+          <div class="form-group">
+            <label class="form-label">Upload Resume</label>
+            <div class="file-upload-area" onclick="document.getElementById('featured-image').click()">
+              <div class="file-upload-icon">📁</div>
+              <div class="file-upload-text">
+                <span class="file-upload-browse">Browse File</span>
+              </div>
+              <input type="file" id="featured-image" name="featured_image" class="file-upload-input" accept="image/*">
+            </div>
+          </div>
+
+          {% comment %} <!-- Email -->
+          <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control" placeholder="you@yourdomain.com" required>
+          </div> {% endcomment %}
+
+          <!-- Job Title -->
+          {% comment %} <div class="form-group">
+            <label for="job_title" class="form-label">Job Title</label>
+            <input type="text" id="job_title" name="job_title" class="form-control" placeholder="Product Designer" required>
+          </div> {% endcomment %}
+
+          {% comment %} <!-- Location and Job Region in two columns -->
+          <div class="two-column">
+            <div class="form-group">
+              <label for="location" class="form-label">Location</label>
+              <input type="text" id="location" name="location" class="form-control" placeholder="e.g. New York" required>
+            </div> {% endcomment %}
+
+            {% comment %} <div class="form-group">
+              <label for="job_region" class="form-label">Job Region</label>
+              <select id="job_region" name="job_region" class="form-select" required>
+                <option value="">Select Region</option>
+                <option value="north-america">North America</option>
+                <option value="europe">Europe</option>
+                <option value="asia">Asia</option>
+                <option value="africa">Africa</option>
+                <option value="south-america">South America</option>
+                <option value="oceania">Oceania</option>
+              </select>
+            </div>
+          </div> {% endcomment %}
+
+          {% comment %} <!-- Job Type and Experience Level in two columns -->
+          <div class="two-column">
+            <div class="form-group">
+              <label for="job_type" class="form-label">Job Type</label>
+              <select id="job_type" name="job_type" class="form-select" required>
+                <option value="">Select Job Type</option>
+                <option value="full-time">Full Time</option>
+                <option value="part-time">Part Time</option>
+                <option value="contract">Contract</option>
+                <option value="freelance">Freelance</option>
+                <option value="internship">Internship</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="experience_level" class="form-label">Experience Level</label>
+              <select id="experience_level" name="experience_level" class="form-select" required>
+                <option value="">Select Experience Level</option>
+                <option value="entry">Entry Level</option>
+                <option value="mid">Mid Level</option>
+                <option value="senior">Senior Level</option>
+                <option value="executive">Executive</option>
+              </select>
+            </div>
+          </div> {% endcomment %}
+
+          {% comment %} <!-- Salary Range in two columns -->
+          <div class="two-column">
+            <div class="form-group">
+              <label for="salary_min" class="form-label">Minimum Salary</label>
+              <input type="number" id="salary_min" name="salary_min" class="form-control" placeholder="50000">
+            </div>
+
+            <div class="form-group">
+              <label for="salary_max" class="form-label">Maximum Salary</label>
+              <input type="number" id="salary_max" name="salary_max" class="form-control" placeholder="80000">
+            </div>
+          </div>
+
+          <!-- Company Name -->
+          <div class="form-group">
+            <label for="company_name" class="form-label">Company Name</label>
+            <input type="text" id="company_name" name="company_name" class="form-control" placeholder="Your Company Name" required>
+          </div>
+
+          <!-- Job Description -->
+          <div class="form-group">
+            <label for="job_description" class="form-label">Job Description</label>
+            <textarea id="job_description" name="job_description" class="form-control" rows="6" placeholder="Describe the job role, responsibilities, and requirements..." required></textarea>
+          </div>
+
+          <!-- Requirements -->
+          <div class="form-group">
+            <label for="requirements" class="form-label">Requirements</label>
+            <textarea id="requirements" name="requirements" class="form-control" rows="4" placeholder="List the key requirements and qualifications..." required></textarea>
+          </div>
+
+          <!-- Benefits -->
+          <div class="form-group">
+            <label for="benefits" class="form-label">Benefits (Optional)</label>
+            <textarea id="benefits" name="benefits" class="form-control" rows="3" placeholder="Health insurance, remote work, flexible hours..."></textarea>
+          </div>
+
+          <!-- Application Deadline -->
+          <div class="form-group">
+            <label for="application_deadline" class="form-label">Application Deadline</label>
+            <input type="date" id="application_deadline" name="application_deadline" class="form-control">
+          </div>
+        </div>
+      </form>
+    </div> {% endcomment %}
+
+    {% comment %} </div> {% endcomment %}
+ <!-- ✅ Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4">
+          <h5>JobPortal</h5>
+          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+        </div>
+        <div class="col-md-4">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'job_list' %}">Jobs</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h6>Contact</h6>
+          <p>Email: support@jobportal.com</p>
+          <p>Phone: +91-9876543210</p>
+          <p>Kochi, Kerala</p>
+        </div>
+      </div>
+      <div class="text-center pt-3 border-top">
+        <p>&copy; 2025 JobPortal. All rights reserved.</p>
+      </div>
+    </div>
+  </footer> 
+
+
+    <!-- SCRIPTS -->
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/isotope.pkgd.min.js' %}"></script>
+    <script src="{% static 'js/stickyfill.min.js' %}"></script>
+    <script src="{% static 'js/jquery.fancybox.min.js' %}"></script>
+    <script src="{% static 'js/jquery.easing.1.3.js' %}"></script>
+    <script src="{% static 'js/jquery.waypoints.min.js' %}"></script>
+    <script src="{% static 'js/jquery.animateNumber.min.js' %}"></script>
+    <script src="{% static 'js/owl.carousel.min.js' %}"></script>
+    <script src="{% static 'js/quill.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap-select.min.js' %}"></script>
+    <script src="{% static 'js/custom.js' %}"></script>
+
+    <script>
+      // File upload interaction
+      document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('featured-image');
+        const fileUploadArea = document.querySelector('.file-upload-area');
+        
+        fileInput.addEventListener('change', function() {
+          if (this.files && this.files[0]) {
+            const fileName = this.files[0].name;
+            fileUploadArea.innerHTML = `
+              <div class="file-upload-icon">✓</div>
+              <div class="file-upload-text">
+                <strong>${fileName}</strong><br>
+                <span class="file-upload-browse">Change file</span>
+              </div>
+            `;
+          }
+        });
+      });
+    </script>
+  
+</body>
+</html>
+
+
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apply for {{ job.title }}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+
+
+
+    <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
+    <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
+    <link rel="stylesheet" href="fonts/icomoon/style.css">
+    <link rel="stylesheet" href="fonts/line-icons/style.css"> 
+    <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
+    
+
+    <!-- MAIN CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  
   <style>
     .hero-section {
       background-image: url('{% static 'images/hero_1.jpg' %}');
@@ -22,139 +574,102 @@
     .file-input-label:hover {
       background-color: #f3f4f6;
     }
+
+     .footer {
+      background: #343a40;
+      color: white;
+      padding: 40px 0 20px;
+    }
+
+    .footer a {
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
     
   </style>
 </head>
 <body class="bg-gray-50">
-  <!-- Navigation -->
-  <nav class="bg-gray-900 text-white fixed w-full z-50 shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16 items-center">
-        <!-- Logo -->
-        <div class="flex-shrink-0 flex items-center">
-          <a href="{% url 'home' %}" class="text-xl font-bold text-white">JOBBOARD</a>
-        </div>
+  <div class="site-wrap">
 
-        <!-- Desktop Navigation -->
-        <div class="hidden md:flex items-center space-x-8">
-          <div class="flex space-x-8">
-            <a href="{% url 'home' %}" class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium">Home</a>
-            <a href="#" class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium">About</a>
-            
-            <!-- Job Listings Dropdown -->
-            <div class="relative group">
-              <button class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium flex items-center">
-                Job Listings
-                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                <a href="{% url 'job_list' %}" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">Job Listings</a>
-                <a href="{% url 'post_job' %}" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">Post a Job</a>
-              </div>
-            </div>
-            
-            <!-- Pages Dropdown -->
-            <div class="relative group">
-              <button class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium flex items-center">
-                Pages
-                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">Blog</a>
-                <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">Testimonials</a>
-                <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">FAQ</a>
-              </div>
-            </div>
-            
-            <a href="{% url 'contact' %}" class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium">Contact</a>
-          </div>
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close mt-3">
+          <span class="icon-close2 js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div> <!-- .site-mobile-menu -->
+    
+
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
+
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  
+                  
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  
+                </ul>
+              </li>
+              
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
+            </ul>
+          </nav>
           
-          <div class="ml-8 flex items-center space-x-4">
-            <a href="{% url 'post_job' %}" class="px-4 py-2 border border-white text-white rounded-md hover:bg-white hover:text-gray-900 transition duration-300">
-              <i class="fas fa-plus mr-1"></i> Post Job
-            </a>
-            <a href="{% url 'login' %}" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">
-              <i class="fas fa-lock mr-1"></i> Log In
-            </a>
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
           </div>
-        </div>
 
-        <!-- Mobile menu button -->
-        <div class="md:hidden flex items-center">
-          <button type="button" class="text-white hover:text-gray-300 focus:outline-none" aria-controls="mobile-menu" aria-expanded="false">
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
         </div>
       </div>
-    </div>
+    </header>
 
-    <!-- Mobile menu -->
-    <div class="md:hidden hidden" id="mobile-menu">
-      <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800">
-        <a href="{% url 'home' %}" class="block px-3 py-2 text-white hover:bg-gray-700 rounded-md">Home</a>
-        <a href="#" class="block px-3 py-2 text-white hover:bg-gray-700 rounded-md">About</a>
-        
-        <div>
-          <button class="w-full flex justify-between items-center px-3 py-2 text-white hover:bg-gray-700 rounded-md">
-            Job Listings
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </button>
-          <div class="pl-4">
-            <a href="{% url 'job_list' %}" class="block px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md">Job Listings</a>
-            <a href="{% url 'post_job' %}" class="block px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md">Post a Job</a>
+    <!-- HOME -->
+    <section class="section-hero overlay inner-page bg-image" style="background-image: url({% static 'images/hero_1.jpg' %});" id="home-section">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-7">
+            <h1 class="text-white font-weight-bold">About Us</h1>
+            <div class="custom-breadcrumbs">
+              <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
+              <span class="text-white"><strong>About Us</strong></span>
+            </div>
           </div>
         </div>
-        
-        <div>
-          <button class="w-full flex justify-between items-center px-3 py-2 text-white hover:bg-gray-700 rounded-md">
-            Pages
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </button>
-          <div class="pl-4">
-            <a href="#" class="block px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md">Blog</a>
-            <a href="#" class="block px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md">Testimonials</a>
-            <a href="#" class="block px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md">FAQ</a>
-          </div>
-        </div>
-        
-        <a href="{% url 'contact' %}" class="block px-3 py-2 text-white hover:bg-gray-700 rounded-md">Contact</a>
-        
-        <div class="pt-4 border-t border-gray-700">
-          <a href="{% url 'post_job' %}" class="block px-3 py-2 text-center text-white bg-blue-600 rounded-md hover:bg-blue-700 mb-2">
-            <i class="fas fa-plus mr-1"></i> Post Job
-          </a>
-          <a href="{% url 'login' %}" class="block px-3 py-2 text-center text-white bg-green-600 rounded-md hover:bg-green-700">
-            <i class="fas fa-lock mr-1"></i> Log In
-          </a>
-        </div>
       </div>
-    </div>
-  </nav>
+    </section>
 
-  <!-- Hero Section -->
-  <section class="hero-section pt-32 pb-20 md:pt-40 md:pb-28 relative">
-    <div class="absolute inset-0 bg-black opacity-50"></div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-      <div class="text-white">
-        <h1 class="text-3xl md:text-4xl font-bold mb-4">{{ profile.full_name }} | Dashboard</h1>
-        <div class="flex items-center text-sm">
-          <a href="{% url 'home' %}" class="text-blue-300 hover:text-blue-200">Home</a>
-          <span class="mx-2">/</span>
-          <span class="text-white font-medium">Candidate Dashboard</span>
-        </div>
-      </div>
-    </div>
-  </section>
+ 
 
   <!-- Application Form -->
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -317,202 +832,7 @@
     </div>
   </footer>
 
-  <!-- Mobile Menu Script -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const mobileMenuButton = document.querySelector('[aria-controls="mobile-menu"]');
-      const mobileMenu = document.getElementById('mobile-menu');
-      
-      mobileMenuButton.addEventListener('click', function() {
-        const expanded = this.getAttribute('aria-expanded') === 'true';
-        this.setAttribute('aria-expanded', !expanded);
-        mobileMenu.classList.toggle('hidden');
-      });
-    });
-  </script>
-</body>
-</html>
-
-
-
-
-
-
-{% comment %} {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Apply for {{ job.title }}</title>
-
-    <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  
-   <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
-    <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
-   
-    <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
-
-     <!-- MAIN CSS -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}"> 
-
-  <style>
-       .footer {
-      background: #343a40;
-      color: white;
-      padding: 40px 0 20px;
-    }
-
-    .footer a {
-      color: #ccc;
-      text-decoration: none;
-    }
-
-    .footer a:hover {
-      color: white;
-      text-decoration: underline;
-    }
-    .navbar {
-      padding: 10px 20px;
-      fixed: top;
-    }
-
-
-    .navbar.transparent {
-      background-color: transparent !important;
-
-      
-    }
-  </style>
-
-
-</head>
-<body>
-  <nav class="navbar navbar-expand-xl navbar-dark bg-transparent fixed-top py-3">
-  <div class="container">
-    <div class="row w-100 align-items-center">
-      <!-- Left: Logo -->
-      <div class="col-3">
-        <a class="navbar-brand fw-bold text-white" href="{% url 'home' %}">JOBBOARD</a>
-      </div>
-
-      <!-- Center: Navigation Links -->
-      <div class="col-6 d-none d-xl-block">
-        <ul class="navbar-nav justify-content-center d-flex gap-3">
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'home' %}">Home</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="#">About</a></li>
-
-          <!-- Dropdown: Job Listings -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Job Listings</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
-              <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
-            </ul>
-          </li>
-
-          <!-- Dropdown: Pages -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Pages</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Blog</a></li>
-              <li><a class="dropdown-item" href="#">Testimonials</a></li>
-              <li><a class="dropdown-item" href="#">FAQ</a></li>
-            </ul>
-          </li>
-
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'contact' %}">Contact</a></li>
-        </ul>
-      </div>
-
-      <!-- Right: CTA Buttons -->
-      <div class="col-3 d-none d-xl-flex justify-content-end">
-        <a href="{% url 'post_job' %}" class="btn btn-outline-light me-2"><span class="me-1">+</span> Post Job</a>
-        <a href="{% url 'login' %}" class="btn btn-success"><span class="me-1">🔐</span> Log In</a>
-      </div>
-
-      <!-- Mobile: Toggler -->
-      <div class="col-9 d-xl-none text-end">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMobile">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-    </div>
-
-
-  </div>
-</nav>
-
-
-
-    <!-- HOME -->
-    <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-7">
-            <h1 class="text-white font-weight-bold">{{ profile.full_name }} | Dshboard</h1>
-            <div class="custom-breadcrumbs">
-              <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
-              <span class="text-white"><strong>Candidate Dashboard</strong></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-  <div class="container">
-    <h2>Apply for {{ job.title }}</h2>
-
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Submit Application</button>
-
-
-    </form>
-
-    <br>
-    <a href="{% url 'job_detail' job.id %}">← Back to Job Detail</a>
-  </div>
-
-    <!-- ✅ Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-4">
-          <h5>JobPortal</h5>
-          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
-        </div>
-        <div class="col-md-4">
-          <h6>Quick Links</h6>
-          <ul class="list-unstyled">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'job_list' %}">Jobs</a></li>
-            <li><a href="{% url 'register' %}">Register</a></li>
-            <li><a href="{% url 'login' %}">Login</a></li>
-          </ul>
-        </div>
-        <div class="col-md-4">
-          <h6>Contact</h6>
-          <p>Email: support@jobportal.com</p>
-          <p>Phone: +91-9876543210</p>
-          <p>Kochi, Kerala</p>
-        </div>
-      </div>
-      <div class="text-center pt-3 border-top">
-        <p>&copy; 2025 JobPortal. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-      <!-- SCRIPTS -->
+   <!-- SCRIPTS -->
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/isotope.pkgd.min.js' %}"></script>
@@ -529,8 +849,13 @@
     <script src="{% static 'js/bootstrap-select.min.js' %}"></script>
     
     <script src="{% static 'js/custom.js' %}"></script>
+   
+
+ 
 </body>
 </html>
+
+
 
 
 

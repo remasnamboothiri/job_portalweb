@@ -32,11 +32,22 @@ urlpatterns = [
     # path('interview/response/', views.ai_chat_response, name='ai_chat_response'),
     
     
+    
+    # About
+    path('about/', views.about_view, name='about'),
+    
+    
     # contact 
     path('contact/', views.contact_view, name='contact'),
     
     # testimonials 
     path('testimonials/', views.testimonials_view, name='testimonials'),
+    
+    # FAQ 
+    path('faq/', views.faq_view, name='faq'),
+    
+    # Blog
+    path('blog/', views.blog_view, name='blog'),
     
     # debugging
     path('debug/', views.debug_db, name='debug'),

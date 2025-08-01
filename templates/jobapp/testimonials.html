@@ -11,15 +11,15 @@
     <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
     <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
-    <link rel="stylesheet" href="{% static 'fonts/icomoon/style.css' %}">
-    <link rel="stylesheet" href="{% static 'fonts/line-icons/style.css' %}">
+    <link rel="stylesheet" href="fonts/icomoon/style.css">
+    <link rel="stylesheet" href="fonts/line-icons/style.css"> 
     <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
     
 
     <!-- MAIN CSS -->
-    <link rel="stylesheet" href="css/style.css">  
+    <link rel="stylesheet" href="{% static 'css/style.css' %}"> 
     
     
   <style>
@@ -48,160 +48,7 @@
       text-decoration: underline;
     }
 
-    /* Enhanced Testimonials Styling */
-    .testimonials-section {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      padding: 80px 0;
-    }
 
-    .testimonials-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-
-    .testimonials-header h2 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #343a40;
-      margin-bottom: 15px;
-    }
-
-    .testimonials-header p {
-      font-size: 1.1rem;
-      color: #6c757d;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    .block__87154 {
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-      height: 100%;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .block__87154:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-    }
-
-    .block__87154::before {
-      content: '"';
-      position: absolute;
-      top: 15px;
-      left: 25px;
-      font-size: 4rem;
-      color: #007bff;
-      opacity: 0.1;
-      font-family: serif;
-    }
-
-    .block__87154 blockquote {
-      border: none;
-      padding: 0;
-      margin: 0 0 25px 0;
-      position: relative;
-      z-index: 2;
-    }
-
-    .block__87154 blockquote p {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #495057;
-      font-style: italic;
-      margin: 0;
-    }
-
-    .block__91147 figure {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      overflow: hidden;
-      margin-right: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .block__91147 figure img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .block__91147 h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin: 0 0 5px 0;
-      color: #343a40;
-    }
-
-    .block__91147 .position {
-      font-size: 0.9rem;
-      color: #007bff;
-      font-weight: 500;
-    }
-
-    /* Featured testimonial styling */
-    .block__87154.bg-primary {
-      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
-      color: white;
-      border: none;
-    }
-
-    .block__87154.bg-primary::before {
-      color: rgba(255,255,255,0.2);
-    }
-
-    .block__87154.bg-primary blockquote p {
-      color: white;
-      font-size: 1.1rem;
-    }
-
-    .block__87154.bg-primary .position-2 {
-      color: rgba(255,255,255,0.8);
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .testimonials-header h2 {
-        font-size: 2rem;
-      }
-      
-      .block__87154 {
-        margin-bottom: 30px;
-      }
-      
-      .testimonials-section {
-        padding: 60px 0;
-      }
-    }
-
-    /* Animation for testimonials */
-    .testimonial-card {
-      opacity: 0;
-      transform: translateY(30px);
-      animation: fadeInUp 0.6s ease forwards;
-    }
-
-    .testimonial-card:nth-child(1) { animation-delay: 0.1s; }
-    .testimonial-card:nth-child(2) { animation-delay: 0.2s; }
-    .testimonial-card:nth-child(3) { animation-delay: 0.3s; }
-    .testimonial-card:nth-child(4) { animation-delay: 0.4s; }
-    .testimonial-card:nth-child(5) { animation-delay: 0.5s; }
-    .testimonial-card:nth-child(6) { animation-delay: 0.6s; }
-    .testimonial-card:nth-child(7) { animation-delay: 0.7s; }
-    .testimonial-card:nth-child(8) { animation-delay: 0.8s; }
-    .testimonial-card:nth-child(9) { animation-delay: 0.9s; }
-
-    @keyframes fadeInUp {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
   </style>  
   </head>
   <body id="top">
@@ -215,60 +62,56 @@
         </div>
       </div>
       <div class="site-mobile-menu-body"></div>
-    </div> <!-- .site-mobile-menu --> 
+    </div> <!-- .site-mobile-menu -->
+    
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-xl navbar-dark bg-transparent fixed-top py-3">
-  <div class="container">
-    <div class="row w-100 align-items-center">
-      <!-- Left: Logo -->
-      <div class="col-3">
-        <a class="navbar-brand fw-bold text-white" href="{% url 'home' %}">JOBBOARD</a>
-      </div>
-      <!-- Center: Navigation Links -->
-      <div class="col-6 d-none d-xl-block">
-        <ul class="navbar-nav justify-content-center d-flex gap-3">
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'home' %}">Home</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="#">About</a></li>
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
 
-          <!-- Dropdown: Job Listings -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Job Listings</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
-              <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  
+                  
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  
+                </ul>
+              </li>
+              
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
             </ul>
-          </li>
+          </nav>
+          
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
+          </div>
 
-          <!-- Dropdown: Pages -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">Pages</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Blog</a></li>
-              <li><a class="dropdown-item" href="{% url 'testimonials' %}">Testimonials</a></li>
-              <li><a class="dropdown-item" href="#">FAQ</a></li>
-            </ul>
-          </li>
-        
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'contact' %}">Contact</a></li>
-        </ul>
+        </div>
       </div>
-
-      <!-- Right: CTA Buttons -->
-      <div class="col-3 d-none d-xl-flex justify-content-end">
-        <a href="{% url 'register' %}" class="btn btn-outline-light me-2"><span class="me-1">+</span> Register</a>
-        <a href="{% url 'login' %}" class="btn btn-success"><span class="me-1">🔐</span> Log In</a>
-      </div>
-
-      <!-- Mobile: Toggler -->
-      <div class="col-9 d-xl-none text-end">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMobile">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-    </div>
-  </div>
-</nav>
+    </header>
 
     <!-- HOME -->
 <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
@@ -476,7 +319,7 @@
   
   </div>
 
-    <!-- SCRIPTS -->
+      <!-- SCRIPTS -->
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/isotope.pkgd.min.js' %}"></script>

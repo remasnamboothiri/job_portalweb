@@ -28,14 +28,7 @@
  
   
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      
-      
-      font-family: 'Segoe UI', sans-serif;
-      
-    }
+   
     
     .hero {
       background: url("{% static 'images/hero_1.jpg' %}") no-repeat center center/cover;
@@ -77,28 +70,7 @@
       margin-top: 30px;
     }
 
-    .stats {
-      background: #f8f9fa;
-      text-align: center;
-      padding: 50px 0;
-    }
-
-    .stat h3 {
-      font-size: 2rem;
-      color: #007bff;
-    }
-
-    .companies, .testimonials {
-      background: white;
-      padding: 50px 0;
-      text-align: center;
-    }
-
-    .company-logos img {
-      max-width: 120px;
-      margin: 15px;
-    }
-
+    
 
     .footer {
       background: #343a40;
@@ -117,7 +89,7 @@
     }
   </style>
 </head>
-<body>
+<body id="top">
 
   <div class="site-wrap">
 
@@ -198,40 +170,72 @@
     </div>
   </section> 
 
-  <!-- ✅ Job Stats -->
-   <section class="stats">
-    <div class="container">
-      <div class="row text-center">
-        <div class="col-md-4">
-          <h3>2500+</h3>
-          <p>Jobs Posted</p>
-        </div>
-        <div class="col-md-4">
-          <h3>800+</h3>
-          <p>Companies</p>
-        </div>
-        <div class="col-md-4">
-          <h3>1200+</h3>
-          <p>Applications</p>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ✅ Featured Companies -->
-  <section class="companies">
-    <div class="container">
-      <h2>Featured Companies</h2>
-      <div class="d-flex flex-wrap justify-content-center company-logos">
-        <img src="{% static 'images/company1.png' %}" alt="Company 1" class="img-fluid m-2" style="max-height: 100px;">
-        <img src="{% static 'images/company2.png' %}" alt="Company 2" class="img-fluid m-2" style="max-height: 100px;">
-        <img src="{% static 'images/company3.png' %}" alt="Company 3" class="img-fluid m-2" style="max-height: 100px;">
-        <img src="{% static 'images/company4.png' %}" alt="Company 4" class="img-fluid m-2" style="max-height: 100px;">
-        
+
+  <section class="py-5 bg-image overlay-primary fixed overlay" id="next" style="background-image: url('images/hero_1.jpg');">
+      <div class="container">
+        <div class="row mb-5 justify-content-center">
+          <div class="col-md-7 text-center">
+            <h2 class="section-title mb-2 text-white">JobBoard Site Stats</h2>
+            <p class="lead text-white">Lorem ipsum dolor sit amet consectetur adipisicing elit. Expedita unde officiis recusandae sequi excepturi corrupti.</p>
+          </div>
+        </div>
+        <div class="row pb-0 block__19738 section-counter">
+
+          <div class="col-6 col-md-6 col-lg-3 mb-5 mb-lg-0">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <strong class="number" data-number="1930">0</strong>
+            </div>
+            <span class="caption">Candidates</span>
+          </div>
+
+          <div class="col-6 col-md-6 col-lg-3 mb-5 mb-lg-0">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <strong class="number" data-number="54">0</strong>
+            </div>
+            <span class="caption">Jobs Posted</span>
+          </div>
+
+          <div class="col-6 col-md-6 col-lg-3 mb-5 mb-lg-0">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <strong class="number" data-number="120">0</strong>
+            </div>
+            <span class="caption">Jobs Filled</span>
+          </div>
+
+          <div class="col-6 col-md-6 col-lg-3 mb-5 mb-lg-0">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <strong class="number" data-number="550">0</strong>
+            </div>
+            <span class="caption">Companies</span>
+          </div>
+
+            
+        </div>
       </div>
-      
-    </div>
-  </section>
+    </section>
+
+
+
+
+
+
+
+      <section class="py-5 bg-image overlay-primary fixed overlay" style="background-image: url('images/hero_1.jpg');">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h2 class="text-white">Looking For A Job?</h2>
+            <p class="mb-0 text-white lead">Lorem ipsum dolor sit amet consectetur adipisicing elit tempora adipisci impedit.</p>
+          </div>
+          <div class="col-md-3 ml-auto">
+            <a href="#" class="btn btn-warning btn-block btn-lg">Sign Up</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
   <!-- 🌐 Company We've Helped Section -->
    <section class="site-section py-5">
     <div class="container">
@@ -278,45 +282,60 @@
 </section>
 
 <!-- ✅ Testimonial Section -->
-<section class="bg-light pt-5 testimony-full">
-  <div class="container">
-    <div class="owl-carousel single-carousel">
+        <section class="bg-light pt-5 testimony-full">
+        
+        <div class="owl-carousel single-carousel">
 
-      <!-- Testimonial 1 -->
-      <div class="item">
-        <div class="row">
-          <div class="col-lg-6 align-self-center text-center text-lg-left mb-4 mb-lg-0">
-            <blockquote>
-              <p class="mb-4">&ldquo;Soluta quasi cum delectus eum facilis recusandae nesciunt molestias accusantium libero dolores repellat id in dolorem laborum ad modi qui at quas dolorum voluptatem voluptatum repudiandae.&rdquo;</p>
-              <p><cite>&mdash; Corey Woods, @Dribbble</cite></p>
-            </blockquote>
+        
+          <div class="container">
+            <div class="row">
+              <div class="col-lg-6 align-self-center text-center text-lg-left">
+                <blockquote>
+                  <p>&ldquo;Soluta quasi cum delectus eum facilis recusandae nesciunt molestias accusantium libero dolores repellat id in dolorem laborum ad modi qui at quas dolorum voluptatem voluptatum repudiandae.&rdquo;</p>
+                  <p><cite> &mdash; Corey Woods, @Dribbble</cite></p>
+                </blockquote>
+              </div>
+              <div class="col-lg-6 align-self-end text-center text-lg-right">
+                <img src="{% static 'images/person_transparent_2.png' %}" alt="Image" class="img-fluid mb-0">
+              </div>
+            </div>
           </div>
-          <div class="col-lg-6 align-self-end text-center text-lg-right">
-            <img src="{% static 'images/person_transparent_2.png' %}" alt="Image" class="img-fluid" style="max-height: 350px;">
+
+          <div class="container">
+            <div class="row">
+              <div class="col-lg-6 align-self-center text-center text-lg-left">
+                <blockquote>
+                  <p>&ldquo;Soluta quasi cum delectus eum facilis recusandae nesciunt molestias accusantium libero dolores repellat id in dolorem laborum ad modi qui at quas dolorum voluptatem voluptatum repudiandae.&rdquo;</p>
+                  <p><cite> &mdash; Chris Peters, @Google</cite></p>
+                </blockquote>
+              </div>
+              <div class="col-lg-6 align-self-end text-center text-lg-right">
+                <img src="{% static 'images/person_transparent.png' %}" alt="Image" class="img-fluid mb-0">
+              </div>
+            </div>
+          </div>
+
+      </div>
+
+    </section>
+
+    <section class="pt-5 bg-image overlay-primary fixed overlay" style="background-image: url({% static 'images/hero_1.jpg' %});">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6 align-self-center text-center text-md-left mb-5 mb-md-0">
+            <h2 class="text-white">Get The Mobile Apps</h2>
+            <p class="mb-5 lead text-white">Lorem ipsum dolor sit amet consectetur adipisicing elit tempora adipisci impedit.</p>
+            <p class="mb-0">
+              <a href="#" class="btn btn-dark btn-md px-4 border-width-2"><span class="icon-apple mr-3"></span>App Store</a>
+              <a href="#" class="btn btn-dark btn-md px-4 border-width-2"><span class="icon-android mr-3"></span>Play Store</a>
+            </p>
+          </div>
+          <div class="col-md-6 ml-auto align-self-end">
+            <img src="{% static 'images/apps.png' %}" alt="Free Website Template by Free-Template.co" class="img-fluid">
           </div>
         </div>
       </div>
-
-      <!-- Testimonial 2 -->
-      <div class="item">
-        <div class="row">
-          <div class="col-lg-6 align-self-center text-center text-lg-left mb-4 mb-lg-0">
-            <blockquote>
-              <p class="mb-4">&ldquo;Soluta quasi cum delectus eum facilis recusandae nesciunt molestias accusantium libero dolores repellat id in dolorem laborum ad modi qui at quas dolorum voluptatem voluptatum repudiandae.&rdquo;</p>
-              <p><cite>&mdash; Chris Peters, @Google</cite></p>
-            </blockquote>
-          </div>
-          <div class="col-lg-6 align-self-end text-center text-lg-right">
-            <img src="{% static 'images/person_transparent.png' %}" alt="Image" class="img-fluid" style="max-height: 350px;">
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-
+    </section>
 
 
 
@@ -386,4 +405,4 @@
 
 
 
-
+ 

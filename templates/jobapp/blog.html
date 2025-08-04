@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
     <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
-    <link rel="stylesheet" href="fonts/icomoon/style.css">
-    <link rel="stylesheet" href="fonts/line-icons/style.css"> 
+    <link rel="stylesheet" href="{% static 'fonts/icomoon/style.css' %}">
+    <link rel="stylesheet" href="{% static 'fonts/line-icons/style.css' %}"> 
     <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
@@ -127,33 +127,33 @@
       <div class="container">
         <div class="row mb-5">
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_1.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">7 Factors for Choosing Between Two Jobs</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_1.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">7 Factors for Choosing Between Two Jobs</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_2.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">How to Write a Creative Cover Letter</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_2.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">How to Write a Creative Cover Letter</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_4.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">The Right Way to Quit a Job You Started</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_4.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">The Right Way to Quit a Job You Started</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_7.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">7 Factors for Choosing Between Two Jobs</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_7.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">7 Factors for Choosing Between Two Jobs</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_5.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">How to Write a Creative Cover Letter</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_5.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">How to Write a Creative Cover Letter</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
           <div class="col-md-6 col-lg-4 mb-5">
-            <a href="blog-single.html"><img src="{% static 'images/sq_img_6.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
-            <h3><a href="blog-single.html" class="text-black">The Right Way to Quit a Job You Started</a></h3>
+            <a href="{% url 'blog_single' %}"><img src="{% static 'images/sq_img_6.jpg' %}" alt="Image" class="img-fluid rounded mb-4"></a>
+            <h3><a href="{% url 'blog_single' %}" class="text-black">The Right Way to Quit a Job You Started</a></h3>
             <div>April 15, 2019 <span class="mx-2">|</span> <a href="#">2 Comments</a></div>
           </div>
         </div>

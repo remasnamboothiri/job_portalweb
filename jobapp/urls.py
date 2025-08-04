@@ -48,6 +48,8 @@ urlpatterns = [
     
     # Blog
     path('blog/', views.blog_view, name='blog'),
+    # blog_single
+    path('blog/single/', views.blog_single_view, name='blog_single'),
     
     # debugging
     path('debug/', views.debug_db, name='debug'),

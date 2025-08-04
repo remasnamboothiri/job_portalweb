@@ -515,6 +515,12 @@ def blog_view(request):
 
 
 
+# blog single
+def blog_single_view(request):
+    """Display single blog post"""
+    return render(request, 'jobapp/blog_single.html')
+
+
 
 
         

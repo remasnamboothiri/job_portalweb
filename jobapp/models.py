@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser , User
 from django.conf import settings
 from taggit.managers import TaggableManager
 
@@ -61,7 +61,10 @@ class Application(models.Model):
     def __str__(self):
         return f"{self.applicant.username} - {self.job.title}"
     
-    
+
+
+
+  
     
 class Interview(models.Model):
     id = models.AutoField(primary_key=True)

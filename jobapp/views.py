@@ -3,6 +3,7 @@ from django.contrib.auth import login, authenticate, logout
 from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
+from django.views.decorators.http import require_http_methods
 from django.http import HttpResponseForbidden , JsonResponse
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -15,6 +16,12 @@ import uuid
 import base64
 import tempfile
 from gtts import gTTS
+from django.utils import timezone
+from django.contrib import messages
+from django.http import JsonResponse
+from .tts import generate_tts
+import json
+from django.conf import settings
 
 
 #for Ai interview
@@ -169,7 +176,7 @@ def job_detail(request, job_id):
 
 
 #is loged in as a recruiter only 
-from django.contrib import messages
+
 
 
 def add_candidates(request, job_id):
@@ -287,12 +294,32 @@ def schedule_interview(request, job_id, applicant_id):
 
 
 
+# interview_ready function view
+def interview_ready(request, interview_uuid):
+    """
+    Display the interview ready page before starting the actual AI interview
+    """
+    try:
+        # Get the interview record
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+        # Check if the user is authorized (optional security check)
+        if hasattr(request.user, 'profile'):
+            if interview.candidate != request.user:
+                return HttpResponse('Unauthorized access to this interview.', status=403)
+        
+        return render(request, 'jobapp/interview_ready.html', {
+            'interview': interview,
+        })
+        
+    except Exception as e:
+        print(f"Interview Ready Error: {e}")
+        return HttpResponse(f'Interview ready page could not be loaded. Error: {str(e)}', status=500)
 
 
 
 
-
-# interview starting view      
+# interview starting view 
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
@@ -332,13 +359,24 @@ def start_interview_by_uuid(request, interview_uuid):
         }
         
         if request.method == "POST":
-            user_text = request.POST.get("text", "")
+            # Handle both AJAX and regular form submissions
+            try:
+                if request.content_type == 'application/json':
+                    data = json.loads(request.body)
+                    user_text = data.get("text") or data.get("message")
+                else:
+                    user_text = request.POST.get("text", "")
+            except:
+                user_text = request.POST.get("text", "")
             
             if not user_text.strip():
                 return JsonResponse({
                     'error': 'Please provide a response.',
-                    'response': 'I didn\'t receive your answer. Could you please respond?'
+                    'response': 'I didn\'t receive your answer. Could you please respond?',
+                    'audio': None
                 })
+            
+            print(f"🔵 User input: {user_text}")
             
             # Get context from session
             context = request.session.get('interview_context', {})
@@ -392,39 +430,28 @@ This was the final question.
                 print(f"AI API Error: {e}")
                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
-            # Generate audio (keeping your existing TTS logic)
-            audio_data = None
-            if ai_response and ai_response.strip():
-                try:
-                    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-                        temp_path = temp_file.name
-                    
-                    tts = gTTS(text=ai_response.strip(), lang='en', slow=False)
-                    tts.save(temp_path)
-                    
-                    if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
-                        with open(temp_path, 'rb') as audio_file:
-                            audio_content = audio_file.read()
-                            audio_base64 = base64.b64encode(audio_content).decode('utf-8')
-                            audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                    
-                    try:
-                        os.unlink(temp_path)
-                    except:
-                        pass
-                        
-                except Exception as e:
-                    print(f"TTS Error: {e}")
-
-            return JsonResponse({
-                'response': ai_response,
-                'audio': audio_data
-            })
+            print(f"🔵 AI Response: {ai_response}")
+            
+            # 🎯 USE YOUR EXISTING TTS SYSTEM HERE
+            print("🔵 Generating TTS...")
+            audio_path = generate_tts(ai_response)  # Use your existing TTS function
+            print(f"🔵 TTS result: {audio_path}")
+            
+            # Return JSON response for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'response': ai_response,
+                    'audio': audio_path,  # This will be the URL path like "/media/tts/filename.wav"
+                    'success': True
+                })
+            else:
+                return JsonResponse({
+                    'response': ai_response,
+                    'audio': audio_path
+                })
 
         # GET: Show interview UI with first question
         first_prompt = f"""
-        
-
 You are Alex interviewing {candidate_name} for {job_title} at {company_name}.
 
 Resume highlights: {resume_text[:300]}
@@ -437,8 +464,6 @@ RULES:
 
 START: Say hello, ask "can you hear me clearly?" then ask why they want this role.
 """        
-
-
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
@@ -446,39 +471,250 @@ START: Say hello, ask "can you hear me clearly?" then ask why they want this rol
             print(f"AI API Error on initial question: {e}")
             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
-        # Generate initial audio
-        audio_data = None
-        if ai_question and ai_question.strip():
-            try:
-                with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-                    temp_path = temp_file.name
-                
-                tts = gTTS(text=ai_question.strip(), lang='en', slow=False)
-                tts.save(temp_path)
-                
-                if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
-                    with open(temp_path, 'rb') as audio_file:
-                        audio_content = audio_file.read()
-                        audio_base64 = base64.b64encode(audio_content).decode('utf-8')
-                        audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                
-                try:
-                    os.unlink(temp_path)
-                except:
-                    pass
-                    
-            except Exception as e:
-                print(f"Initial TTS Error: {e}")
+        print(f"🔵 Initial AI Question: {ai_question}")
+        
+        # 🎯 USE YOUR EXISTING TTS SYSTEM FOR INITIAL QUESTION
+        print("🔵 Generating initial TTS...")
+        audio_path = generate_tts(ai_question)  # Use your existing TTS function
+        print(f"🔵 Initial TTS result: {audio_path}")
 
         return render(request, 'jobapp/interview_ai.html', {
             'interview': interview,
             'ai_question': ai_question,
-            'audio_url': audio_data
+            'audio_url': audio_path  # Pass the URL path to the template
         })
         
     except Exception as e:
         print(f"Interview Error: {e}")
         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
+    
+    
+    
+#for tts debugging   
+def test_media_debug(request):
+    """Debug media file serving"""
+    from django.conf import settings
+    import os
+    from .tts import generate_tts
+    from django.http import JsonResponse
+    
+    # Test TTS generation
+    test_text = "This is a test audio file."
+    audio_path = generate_tts(test_text)
+    
+    debug_info = {
+        'BASE_DIR': str(settings.BASE_DIR),
+        'MEDIA_ROOT': settings.MEDIA_ROOT,
+        'MEDIA_URL': settings.MEDIA_URL,
+        'DEBUG': settings.DEBUG,
+        'audio_path': audio_path,
+    }
+    
+    if audio_path:
+        # Check if file exists
+        full_file_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+        debug_info['full_file_path'] = full_file_path
+        debug_info['file_exists'] = os.path.exists(full_file_path)
+        
+        if os.path.exists(full_file_path):
+            debug_info['file_size'] = os.path.getsize(full_file_path)
+        
+        # List all files in media/tts directory
+        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
+        if os.path.exists(tts_dir):
+            debug_info['tts_files'] = os.listdir(tts_dir)
+        else:
+            debug_info['tts_files'] = 'Directory does not exist'
+    
+    return JsonResponse(debug_info, indent=2)
+    
+     
+# def start_interview_by_uuid(request, interview_uuid):
+#     try:
+#         # Get the interview record
+#         interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+#         candidate_name = interview.candidate.get_full_name() or "the candidate"
+#         job_title = interview.job.title or "Software Developer"
+        
+#         # Handle company name safely
+#         try:
+#             company_name = interview.job.company
+#         except AttributeError:
+#             company_name = "Our Company"
+        
+#         # Get resume file from candidate's profile with error handling
+#         profile = getattr(interview.candidate, 'profile', None)
+#         resume_file = profile.resume if profile and profile.resume else None
+
+#         if not resume_file:
+#             return HttpResponse("Resume file not found. Please upload your resume in your profile.", status=400)
+
+#         try:
+#             resume_text = extract_resume_text(resume_file)
+#         except Exception as e:
+#             resume_text = "Resume could not be processed."
+#             print(f"Resume extraction error: {e}")
+        
+#         # Store interview context in session for consistency
+#         request.session['interview_context'] = {
+#             'candidate_name': candidate_name,
+#             'job_title': job_title,
+#             'company_name': company_name,
+#             'resume_text': resume_text,
+#             'job_description': interview.job.description,
+#             'job_location': interview.job.location,
+#             'question_count': 0
+#         }
+        
+#         if request.method == "POST":
+#             user_text = request.POST.get("text", "")
+            
+#             if not user_text.strip():
+#                 return JsonResponse({
+#                     'error': 'Please provide a response.',
+#                     'response': 'I didn\'t receive your answer. Could you please respond?'
+#                 })
+            
+#             # Get context from session
+#             context = request.session.get('interview_context', {})
+#             question_count = context.get('question_count', 0) + 1
+            
+#             # Update question count
+#             context['question_count'] = question_count
+#             request.session['interview_context'] = context
+            
+#             # Create contextual prompt based on question number
+#             if question_count <= 8:
+#                 prompt = f"""
+# You are Alex, a friendly HR interviewer. Keep your responses natural and conversational.
+
+# CONTEXT:
+# - Candidate: {context.get('candidate_name', 'the candidate')}
+# - Position: {context.get('job_title')} at {context.get('company_name')}
+# - Job Description: {context.get('job_description', '')}
+# - Resume Summary: {context.get('resume_text', '')[:500]}...
+
+# The candidate just said: "{user_text}"
+
+# INSTRUCTIONS:
+# - Give a brief, natural acknowledgment of their answer (1 sentence max)
+# - Ask ONE follow-up question related to their response OR move to the next interview topic
+# - Keep it conversational - use "That's interesting," "I see," etc.
+# - Maximum 2-3 sentences total
+# - Don't give lengthy explanations or multiple questions
+
+# Current question #{question_count} of 8.
+# """
+#             else:
+#                 prompt = f"""
+# You are Alex, a friendly HR interviewer wrapping up the interview.
+
+# The candidate just said: "{user_text}"
+
+# INSTRUCTIONS:
+# - Briefly acknowledge their final answer
+# - Thank them for their time
+# - Let them know next steps will be communicated soon
+# - Keep it warm but concise (2-3 sentences max)
+# - End the interview naturally
+
+# This was the final question.
+# """
+            
+#             try:
+#                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+#             except Exception as e:
+#                 print(f"AI API Error: {e}")
+#                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
+            
+#             # Generate audio (keeping your existing TTS logic)
+#             audio_data = None
+#             if ai_response and ai_response.strip():
+#                 try:
+#                     with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+#                         temp_path = temp_file.name
+                    
+#                     tts = gTTS(text=ai_response.strip(), lang='en', slow=False)
+#                     tts.save(temp_path)
+                    
+#                     if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+#                         with open(temp_path, 'rb') as audio_file:
+#                             audio_content = audio_file.read()
+#                             audio_base64 = base64.b64encode(audio_content).decode('utf-8')
+#                             audio_data = f"data:audio/mpeg;base64,{audio_base64}"
+                    
+#                     try:
+#                         os.unlink(temp_path)
+#                     except:
+#                         pass
+                        
+#                 except Exception as e:
+#                     print(f"TTS Error: {e}")
+
+#             return JsonResponse({
+#                 'response': ai_response,
+#                 'audio': audio_data
+#             })
+
+#         # GET: Show interview UI with first question
+#         first_prompt = f"""
+        
+
+# You are Alex interviewing {candidate_name} for {job_title} at {company_name}.
+
+# Resume highlights: {resume_text[:300]}
+
+# RULES:
+# - Only output what you say - no quotes, labels, or descriptions
+# - Maximum 2 sentences per response
+# - Sound natural and conversational
+# - Show interest in their answers
+
+# START: Say hello, ask "can you hear me clearly?" then ask why they want this role.
+# """        
+
+
+        
+#         try:
+#             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
+#         except Exception as e:
+#             print(f"AI API Error on initial question: {e}")
+#             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+        
+#         # Generate initial audio
+#         audio_data = None
+#         if ai_question and ai_question.strip():
+#             try:
+#                 with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+#                     temp_path = temp_file.name
+                
+#                 tts = gTTS(text=ai_question.strip(), lang='en', slow=False)
+#                 tts.save(temp_path)
+                
+#                 if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+#                     with open(temp_path, 'rb') as audio_file:
+#                         audio_content = audio_file.read()
+#                         audio_base64 = base64.b64encode(audio_content).decode('utf-8')
+#                         audio_data = f"data:audio/mpeg;base64,{audio_base64}"
+                
+#                 try:
+#                     os.unlink(temp_path)
+#                 except:
+#                     pass
+                    
+#             except Exception as e:
+#                 print(f"Initial TTS Error: {e}")
+
+#         return render(request, 'jobapp/interview_ai.html', {
+#             'interview': interview,
+#             'ai_question': ai_question,
+#             'audio_url': audio_data
+#         })
+        
+#     except Exception as e:
+#         print(f"Interview Error: {e}")
+#         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
 
 
 
@@ -545,4 +781,52 @@ def debug_db(request):
            
         
         
+# for tts checking   
+def chat_view(request):
+    if request.method == "POST":
+        try:
+            # Handle both form data and JSON
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                user_input = data.get("message")
+            else:
+                user_input = request.POST.get("message")
+            
+            if not user_input:
+                return JsonResponse({"error": "No message provided"}, status=400)
+            
+            print(f"🔵 User input: {user_input}")
+            
+            # Your AI/chatbot logic here
+            response_text = f" {user_input}. "
+            
+            # Generate TTS audio
+            print("🔵 Generating TTS...")
+            audio_path = generate_tts(response_text)
+            print(f"🔵 TTS result: {audio_path}")
+            
+            # Return JSON for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if audio_path:
+                    print(f"✅ Returning audio path: {audio_path}")
+                else:
+                    print("❌ No audio path generated")
+                    
+                return JsonResponse({
+                    "response": response_text,
+                    "audio_path": audio_path,
+                    "success": True
+                })
+            
+            # Return template for regular requests
+            return render(request, "jobapp/chat.html", {
+                "response": response_text,
+                "audio_path": audio_path,
+                "user_input": user_input
+            })
+            
+        except Exception as e:
+            print(f"❌ Error in chat_view: {str(e)}")
+            return JsonResponse({"error": "Internal server error"}, status=500)
     
+    return render(request, "jobapp/chat.html")

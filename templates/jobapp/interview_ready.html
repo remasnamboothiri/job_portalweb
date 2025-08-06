@@ -1,0 +1,399 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Ready - {{ interview.job.title }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #eaecf6ff 0%, #ede9f2ff 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .interview-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .interview-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: white;
+        }
+        
+        .target-icon {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .target-icon::before {
+            content: '🎯';
+            font-size: 2rem;
+        }
+        
+        .interview-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .interview-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .details-section {
+            padding: 2rem;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .detail-item {
+            text-align: center;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .detail-value {
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .system-check {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .check-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: #333;
+        }
+        
+        .check-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .check-item:last-child {
+            border-bottom: none;
+        }
+        
+        .check-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #28a745;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .check-icon i {
+            color: white;
+            font-size: 0.8rem;
+        }
+        
+        .check-text {
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .tips-section {
+            background: #e3f2fd;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .tips-title {
+            color: #1976d2;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tips-title i {
+            margin-right: 0.5rem;
+        }
+        
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .tips-list li {
+            padding: 0.5rem 0;
+            color: #555;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        
+        .tips-list li::before {
+            content: '•';
+            color: #1976d2;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .action-buttons {
+            padding: 2rem;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        
+        .start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .secondary-buttons {
+            margin-top: 1rem;
+        }
+        
+        .secondary-btn {
+            background: transparent;
+            border: 2px solid #6c757d;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            color: #6c757d;
+            text-decoration: none;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .secondary-btn:hover {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .disclaimer {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .details-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .interview-title {
+                font-size: 2rem;
+            }
+            
+            .interview-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="interview-container">
+        <div class="interview-card">
+            <!-- Header Section -->
+            <div class="header-section">
+                <div class="target-icon"></div>
+                <h1 class="interview-title">Interview Ready!</h1>
+                <p class="interview-subtitle">Your AI interview has been configured and is ready to begin</p>
+            </div>
+            
+            <!-- Details Section -->
+            <div class="details-section">
+                <h3 class="text-center mb-4" style="color: #333; font-weight: 600;">Interview Details</h3>
+                
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Position</div>
+                        <div class="detail-value">{{ interview.job.title }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">15 minutes</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Questions</div>
+                        <div class="detail-value">8 questions</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Focus</div>
+                        <div class="detail-value">Technical Skills</div>
+                    </div>
+                </div>
+                
+                <!-- System Check -->
+                <div class="system-check">
+                    <h4 class="check-title">System Check</h4>
+                    
+                    <div class="check-item">
+                        <div class="check-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="check-text">Camera access granted</div>
+                    </div>
+                    
+                    <div class="check-item">
+                        <div class="check-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="check-text">Microphone access granted</div>
+                    </div>
+                    
+                    <div class="check-item">
+                        <div class="check-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="check-text">Internet connection stable</div>
+                    </div>
+                    
+                    <div class="check-item">
+                        <div class="check-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="check-text">AI interviewer ready</div>
+                    </div>
+                </div>
+                
+                <!-- Tips Section -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Before you begin:
+                    </div>
+                    <ul class="tips-list">
+                        <li>Ensure you're in a quiet, well-lit environment</li>
+                        <li>Look directly at the camera when speaking</li>
+                        <li>Speak clearly and at a normal pace</li>
+                        <li>You can take a moment to think before answering</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{% url 'start_interview' interview.uuid %}" class="start-btn">
+                    <i class="fas fa-rocket"></i> Start AI Interview
+                </a>
+                
+                <div class="secondary-buttons">
+                    <a href="#" class="secondary-btn" onclick="testCamera()">
+                        <i class="fas fa-video"></i> Test Camera
+                    </a>
+                    <a href="{% url 'jobseeker_dashboard' %}" class="secondary-btn">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </a>
+                </div>
+                
+                <div class="disclaimer">
+                    This interview will be recorded for evaluation purposes only
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Test camera function
+        function testCamera() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                    .then(function(stream) {
+                        alert('Camera and microphone are working properly!');
+                        // Stop the stream
+                        stream.getTracks().forEach(track => track.stop());
+                    })
+                    .catch(function(error) {
+                        alert('Error accessing camera/microphone: ' + error.message);
+                    });
+            } else {
+                alert('Your browser does not support camera access.');
+            }
+        }
+        
+        // Auto-check system requirements on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // This is just for demo - in real implementation you'd actually check these
+            console.log('System check completed');
+        });
+    </script>
+</body>
+</html>

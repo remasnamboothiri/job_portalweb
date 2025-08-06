@@ -27,9 +27,13 @@ urlpatterns = [
     # 📅 Interview scheduling
     path('schedule-interview/<int:job_id>/<int:applicant_id>/', views.schedule_interview, name='schedule_interview'),
     
+    
+    # interview ready page 
+    path('interview/ready/<uuid:interview_uuid>/', views.interview_ready, name='interview_ready'),
      # 🗣️ Interview Start + AI Response
     path('interview/start/<uuid:interview_uuid>/', views.start_interview_by_uuid, name='start_interview'),
-    # path('interview/response/', views.ai_chat_response, name='ai_chat_response'),
+    path('debug-media/', views.test_media_debug, name='debug_media'),
+   
     
     
     
@@ -53,4 +57,6 @@ urlpatterns = [
     
     # debugging
     path('debug/', views.debug_db, name='debug'),
+    
+    path('chat/', views.chat_view, name='chat'),
 ]

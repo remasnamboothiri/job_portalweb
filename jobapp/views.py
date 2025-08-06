@@ -19,7 +19,7 @@ from gtts import gTTS
 from django.utils import timezone
 from django.contrib import messages
 from django.http import JsonResponse
-from .tts import generate_tts
+from jobapp.tts import generate_tts
 import json
 from django.conf import settings
 

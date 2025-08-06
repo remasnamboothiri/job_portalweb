@@ -25,16 +25,12 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),  # ✅ allauth URLs
     path('api/', include('jobapp.api.urls')),   # 👈 separate for API
     
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
-# Serve media files in production
-if not settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Always serve media files (for both development and production)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+# Serve static files only in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
-    
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)   
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)   
     

@@ -19,7 +19,7 @@ def generate_tts(text):
 
 def generate_external_tts(text):
     """Try external TTS service"""
-    runpod_url = "https://5s3w9bfsqpf5qb-8000.proxy.runpod.net/docs/synthesize"
+    runpod_url = "https://5s3w9bfsqpf5qb-8000.proxy.runpod.net/synthesize"
     
     # ✅ CORRECT PAYLOAD FORMAT - Simple dictionary with text
     payload = {
@@ -186,7 +186,7 @@ def save_direct_audio(audio_content):
 #     Returns the relative path to the audio file or None if failed
 #     """
 #     # ✅ CORRECTED: Proper API endpoint (replace with your actual endpoint)
-#     runpod_url = "https://srfh84s8etlw5u-8000.proxy.runpod.net/synthesize"
+#     runpod_url = "https://5s3w9bfsqpf5qb-8000.proxy.runpod.net/synthesize"
 #     # OR it might be:
 #     # runpod_url = "https://srfh84s8etlw5u-8000.proxy.runpod.net/synthesize"
 #     # OR: runpod_url = "https://srfh84s8etlw5u-8000.proxy.runpod.net/tts"

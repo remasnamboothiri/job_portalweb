@@ -19,7 +19,7 @@ def generate_tts(text):
 
 def generate_external_tts(text):
     """Try external TTS service"""
-    runpod_url = "https://srfh84s8etlw5u-8000.proxy.runpod.net/synthesize"
+    runpod_url = "https://5s3w9bfsqpf5qb-8000.proxy.runpod.net/docs/synthesize"
     
     # ✅ CORRECT PAYLOAD FORMAT - Simple dictionary with text
     payload = {

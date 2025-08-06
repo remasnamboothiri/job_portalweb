@@ -432,10 +432,14 @@ This was the final question.
             
             print(f"🔵 AI Response: {ai_response}")
             
-            # 🎯 USE YOUR EXISTING TTS SYSTEM HERE
-            print("🔵 Generating TTS...")
-            audio_path = generate_tts(ai_response)  # Use your existing TTS function
-            print(f"🔵 TTS result: {audio_path}")
+            # Generate TTS for response
+            audio_path = None
+            try:
+                audio_path = generate_tts(ai_response)
+                print(f"Response TTS generated: {audio_path}")
+            except Exception as e:
+                print(f"TTS generation failed: {e}")
+                audio_path = None
             
             # Return JSON response for AJAX requests
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -473,10 +477,15 @@ START: Say hello, ask "can you hear me clearly?" then ask why they want this rol
         
         print(f"🔵 Initial AI Question: {ai_question}")
         
-        # 🎯 USE YOUR EXISTING TTS SYSTEM FOR INITIAL QUESTION
-        print("🔵 Generating initial TTS...")
-        audio_path = generate_tts(ai_question)  # Use your existing TTS function
-        print(f"🔵 Initial TTS result: {audio_path}")
+        # Generate initial TTS with fallback
+        audio_path = None
+        try:
+            audio_path = generate_tts(ai_question)
+            print(f"Initial TTS generated: {audio_path}")
+        except Exception as e:
+            print(f"TTS generation failed: {e}")
+            # Create a simple fallback
+            audio_path = None
 
         return render(request, 'jobapp/interview_ai.html', {
             'interview': interview,

@@ -5,9 +5,20 @@ from django.conf import settings
 
 def generate_tts(text):
     """
-    Generate TTS audio using ChatterboxTTS API
+    Generate TTS audio using ChatterboxTTS API with gTTS fallback
     Returns the relative path to the audio file or None if failed
     """
+    # Try external TTS first
+    result = generate_external_tts(text)
+    if result:
+        return result
+    
+    # Fallback to gTTS
+    print("🔄 External TTS failed, using gTTS fallback...")
+    return generate_gtts_fallback(text)
+
+def generate_external_tts(text):
+    """Try external TTS service"""
     runpod_url = "https://srfh84s8etlw5u-8000.proxy.runpod.net/synthesize"
     
     # ✅ CORRECT PAYLOAD FORMAT - Simple dictionary with text
@@ -85,7 +96,34 @@ def generate_tts(text):
         print("❌ TTS request timed out")
         return None
     except Exception as e:
-        print(f"❌ Exception in TTS: {str(e)}")
+        print(f"❌ Exception in external TTS: {str(e)}")
+        return None
+
+def generate_gtts_fallback(text):
+    """Fallback TTS using gTTS"""
+    try:
+        from gtts import gTTS
+        import tempfile
+        
+        print(f"🔄 Using gTTS fallback for: '{text}'")
+        
+        # Create unique filename
+        filename = f"tts_{uuid.uuid4().hex[:8]}.mp3"
+        
+        # Ensure media directory exists
+        media_dir = os.path.join(settings.BASE_DIR, "media", "tts")
+        os.makedirs(media_dir, exist_ok=True)
+        
+        # Generate TTS
+        tts = gTTS(text=text, lang='en', slow=False)
+        audio_path = os.path.join(media_dir, filename)
+        tts.save(audio_path)
+        
+        print(f"✅ gTTS fallback successful: {filename}")
+        return f"/media/tts/{filename}"
+        
+    except Exception as e:
+        print(f"❌ gTTS fallback failed: {e}")
         return None
 
 def download_and_save_audio(audio_url):

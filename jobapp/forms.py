@@ -22,14 +22,78 @@ class ProfileForm(forms.ModelForm):
         fields = ['full_name', 'contact', 'resume', 'profile_picture']  
         
 
+   
+
 class JobForm(forms.ModelForm):
-    
     class Meta:
         model = Job
-        fields = ['title', 'company', 'location', 'description' , 'featured_image']
+        fields = [
+            'featured_image', 'title', 'department', 'location', 
+            'employment_type', 'experience_level', 'salary_min', 
+            'salary_max', 'description', 'required_skills', 'status',
+            'enable_ai_interview', 'interview_duration', 'interview_question_count'
+        ]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 6}),
-        }          
+            'title': forms.TextInput(attrs={
+                'placeholder': 'e.g. Senior Frontend Developer',
+                'class': 'form-control'
+            }),
+            'location': forms.TextInput(attrs={
+                'placeholder': 'e.g. San Francisco, CA',
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 6,
+                'placeholder': 'Describe the role, responsibilities, and what you\'re looking for...',
+                'class': 'form-control'
+            }),
+            'required_skills': forms.TextInput(attrs={
+                'placeholder': 'React, JavaScript, TypeScript (comma separated)',
+                'class': 'form-control'
+            }),
+            'salary_min': forms.NumberInput(attrs={
+                'placeholder': '80000',
+                'class': 'form-control'
+            }),
+            'salary_max': forms.NumberInput(attrs={
+                'placeholder': '120000',
+                'class': 'form-control'
+            }),
+            'department': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'employment_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'experience_level': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'enable_ai_interview': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'interview_duration': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'interview_question_count': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+        }
+        labels = {
+            'title': 'Job Title',
+            'department': 'Department',
+            'location': 'Location',
+            'employment_type': 'Employment Type',
+            'experience_level': 'Experience Level',
+            'salary_min': 'Salary Min ($)',
+            'salary_max': 'Salary Max ($)',
+            'description': 'Job Description',
+            'required_skills': 'Required Skills',
+            'status': 'Job Status',
+            'enable_ai_interview': 'Enable AI Interview for this position',
+            'interview_duration': 'Default Duration',
+            'interview_question_count': 'Question Count',
+            'featured_image': 'Upload Featured Image',
+        }
         
 class ApplicationForm(forms.ModelForm):
     

@@ -209,9 +209,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
  #for development
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+if DEBUG:
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+        ]
 
 # STATIC_ROOT = BASE_DIR / 'staticfiles'  # For collectstatic
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -221,6 +222,12 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR , 'media')
+
+
+
+# Make sure these directories exist
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, 'tts'), exist_ok=True)
 
 # Also ensure you have this for file uploads
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB

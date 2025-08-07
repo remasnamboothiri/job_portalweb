@@ -27,26 +27,100 @@ class Profile(models.Model):
         return f"{self.user.username}'s Profile"
     
     
+
+DEPARTMENT_CHOICES = [
+    ('engineering', 'Engineering'),
+    ('marketing', 'Marketing'),
+    ('sales', 'Sales'),
+    ('hr', 'Human Resources'),
+    ('finance', 'Finance'),
+    ('operations', 'Operations'),
+    ('design', 'Design'),
+    ('product', 'Product'),
+    ('customer_support', 'Customer Support'),
+    ('other', 'Other'),
+]
+
+
+
+
+
+
+EMPLOYMENT_TYPE_CHOICES = [
+    ('full_time', 'Full Time'),
+    ('part_time', 'Part Time'),
+    ('contract', 'Contract'),
+    ('internship', 'Internship'),
+    ('freelance', 'Freelance'),
+]
+
+EXPERIENCE_LEVEL_CHOICES = [
+    ('entry', 'Entry Level'),
+    ('mid', 'Mid Level'),
+    ('senior', 'Senior Level'),
+    ('lead', 'Lead/Manager'),
+    ('executive', 'Executive'),
+]
+STATUS_CHOICES = [
+    ('draft', 'Draft'),
+    ('active', 'Active'),
+    ('paused', 'Paused'),
+    ('closed', 'Closed'),
+    ('expired', 'Expired'),
+    ('filled', 'Position Filled'),
+]
+
 class Job(models.Model):
+    # Basic Information
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
     location = models.CharField(max_length=200)
-    description = models.CharField(max_length=2000)
-    featured_image = models.ImageField(upload_to='job_images/', blank=True, null=True)  # Add this
+    description = models.TextField(max_length=2000)
+    featured_image = models.ImageField(upload_to='job_images/', blank=True, null=True)
+    
+    # New fields based on the images
+    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, default='other')
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVEL_CHOICES, default='mid')
+    salary_min = models.IntegerField(help_text="Minimum salary in your currency", default=50000)
+    salary_max = models.IntegerField(help_text="Maximum salary in your currency", default=80000)
+    required_skills = models.TextField(max_length=500, help_text="Comma separated skills", default='Not specified')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # AI Interview Settings
+    enable_ai_interview = models.BooleanField(default=False)
+    interview_duration = models.CharField(
+        max_length=20,
+        choices=[
+            ('15', '15 minutes'),
+            ('30', '30 minutes'),
+            ('45', '45 minutes'),
+            ('60', '60 minutes'),
+        ],
+        default='30',
+        blank=True,
+        null=True
+    )
+    interview_question_count = models.IntegerField(
+        choices=[
+            (5, '5 questions'),
+            (8, '8 questions'),
+            (10, '10 questions'),
+            (12, '12 questions'),
+            (15, '15 questions'),
+        ],
+        default=8,
+        blank=True,
+        null=True
+    )
+    
+    # Existing fields
     posted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date_posted = models.DateTimeField(auto_now_add=True)
     tags = TaggableManager()
-    
+
     def __str__(self):
         return self.title
-    
-
-STATUS_CHOICES = [
-    ('Pending', 'Pending'),
-    ('Shortlisted', 'Shortlisted'),
-    ('Rejected', 'Rejected'),
-    ('Hired', 'Hiered'),
-]
 
 
 

@@ -119,23 +119,28 @@ def update_profile(request):
 
 
   
+
+# post job view for recruiter only 
 @login_required
 def post_job(request):
     if not request.user.is_recruiter:
         messages.error(request, 'Only recruiters can post jobs.')
         return redirect('login')
-    
+        
     if request.method == 'POST':
-        form = JobForm(request.POST, request.FILES)  # Add request.FILES
+        form = JobForm(request.POST, request.FILES)
         if form.is_valid():
             job = form.save(commit=False)
             job.posted_by = request.user
             job.save()
             messages.success(request, 'Job posted successfully!')
             return redirect('job_list')
+        else:
+            # If form is not valid, show errors
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = JobForm()
-    
+        
     return render(request, 'jobapp/post_job.html', {'form': form})
 
 # Job List view
@@ -373,7 +378,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 return JsonResponse({
                     'error': 'Please provide a response.',
                     'response': 'I didn\'t receive your answer. Could you please respond?',
-                    'audio': None
+                    'audio': ''
                 })
             
             print(f"🔵 User input: {user_text}")
@@ -432,27 +437,43 @@ This was the final question.
             
             print(f"🔵 AI Response: {ai_response}")
             
-            # Generate TTS for response
+            # Generate TTS for response with enhanced error handling
             audio_path = None
             try:
+                print(f"🔵 Generating response TTS for: '{ai_response[:50]}...'")
                 audio_path = generate_tts(ai_response)
-                print(f"Response TTS generated: {audio_path}")
+                
+                if audio_path:
+                    # Verify the file actually exists
+                    full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                    if os.path.exists(full_path):
+                        file_size = os.path.getsize(full_path)
+                        print(f"✅ Response TTS verified: {full_path} ({file_size} bytes)")
+                    else:
+                        print(f"❌ Response TTS file not found: {full_path}")
+                        audio_path = None
+                else:
+                    print(f"❌ Response TTS generation returned None")
+                    
             except Exception as e:
-                print(f"TTS generation failed: {e}")
+                print(f"❌ Response TTS generation failed: {e}")
                 audio_path = None
             
             # Return JSON response for AJAX requests
+            response_data = {
+                'response': ai_response,
+                'audio': audio_path if audio_path else '',
+                'success': True,
+                'question_count': question_count,
+                'is_final': question_count > 8
+            }
+            
+            print(f"🔵 Sending response: {response_data}")
+            
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'response': ai_response,
-                    'audio': audio_path,  # This will be the URL path like "/media/tts/filename.wav"
-                    'success': True
-                })
+                return JsonResponse(response_data)
             else:
-                return JsonResponse({
-                    'response': ai_response,
-                    'audio': audio_path
-                })
+                return JsonResponse(response_data)
 
         # GET: Show interview UI with first question
         first_prompt = f"""
@@ -477,29 +498,50 @@ START: Say hello, ask "can you hear me clearly?" then ask why they want this rol
         
         print(f"🔵 Initial AI Question: {ai_question}")
         
-        # Generate initial TTS with fallback
+        # Generate initial TTS with enhanced error handling
         audio_path = None
         try:
+            print(f"🔵 Generating initial TTS for: '{ai_question[:50]}...'")
             audio_path = generate_tts(ai_question)
-            print(f"Initial TTS generated: {audio_path}")
+            
+            if audio_path:
+                # Verify the file actually exists
+                full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                if os.path.exists(full_path):
+                    file_size = os.path.getsize(full_path)
+                    print(f"✅ Initial TTS verified: {full_path} ({file_size} bytes)")
+                else:
+                    print(f"❌ Initial TTS file not found: {full_path}")
+                    audio_path = None
+            else:
+                print(f"❌ Initial TTS generation returned None")
+                
         except Exception as e:
-            print(f"TTS generation failed: {e}")
-            # Create a simple fallback
+            print(f"❌ Initial TTS generation failed: {e}")
             audio_path = None
 
-        return render(request, 'jobapp/interview_ai.html', {
+        # Template context with proper audio handling
+        context_data = {
             'interview': interview,
             'ai_question': ai_question,
-            'audio_url': audio_path  # Pass the URL path to the template
-        })
+            'audio_url': audio_path if audio_path else '',
+            'candidate_name': candidate_name,
+            'job_title': job_title,
+            'company_name': company_name
+        }
+        
+        print(f"🔵 Template context audio_url: '{context_data['audio_url']}'")
+        
+        return render(request, 'jobapp/interview_ai.html', context_data)
         
     except Exception as e:
-        print(f"Interview Error: {e}")
+        print(f"❌ Interview Error: {e}")
+        import traceback
+        traceback.print_exc()
         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
-    
-    
-    
-#for tts debugging   
+
+
+# Debug function for media files
 def test_media_debug(request):
     """Debug media file serving"""
     from django.conf import settings

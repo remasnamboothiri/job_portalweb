@@ -27,10 +27,14 @@ urlpatterns = [
     
 ]
 
-# Always serve media files (for both development and production)
+# Serve media files
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# Serve static files only in development
+# Serve static files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)   
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Ensure media files are served in production too
+if not settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)   
     

@@ -32,7 +32,7 @@ urlpatterns = [
     path('interview/ready/<uuid:interview_uuid>/', views.interview_ready, name='interview_ready'),
      # 🗣️ Interview Start + AI Response
     path('interview/start/<uuid:interview_uuid>/', views.start_interview_by_uuid, name='start_interview'),
-    path('debug-media/', views.test_media_debug, name='debug_media'),
+    path('debug/media/', views.test_media_debug, name='test_debug_media'),
    
     
     

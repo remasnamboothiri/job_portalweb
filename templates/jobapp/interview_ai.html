@@ -539,7 +539,7 @@
         </div>
         <div class="interview-timer">
             <div class="question-counter" id="questionCounter">Question 1/8</div>
-            <div class="timer-display" id="timerDisplay">15:00</div>
+            <div class="timer-display" id="timerDisplay">25:00</div>
         </div>
     </div>
 
@@ -640,7 +640,7 @@ let recognition = null;
 let isListening = false;
 let isInterviewActive = true;
 let questionCount = 1;
-let timeRemaining = 15 * 60; // 15 minutes in seconds
+let timeRemaining = 25 * 60; // 25 minutes in seconds
 let timerInterval = null;
 let audioContext = null;
 
@@ -965,8 +965,8 @@ function initializeSpeechRecognition() {
         
         // Enhanced recognition settings
         recognition.lang = "en-US";
-        recognition.interimResults = false;
-        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.continuous = true;
         recognition.maxAlternatives = 1;
 
         recognition.onstart = function() {
@@ -988,11 +988,19 @@ function initializeSpeechRecognition() {
         };
 
         recognition.onresult = async function(event) {
-            const userText = event.results[0][0].transcript;
-            const confidence = event.results[0][0].confidence;
+            // Only process final results to avoid cutting off speech
+            if (!event.results[event.results.length - 1].isFinal) {
+                return;
+            }
+            
+            const userText = event.results[event.results.length - 1][0].transcript;
+            const confidence = event.results[event.results.length - 1][0].confidence;
             
             console.log('🗣️ User said:', userText);
             console.log('🗣️ Confidence:', confidence);
+            
+            // Stop recognition to prevent auto-restart
+            recognition.stop();
             
             addTranscriptMessage(userText, true);
 
@@ -1047,15 +1055,19 @@ function initializeSpeechRecognition() {
                                 // Process the successful response
                                 if (retryData.question_count) {
                                     questionCount = retryData.question_count;
-                                    questionCounter.textContent = `Question ${Math.min(questionCount, 8)}/8`;
+                                } else {
+                                    questionCount++; // Fallback increment
                                 }
+                                questionCounter.textContent = `Question ${questionCount}/8`;
+                                console.log(`📊 Retry - Updated question counter: ${questionCount}/8`);
                                 addTranscriptMessage(retryData.response);
                                 if (retryData.audio && retryData.audio !== '') {
                                     await playAIResponse(retryData.audio);
                                 } else {
                                     updateParticipantStatus(false, false);
                                 }
-                                if (retryData.is_final || questionCount > 8) {
+                                if (retryData.is_final || questionCount >= 8) {
+                                    console.log(`🏁 Retry - Interview ending: is_final=${retryData.is_final}, questionCount=${questionCount}`);
                                     setTimeout(() => endInterview(), 3000);
                                 }
                                 return;
@@ -1086,11 +1098,14 @@ function initializeSpeechRecognition() {
                     return;
                 }
                 
-                // Update question count
+                // Update question count - force update
                 if (data.question_count) {
                     questionCount = data.question_count;
-                    questionCounter.textContent = `Question ${Math.min(questionCount, 8)}/8`;
+                } else {
+                    questionCount++; // Fallback increment
                 }
+                questionCounter.textContent = `Question ${questionCount}/8`;
+                console.log(`📊 Updated question counter: ${questionCount}/8`);
                 
                 // Add AI response to transcript
                 addTranscriptMessage(data.response);
@@ -1105,7 +1120,8 @@ function initializeSpeechRecognition() {
                 }
                 
                 // Check if interview should end
-                if (data.is_final || questionCount > 8) {
+                if (data.is_final || questionCount >= 8) {
+                    console.log(`🏁 Interview ending: is_final=${data.is_final}, questionCount=${questionCount}`);
                     setTimeout(() => {
                         endInterview();
                     }, 3000);
@@ -1234,9 +1250,54 @@ viewResultsBtn.addEventListener('click', () => {
     window.location.href = `/interview-results/${uuid}/`;
 });
 
+// Request camera and microphone permissions and show video
+async function requestPermissions() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: true 
+        });
+        console.log('✅ Camera and microphone permissions granted');
+        
+        // Create video element and show camera feed
+        const candidateVideo = document.getElementById('candidateVideo');
+        let videoElement = candidateVideo.querySelector('video');
+        
+        if (!videoElement) {
+            videoElement = document.createElement('video');
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
+            videoElement.style.objectFit = 'cover';
+            videoElement.style.borderRadius = '12px';
+            videoElement.autoplay = true;
+            videoElement.muted = true;
+            videoElement.playsInline = true;
+            
+            // Replace avatar with video
+            const avatar = candidateVideo.querySelector('.participant-avatar');
+            if (avatar) {
+                avatar.style.display = 'none';
+            }
+            candidateVideo.appendChild(videoElement);
+        }
+        
+        videoElement.srcObject = stream;
+        console.log('📹 Camera feed started');
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Permission denied:', error);
+        alert('Please allow camera and microphone access for the interview to work properly.');
+        return false;
+    }
+}
+
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Initializing interview system...');
+    
+    // Request permissions first
+    await requestPermissions();
     
     // Set first message time
     const currentTime = new Date().toLocaleTimeString('en-US', {

@@ -411,6 +411,8 @@ def start_interview_by_uuid(request, interview_uuid):
             context['question_count'] = question_count
             request.session['interview_context'] = context
             
+            logger.info(f"Question count for interview {interview_uuid}: {question_count}")
+            
             # Handle "I can't hear" responses specifically
             user_text_lower = user_text.lower().strip()
             if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
@@ -429,14 +431,14 @@ def start_interview_by_uuid(request, interview_uuid):
                     'audio': '',  # No audio
                     'success': True,
                     'question_count': question_count,
-                    'is_final': question_count > 8,
+                    'is_final': question_count >= 8,
                     'text_only': True  # Flag for frontend
                 }
                 
                 return JsonResponse(response_data)
             
             # Create contextual prompt based on question number
-            if question_count <= 8:
+            if question_count < 8:
                 prompt = f"""
 You are Alex, a friendly HR interviewer. Keep your responses natural and conversational.
 
@@ -536,11 +538,12 @@ This was the final question.
                 'audio': audio_path if audio_path else '',
                 'success': True,
                 'question_count': question_count,
-                'is_final': question_count > 8,
+                'is_final': question_count >= 8,
                 'audio_error': audio_generation_error if audio_generation_error else None
             }
             
-            logger.info(f"Sending response for interview {interview_uuid}: {response_data}")
+            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
+            logger.info(f"Response data: {response_data}")
             
             return JsonResponse(response_data)
 

@@ -265,7 +265,7 @@ def check_tts_system():
         'media_root': settings.MEDIA_ROOT,
         'media_url': settings.MEDIA_URL,
         'tts_dir_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
-        'tts_api_url': "https://0k8h7qmls2w17x-8000.proxy.runpod.net",
+        'tts_api_url': "https://56kz529ck8vq9d-8000.proxy.runpod.net",
     }
     
     # Check if we can create TTS directory
@@ -287,7 +287,7 @@ def check_tts_system():
     
     # Check network connectivity to TTS API
     try:
-        response = requests.get("https://0k8h7qmls2w17x-8000.proxy.runpod.net", timeout=5)
+        response = requests.get("https://56kz529ck8vq9d-8000.proxy.runpod.net", timeout=5)
         health_info['api_reachable'] = True
         health_info['api_status'] = response.status_code
     except Exception as e:

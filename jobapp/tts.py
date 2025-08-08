@@ -12,7 +12,7 @@ def generate_tts(text, voice_id="female_default"):
     """
     
     # FIXED: Correct API base URL (remove /docs/)
-    TTS_BASE_URL = "https://0k8h7qmls2w17x-8000.proxy.runpod.net"
+    TTS_BASE_URL = "https://56kz529ck8vq9d-8000.proxy.runpod.net"
     
     try:
         print(f"🔵 Starting TTS generation for: '{text[:50]}...'")

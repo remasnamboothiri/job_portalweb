@@ -51,6 +51,7 @@ from gtts import gTTS
 
 from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
+from django.middleware.csrf import CsrfViewMiddleware
 import uuid
 
 
@@ -338,6 +339,7 @@ def interview_ready(request, interview_uuid):
 
 
 
+@csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
@@ -541,20 +543,6 @@ This was the final question.
             logger.info(f"Sending response for interview {interview_uuid}: {response_data}")
             
             return JsonResponse(response_data)
-            
-    # Handle CSRF errors specifically
-    except PermissionDenied as e:
-        if 'CSRF' in str(e) or 'csrf' in str(e).lower():
-            logger.error(f"CSRF error for interview {interview_uuid}: {e}")
-            return JsonResponse({
-                'error': 'Session expired. Please refresh the page.',
-                'response': 'Your session has expired. Please refresh the page to continue.',
-                'success': False,
-                'csrf_error': True,
-                'refresh_required': True
-            }, status=403)
-        else:
-            raise  # Re-raise if not CSRF related
 
         # GET: Show interview UI with first question
         first_prompt = f"""
@@ -651,9 +639,19 @@ START: Say hello, mention you can communicate via text if they have audio issues
         logger.error(f"Interview not found: {interview_uuid}")
         return HttpResponse('Interview not found.', status=404)
     
-    except PermissionDenied:
-        logger.error(f"Permission denied for interview: {interview_uuid}")
-        return HttpResponse('You do not have permission to access this interview.', status=403)
+    except PermissionDenied as e:
+        if 'CSRF' in str(e) or 'csrf' in str(e).lower():
+            logger.error(f"CSRF error for interview {interview_uuid}: {e}")
+            return JsonResponse({
+                'error': 'Session expired. Please refresh the page.',
+                'response': 'Your session has expired. Please refresh the page to continue.',
+                'success': False,
+                'csrf_error': True,
+                'refresh_required': True
+            }, status=403)
+        else:
+            logger.error(f"Permission denied for interview: {interview_uuid}")
+            return HttpResponse('You do not have permission to access this interview.', status=403)
     
     except ValidationError as e:
         logger.error(f"Validation error for interview {interview_uuid}: {e}")

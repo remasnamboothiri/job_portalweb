@@ -4,7 +4,7 @@ from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, Appli
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
-from django.http import HttpResponseForbidden , JsonResponse, Http404
+from django.http import HttpResponseForbidden , JsonResponse, Http404, FileResponse
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -25,7 +25,14 @@ import json
 from django.conf import settings
 import logging
 
+# Configure logger
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 #for Ai interview
@@ -1003,3 +1010,15 @@ def chat_view(request):
             return JsonResponse({"error": "Internal server error"}, status=500)
     
     return render(request, "jobapp/chat.html")
+
+# Media file serving view for production
+def serve_media(request, path):
+    """Serve media files in production"""
+    import mimetypes
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    
+    if os.path.exists(file_path):
+        content_type, _ = mimetypes.guess_type(file_path)
+        return FileResponse(open(file_path, 'rb'), content_type=content_type)
+    else:
+        raise Http404("Media file not found")

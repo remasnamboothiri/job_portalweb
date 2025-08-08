@@ -18,13 +18,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
+from jobapp.views import serve_media
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',include('jobapp.urls')),
-    path('accounts/', include('allauth.urls')),  # ✅ allauth URLs
-    path('api/', include('jobapp.api.urls')),   # 👈 separate for API
-    
+    path('accounts/', include('allauth.urls')),
+    path('api/', include('jobapp.api.urls')),
+    path('media/<path:path>', serve_media, name='serve_media'),
 ]
 
 # Serve media files

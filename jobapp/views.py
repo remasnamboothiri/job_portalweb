@@ -4,7 +4,8 @@ from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, Appli
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
-from django.http import HttpResponseForbidden , JsonResponse
+from django.http import HttpResponseForbidden , JsonResponse, Http404
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -19,9 +20,12 @@ from gtts import gTTS
 from django.utils import timezone
 from django.contrib import messages
 from django.http import JsonResponse
-from jobapp.tts import generate_tts
+from jobapp.tts import generate_tts, generate_gtts_fallback
 import json
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 #for Ai interview
@@ -67,7 +71,7 @@ def register_view(request):
             login(request, user)
             return redirect('Profile_update')  # Redirect to profile page
         else:
-            print("❌ Form errors:", form.errors)  # Debugging
+            pass  # Form errors
     else:
         form = UserRegistrationForm() # Show empty form on GET request
     return render(request, 'registration/register.html', {'form': form}) # ✅ Always return something
@@ -350,7 +354,7 @@ def start_interview_by_uuid(request, interview_uuid):
             resume_text = extract_resume_text(resume_file)
         except Exception as e:
             resume_text = "Resume could not be processed."
-            logger.warning(f"Resume extraction error: {e}")
+            logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
         
         # Store interview context in session for consistency
         request.session['interview_context'] = {
@@ -371,7 +375,11 @@ def start_interview_by_uuid(request, interview_uuid):
                     user_text = data.get("text") or data.get("message")
                 else:
                     user_text = request.POST.get("text", "")
-            except:
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error in interview {interview_uuid}: {e}")
+                user_text = request.POST.get("text", "")
+            except Exception as e:
+                logger.error(f"Unexpected error parsing request data in interview {interview_uuid}: {e}")
                 user_text = request.POST.get("text", "")
             
             if not user_text.strip():
@@ -382,7 +390,7 @@ def start_interview_by_uuid(request, interview_uuid):
                     'success': False
                 })
             
-            logger.info(f"User input: {user_text}")
+            logger.info(f"User input for interview {interview_uuid}: {user_text}")
             
             # Get context from session
             context = request.session.get('interview_context', {})
@@ -395,7 +403,7 @@ def start_interview_by_uuid(request, interview_uuid):
             # Handle "I can't hear" responses specifically
             user_text_lower = user_text.lower().strip()
             if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
-                logger.info("User reported audio issues, providing text-based response")
+                logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
                 
                 if question_count == 1:
                     ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
@@ -457,17 +465,17 @@ This was the final question.
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
             except Exception as e:
-                logger.error(f"AI API Error: {e}")
+                logger.error(f"AI API Error for interview {interview_uuid}: {e}")
                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
-            logger.info(f"AI Response: {ai_response}")
+            logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
             
             # Generate TTS for response with enhanced error handling and fallback
             audio_path = None
             audio_generation_error = None
             
             try:
-                logger.info(f"Generating response TTS for: '{ai_response[:50]}...'")
+                logger.info(f"Generating response TTS for interview {interview_uuid}: '{ai_response[:50]}...'")
                 
                 # Try primary TTS first
                 audio_path = generate_tts(ai_response)
@@ -477,38 +485,38 @@ This was the final question.
                     full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     if os.path.exists(full_path):
                         file_size = os.path.getsize(full_path)
-                        logger.info(f"Response TTS verified: {full_path} ({file_size} bytes)")
+                        logger.info(f"Response TTS verified for interview {interview_uuid}: {full_path} ({file_size} bytes)")
                         
                         # Additional validation for audio files
                         if file_size < 100:  # Too small to be valid audio
-                            logger.warning("Generated audio file too small, trying fallback")
+                            logger.warning(f"Generated audio file too small for interview {interview_uuid}, trying fallback")
                             audio_path = None
                         
                     else:
-                        logger.error(f"Response TTS file not found: {full_path}")
+                        logger.error(f"Response TTS file not found for interview {interview_uuid}: {full_path}")
                         audio_path = None
                 else:
-                    logger.warning("Response TTS generation returned None")
+                    logger.warning(f"Response TTS generation returned None for interview {interview_uuid}")
                     
             except Exception as e:
-                logger.error(f"Response TTS generation failed: {e}")
+                logger.error(f"Response TTS generation failed for interview {interview_uuid}: {e}")
                 audio_generation_error = str(e)
                 audio_path = None
             
             # If primary TTS failed, try gTTS specifically
             if not audio_path:
                 try:
-                    logger.info("Trying gTTS fallback for response...")
+                    logger.info(f"Trying gTTS fallback for interview {interview_uuid}...")
                     audio_path = generate_gtts_fallback(ai_response)
                     if audio_path:
                         full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                         if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
-                            logger.info("gTTS fallback successful")
+                            logger.info(f"gTTS fallback successful for interview {interview_uuid}")
                         else:
-                            logger.warning("gTTS fallback file invalid")
+                            logger.warning(f"gTTS fallback file invalid for interview {interview_uuid}")
                             audio_path = None
                 except Exception as e:
-                    logger.error(f"gTTS fallback also failed: {e}")
+                    logger.error(f"gTTS fallback also failed for interview {interview_uuid}: {e}")
                     audio_path = None
             
             # Return JSON response for AJAX requests
@@ -521,7 +529,7 @@ This was the final question.
                 'audio_error': audio_generation_error if audio_generation_error else None
             }
             
-            logger.info(f"Sending response: {response_data}")
+            logger.info(f"Sending response for interview {interview_uuid}: {response_data}")
             
             return JsonResponse(response_data)
 
@@ -543,20 +551,20 @@ START: Say hello, mention you can communicate via text if they have audio issues
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
         except Exception as e:
-            logger.error(f"AI API Error on initial question: {e}")
+            logger.error(f"AI API Error on initial question for interview {interview_uuid}: {e}")
             ai_question = f"Hi {candidate_name}! Thanks for joining me today. If you have any audio issues, we can communicate via text. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
-        logger.info(f"Initial AI Question: {ai_question}")
+        logger.info(f"Initial AI Question for interview {interview_uuid}: {ai_question}")
         
         # Generate initial TTS with enhanced error handling
         audio_path = None
         try:
-            logger.info(f"Generating initial TTS for: '{ai_question[:50]}...'")
+            logger.info(f"Generating initial TTS for interview {interview_uuid}: '{ai_question[:50]}...'")
             
-            # Check TTS system health first
-            health_check = check_tts_system()
-            if not health_check.get('gtts_available', False):
-                logger.error("gTTS not available, cannot generate audio")
+            # Skip TTS health check for now
+            # health_check = check_tts_system()
+            # if not health_check.get('gtts_available', False):
+            #     logger.error(f"gTTS not available for interview {interview_uuid}, cannot generate audio")
             
             # Try to generate initial audio
             audio_path = generate_tts(ai_question)
@@ -566,37 +574,37 @@ START: Say hello, mention you can communicate via text if they have audio issues
                 full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                 if os.path.exists(full_path):
                     file_size = os.path.getsize(full_path)
-                    logger.info(f"Initial TTS verified: {full_path} ({file_size} bytes)")
+                    logger.info(f"Initial TTS verified for interview {interview_uuid}: {full_path} ({file_size} bytes)")
                     
                     # Validate file size
                     if file_size < 100:
-                        logger.warning("Initial TTS file too small")
+                        logger.warning(f"Initial TTS file too small for interview {interview_uuid}")
                         audio_path = None
                         
                 else:
-                    logger.error(f"Initial TTS file not found: {full_path}")
+                    logger.error(f"Initial TTS file not found for interview {interview_uuid}: {full_path}")
                     audio_path = None
             else:
-                logger.warning("Initial TTS generation returned None")
+                logger.warning(f"Initial TTS generation returned None for interview {interview_uuid}")
                 
         except Exception as e:
-            logger.error(f"Initial TTS generation failed: {e}")
+            logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
             audio_path = None
 
         # If no audio generated, try gTTS specifically
         if not audio_path:
             try:
-                logger.info("Trying gTTS for initial question...")
+                logger.info(f"Trying gTTS for initial question in interview {interview_uuid}...")
                 audio_path = generate_gtts_fallback(ai_question)
                 if audio_path:
                     full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
-                        logger.info("Initial gTTS successful")
+                        logger.info(f"Initial gTTS successful for interview {interview_uuid}")
                     else:
-                        logger.warning("Initial gTTS file invalid")
+                        logger.warning(f"Initial gTTS file invalid for interview {interview_uuid}")
                         audio_path = None
             except Exception as e:
-                logger.error(f"Initial gTTS also failed: {e}")
+                logger.error(f"Initial gTTS also failed for interview {interview_uuid}: {e}")
                 audio_path = None
 
         # Template context with proper audio handling
@@ -610,118 +618,88 @@ START: Say hello, mention you can communicate via text if they have audio issues
             'has_audio': bool(audio_path),  # Helper flag for template
         }
         
-        logger.info(f"Template context - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
+        logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
         
         return render(request, 'jobapp/interview_ai.html', context_data)
         
-    except Exception as e:
-        logger.error(f"Interview Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
-
-
-def test_media_debug(request):
-    """Enhanced debug media file serving with comprehensive testing"""
-    from django.conf import settings
-    import os
-    from .tts import generate_tts, check_tts_system, test_tts_generation
-    from django.http import JsonResponse
+    # Improved error handling with specific exception types
+    except Http404:
+        logger.error(f"Interview not found: {interview_uuid}")
+        return HttpResponse('Interview not found.', status=404)
     
-    # Comprehensive system check
-    debug_info = {
-        'timestamp': str(datetime.now()),
-        'BASE_DIR': str(settings.BASE_DIR),
-        'MEDIA_ROOT': settings.MEDIA_ROOT,
-        'MEDIA_URL': settings.MEDIA_URL,
-        'DEBUG': settings.DEBUG,
+    except PermissionDenied:
+        logger.error(f"Permission denied for interview: {interview_uuid}")
+        return HttpResponse('You do not have permission to access this interview.', status=403)
+    
+    except ValidationError as e:
+        logger.error(f"Validation error for interview {interview_uuid}: {e}")
+        return HttpResponse(f'Invalid data: {str(e)}', status=400)
+    
+    except ConnectionError as e:
+        logger.error(f"Connection error for interview {interview_uuid}: {e}")
+        return HttpResponse('Unable to connect to required services. Please try again later.', status=503)
+    
+    except TimeoutError as e:
+        logger.error(f"Timeout error for interview {interview_uuid}: {e}")
+        return HttpResponse('Request timed out. Please try again.', status=504)
+    
+    except Exception as e:
+        # Enhanced error logging with more context
+        import traceback
+        error_details = {
+            'interview_uuid': interview_uuid,
+            'error_type': type(e).__name__,
+            'error_message': str(e),
+            'traceback': traceback.format_exc(),
+            'request_method': request.method,
+            'user': getattr(request.user, 'id', 'Anonymous') if hasattr(request, 'user') else 'Unknown',
+            'session_key': request.session.session_key if hasattr(request, 'session') else 'Unknown'
+        }
+        
+        logger.error(f"Interview Error Details: {error_details}")
+        
+        # For development, show detailed error
+        if settings.DEBUG:
+            return HttpResponse(
+                f'Interview could not be started.<br>'
+                f'Error Type: {error_details["error_type"]}<br>'
+                f'Error: {error_details["error_message"]}<br>'
+                f'UUID: {interview_uuid}<br>'
+                f'<pre>{error_details["traceback"]}</pre>',
+                status=500
+            )
+        else:
+            # For production, show generic error
+            return HttpResponse(
+                'Interview could not be started. Our team has been notified and is working to resolve the issue.',
+                status=500
+            )
+
+
+# Additional helper function for better error context
+def log_interview_error(interview_uuid, error, context=None):
+    """
+    Centralized error logging for interview-related errors
+    """
+    import traceback
+    
+    error_info = {
+        'timestamp': datetime.now().isoformat(),
+        'interview_uuid': interview_uuid,
+        'error_type': type(error).__name__,
+        'error_message': str(error),
+        'traceback': traceback.format_exc(),
     }
     
-    # Run TTS system health check
-    try:
-        health_check = check_tts_system()
-        debug_info['health_check'] = health_check
-    except Exception as e:
-        debug_info['health_check_error'] = str(e)
+    if context:
+        error_info['context'] = context
     
-    # Test TTS generation with multiple methods
-    test_texts = [
-        "This is a short test.",
-        "Hello, this is a comprehensive test of the text to speech system with a longer sentence to verify proper audio generation.",
-    ]
+    logger.error(f"Interview System Error: {error_info}")
     
-    for i, test_text in enumerate(test_texts):
-        try:
-            # Test primary TTS
-            audio_path = generate_tts(test_text)
-            debug_info[f'test_{i}_primary'] = {
-                'text': test_text,
-                'audio_path': audio_path,
-                'success': bool(audio_path)
-            }
-            
-            if audio_path:
-                full_file_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-                debug_info[f'test_{i}_primary']['full_path'] = full_file_path
-                debug_info[f'test_{i}_primary']['file_exists'] = os.path.exists(full_file_path)
-                
-                if os.path.exists(full_file_path):
-                    debug_info[f'test_{i}_primary']['file_size'] = os.path.getsize(full_file_path)
-            
-            # Test gTTS specifically
-            gtts_path = generate_gtts_fallback(test_text)
-            debug_info[f'test_{i}_gtts'] = {
-                'text': test_text,
-                'audio_path': gtts_path,
-                'success': bool(gtts_path)
-            }
-            
-            if gtts_path:
-                gtts_full_path = os.path.join(settings.BASE_DIR, gtts_path.lstrip('/'))
-                debug_info[f'test_{i}_gtts']['full_path'] = gtts_full_path
-                debug_info[f'test_{i}_gtts']['file_exists'] = os.path.exists(gtts_full_path)
-                
-                if os.path.exists(gtts_full_path):
-                    debug_info[f'test_{i}_gtts']['file_size'] = os.path.getsize(gtts_full_path)
-                    
-        except Exception as e:
-            debug_info[f'test_{i}_error'] = str(e)
+    # Optional: Send to external monitoring service
+    # send_to_monitoring_service(error_info)
     
-    # List all files in media/tts directory
-    try:
-        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
-        if os.path.exists(tts_dir):
-            files = []
-            for filename in os.listdir(tts_dir):
-                filepath = os.path.join(tts_dir, filename)
-                if os.path.isfile(filepath):
-                    files.append({
-                        'name': filename,
-                        'size': os.path.getsize(filepath),
-                        'modified': os.path.getmtime(filepath)
-                    })
-            debug_info['tts_files'] = files
-        else:
-            debug_info['tts_files'] = 'Directory does not exist'
-    except Exception as e:
-        debug_info['tts_files_error'] = str(e)
-    
-    # Test network connectivity
-    try:
-        import requests
-        response = requests.get('https://56kz529ck8vq9d-8000.proxy.runpod.net', timeout=10)
-        debug_info['api_connectivity'] = {
-            'status_code': response.status_code,
-            'response_time': response.elapsed.total_seconds(),
-            'reachable': True
-        }
-    except Exception as e:
-        debug_info['api_connectivity'] = {
-            'reachable': False,
-            'error': str(e)
-        }
-    
-    return JsonResponse(debug_info, indent=2)
+    return error_info
     
      
 # def start_interview_by_uuid(request, interview_uuid):
@@ -749,7 +727,7 @@ def test_media_debug(request):
 #             resume_text = extract_resume_text(resume_file)
 #         except Exception as e:
 #             resume_text = "Resume could not be processed."
-#             print(f"Resume extraction error: {e}")
+#             pass  # Resume extraction error
         
 #         # Store interview context in session for consistency
 #         request.session['interview_context'] = {
@@ -820,7 +798,7 @@ def test_media_debug(request):
 #             try:
 #                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
 #             except Exception as e:
-#                 print(f"AI API Error: {e}")
+#                 pass  # AI API Error
 #                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
 #             # Generate audio (keeping your existing TTS logic)
@@ -845,7 +823,7 @@ def test_media_debug(request):
 #                         pass
                         
 #                 except Exception as e:
-#                     print(f"TTS Error: {e}")
+#                     pass  # TTS Error
 
 #             return JsonResponse({
 #                 'response': ai_response,
@@ -874,7 +852,7 @@ def test_media_debug(request):
 #         try:
 #             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
 #         except Exception as e:
-#             print(f"AI API Error on initial question: {e}")
+#             pass  # AI API Error on initial question
 #             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
 #         # Generate initial audio
@@ -899,7 +877,7 @@ def test_media_debug(request):
 #                     pass
                     
 #             except Exception as e:
-#                 print(f"Initial TTS Error: {e}")
+#                 pass  # Initial TTS Error
 
 #         return render(request, 'jobapp/interview_ai.html', {
 #             'interview': interview,
@@ -908,7 +886,7 @@ def test_media_debug(request):
 #         })
         
 #     except Exception as e:
-#         print(f"Interview Error: {e}")
+#         pass  # Interview Error
 #         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
 
 

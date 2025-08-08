@@ -324,7 +324,7 @@ def interview_ready(request, interview_uuid):
 
 
 
-# interview starting view 
+
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
@@ -350,7 +350,7 @@ def start_interview_by_uuid(request, interview_uuid):
             resume_text = extract_resume_text(resume_file)
         except Exception as e:
             resume_text = "Resume could not be processed."
-            print(f"Resume extraction error: {e}")
+            logger.warning(f"Resume extraction error: {e}")
         
         # Store interview context in session for consistency
         request.session['interview_context'] = {
@@ -378,10 +378,11 @@ def start_interview_by_uuid(request, interview_uuid):
                 return JsonResponse({
                     'error': 'Please provide a response.',
                     'response': 'I didn\'t receive your answer. Could you please respond?',
-                    'audio': ''
+                    'audio': '',
+                    'success': False
                 })
             
-            print(f"🔵 User input: {user_text}")
+            logger.info(f"User input: {user_text}")
             
             # Get context from session
             context = request.session.get('interview_context', {})
@@ -390,6 +391,30 @@ def start_interview_by_uuid(request, interview_uuid):
             # Update question count
             context['question_count'] = question_count
             request.session['interview_context'] = context
+            
+            # Handle "I can't hear" responses specifically
+            user_text_lower = user_text.lower().strip()
+            if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
+                logger.info("User reported audio issues, providing text-based response")
+                
+                if question_count == 1:
+                    ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
+                elif question_count <= 8:
+                    ai_response = "I understand you can't hear the audio. That's okay! Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
+                else:
+                    ai_response = "Thank you for letting me know about the audio issues. We can continue with text-based questions. What questions do you have about this role or our company?"
+                
+                # Force text-only response (no audio generation)
+                response_data = {
+                    'response': ai_response,
+                    'audio': '',  # No audio
+                    'success': True,
+                    'question_count': question_count,
+                    'is_final': question_count > 8,
+                    'text_only': True  # Flag for frontend
+                }
+                
+                return JsonResponse(response_data)
             
             # Create contextual prompt based on question number
             if question_count <= 8:
@@ -432,15 +457,19 @@ This was the final question.
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
             except Exception as e:
-                print(f"AI API Error: {e}")
+                logger.error(f"AI API Error: {e}")
                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
-            print(f"🔵 AI Response: {ai_response}")
+            logger.info(f"AI Response: {ai_response}")
             
-            # Generate TTS for response with enhanced error handling
+            # Generate TTS for response with enhanced error handling and fallback
             audio_path = None
+            audio_generation_error = None
+            
             try:
-                print(f"🔵 Generating response TTS for: '{ai_response[:50]}...'")
+                logger.info(f"Generating response TTS for: '{ai_response[:50]}...'")
+                
+                # Try primary TTS first
                 audio_path = generate_tts(ai_response)
                 
                 if audio_path:
@@ -448,16 +477,39 @@ This was the final question.
                     full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     if os.path.exists(full_path):
                         file_size = os.path.getsize(full_path)
-                        print(f"✅ Response TTS verified: {full_path} ({file_size} bytes)")
+                        logger.info(f"Response TTS verified: {full_path} ({file_size} bytes)")
+                        
+                        # Additional validation for audio files
+                        if file_size < 100:  # Too small to be valid audio
+                            logger.warning("Generated audio file too small, trying fallback")
+                            audio_path = None
+                        
                     else:
-                        print(f"❌ Response TTS file not found: {full_path}")
+                        logger.error(f"Response TTS file not found: {full_path}")
                         audio_path = None
                 else:
-                    print(f"❌ Response TTS generation returned None")
+                    logger.warning("Response TTS generation returned None")
                     
             except Exception as e:
-                print(f"❌ Response TTS generation failed: {e}")
+                logger.error(f"Response TTS generation failed: {e}")
+                audio_generation_error = str(e)
                 audio_path = None
+            
+            # If primary TTS failed, try gTTS specifically
+            if not audio_path:
+                try:
+                    logger.info("Trying gTTS fallback for response...")
+                    audio_path = generate_gtts_fallback(ai_response)
+                    if audio_path:
+                        full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                        if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
+                            logger.info("gTTS fallback successful")
+                        else:
+                            logger.warning("gTTS fallback file invalid")
+                            audio_path = None
+                except Exception as e:
+                    logger.error(f"gTTS fallback also failed: {e}")
+                    audio_path = None
             
             # Return JSON response for AJAX requests
             response_data = {
@@ -465,15 +517,13 @@ This was the final question.
                 'audio': audio_path if audio_path else '',
                 'success': True,
                 'question_count': question_count,
-                'is_final': question_count > 8
+                'is_final': question_count > 8,
+                'audio_error': audio_generation_error if audio_generation_error else None
             }
             
-            print(f"🔵 Sending response: {response_data}")
+            logger.info(f"Sending response: {response_data}")
             
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse(response_data)
-            else:
-                return JsonResponse(response_data)
+            return JsonResponse(response_data)
 
         # GET: Show interview UI with first question
         first_prompt = f"""
@@ -487,21 +537,28 @@ RULES:
 - Sound natural and conversational
 - Show interest in their answers
 
-START: Say hello, ask "can you hear me clearly?" then ask why they want this role.
+START: Say hello, mention you can communicate via text if they have audio issues, then ask why they want this role.
 """        
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
         except Exception as e:
-            print(f"AI API Error on initial question: {e}")
-            ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+            logger.error(f"AI API Error on initial question: {e}")
+            ai_question = f"Hi {candidate_name}! Thanks for joining me today. If you have any audio issues, we can communicate via text. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
-        print(f"🔵 Initial AI Question: {ai_question}")
+        logger.info(f"Initial AI Question: {ai_question}")
         
         # Generate initial TTS with enhanced error handling
         audio_path = None
         try:
-            print(f"🔵 Generating initial TTS for: '{ai_question[:50]}...'")
+            logger.info(f"Generating initial TTS for: '{ai_question[:50]}...'")
+            
+            # Check TTS system health first
+            health_check = check_tts_system()
+            if not health_check.get('gtts_available', False):
+                logger.error("gTTS not available, cannot generate audio")
+            
+            # Try to generate initial audio
             audio_path = generate_tts(ai_question)
             
             if audio_path:
@@ -509,16 +566,38 @@ START: Say hello, ask "can you hear me clearly?" then ask why they want this rol
                 full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                 if os.path.exists(full_path):
                     file_size = os.path.getsize(full_path)
-                    print(f"✅ Initial TTS verified: {full_path} ({file_size} bytes)")
+                    logger.info(f"Initial TTS verified: {full_path} ({file_size} bytes)")
+                    
+                    # Validate file size
+                    if file_size < 100:
+                        logger.warning("Initial TTS file too small")
+                        audio_path = None
+                        
                 else:
-                    print(f"❌ Initial TTS file not found: {full_path}")
+                    logger.error(f"Initial TTS file not found: {full_path}")
                     audio_path = None
             else:
-                print(f"❌ Initial TTS generation returned None")
+                logger.warning("Initial TTS generation returned None")
                 
         except Exception as e:
-            print(f"❌ Initial TTS generation failed: {e}")
+            logger.error(f"Initial TTS generation failed: {e}")
             audio_path = None
+
+        # If no audio generated, try gTTS specifically
+        if not audio_path:
+            try:
+                logger.info("Trying gTTS for initial question...")
+                audio_path = generate_gtts_fallback(ai_question)
+                if audio_path:
+                    full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                    if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
+                        logger.info("Initial gTTS successful")
+                    else:
+                        logger.warning("Initial gTTS file invalid")
+                        audio_path = None
+            except Exception as e:
+                logger.error(f"Initial gTTS also failed: {e}")
+                audio_path = None
 
         # Template context with proper audio handling
         context_data = {
@@ -527,55 +606,120 @@ START: Say hello, ask "can you hear me clearly?" then ask why they want this rol
             'audio_url': audio_path if audio_path else '',
             'candidate_name': candidate_name,
             'job_title': job_title,
-            'company_name': company_name
+            'company_name': company_name,
+            'has_audio': bool(audio_path),  # Helper flag for template
         }
         
-        print(f"🔵 Template context audio_url: '{context_data['audio_url']}'")
+        logger.info(f"Template context - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
         
         return render(request, 'jobapp/interview_ai.html', context_data)
         
     except Exception as e:
-        print(f"❌ Interview Error: {e}")
+        logger.error(f"Interview Error: {e}")
         import traceback
         traceback.print_exc()
         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
 
 
-# Debug function for media files
 def test_media_debug(request):
-    """Debug media file serving"""
+    """Enhanced debug media file serving with comprehensive testing"""
     from django.conf import settings
     import os
-    from .tts import generate_tts
+    from .tts import generate_tts, check_tts_system, test_tts_generation
     from django.http import JsonResponse
     
-    # Test TTS generation
-    test_text = "This is a test audio file."
-    audio_path = generate_tts(test_text)
-    
+    # Comprehensive system check
     debug_info = {
+        'timestamp': str(datetime.now()),
         'BASE_DIR': str(settings.BASE_DIR),
         'MEDIA_ROOT': settings.MEDIA_ROOT,
         'MEDIA_URL': settings.MEDIA_URL,
         'DEBUG': settings.DEBUG,
-        'audio_path': audio_path,
     }
     
-    if audio_path:
-        # Check if file exists
-        full_file_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-        debug_info['full_file_path'] = full_file_path
-        debug_info['file_exists'] = os.path.exists(full_file_path)
-        
-        if os.path.exists(full_file_path):
-            debug_info['file_size'] = os.path.getsize(full_file_path)
-        
-        # List all files in media/tts directory
+    # Run TTS system health check
+    try:
+        health_check = check_tts_system()
+        debug_info['health_check'] = health_check
+    except Exception as e:
+        debug_info['health_check_error'] = str(e)
+    
+    # Test TTS generation with multiple methods
+    test_texts = [
+        "This is a short test.",
+        "Hello, this is a comprehensive test of the text to speech system with a longer sentence to verify proper audio generation.",
+    ]
+    
+    for i, test_text in enumerate(test_texts):
+        try:
+            # Test primary TTS
+            audio_path = generate_tts(test_text)
+            debug_info[f'test_{i}_primary'] = {
+                'text': test_text,
+                'audio_path': audio_path,
+                'success': bool(audio_path)
+            }
+            
+            if audio_path:
+                full_file_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                debug_info[f'test_{i}_primary']['full_path'] = full_file_path
+                debug_info[f'test_{i}_primary']['file_exists'] = os.path.exists(full_file_path)
+                
+                if os.path.exists(full_file_path):
+                    debug_info[f'test_{i}_primary']['file_size'] = os.path.getsize(full_file_path)
+            
+            # Test gTTS specifically
+            gtts_path = generate_gtts_fallback(test_text)
+            debug_info[f'test_{i}_gtts'] = {
+                'text': test_text,
+                'audio_path': gtts_path,
+                'success': bool(gtts_path)
+            }
+            
+            if gtts_path:
+                gtts_full_path = os.path.join(settings.BASE_DIR, gtts_path.lstrip('/'))
+                debug_info[f'test_{i}_gtts']['full_path'] = gtts_full_path
+                debug_info[f'test_{i}_gtts']['file_exists'] = os.path.exists(gtts_full_path)
+                
+                if os.path.exists(gtts_full_path):
+                    debug_info[f'test_{i}_gtts']['file_size'] = os.path.getsize(gtts_full_path)
+                    
+        except Exception as e:
+            debug_info[f'test_{i}_error'] = str(e)
+    
+    # List all files in media/tts directory
+    try:
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         if os.path.exists(tts_dir):
-            debug_info['tts_files'] = os.listdir(tts_dir)
+            files = []
+            for filename in os.listdir(tts_dir):
+                filepath = os.path.join(tts_dir, filename)
+                if os.path.isfile(filepath):
+                    files.append({
+                        'name': filename,
+                        'size': os.path.getsize(filepath),
+                        'modified': os.path.getmtime(filepath)
+                    })
+            debug_info['tts_files'] = files
         else:
             debug_info['tts_files'] = 'Directory does not exist'
+    except Exception as e:
+        debug_info['tts_files_error'] = str(e)
+    
+    # Test network connectivity
+    try:
+        import requests
+        response = requests.get('https://56kz529ck8vq9d-8000.proxy.runpod.net', timeout=10)
+        debug_info['api_connectivity'] = {
+            'status_code': response.status_code,
+            'response_time': response.elapsed.total_seconds(),
+            'reachable': True
+        }
+    except Exception as e:
+        debug_info['api_connectivity'] = {
+            'reachable': False,
+            'error': str(e)
+        }
     
     return JsonResponse(debug_info, indent=2)
     

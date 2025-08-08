@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
-from jobapp.views import serve_media
+from jobapp.views import serve_media, get_csrf_token
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +26,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('api/', include('jobapp.api.urls')),
     path('media/<path:path>', serve_media, name='serve_media'),
+    path('get-csrf-token/', get_csrf_token, name='get_csrf_token'),
 ]
 
 # Serve media files

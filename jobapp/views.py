@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required , user_passes_test
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponseForbidden , JsonResponse, Http404, FileResponse
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.middleware.csrf import CsrfViewMiddleware
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -49,6 +50,7 @@ except ImportError as e:
 from gtts import gTTS
 
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
 import uuid
 
 
@@ -539,6 +541,20 @@ This was the final question.
             logger.info(f"Sending response for interview {interview_uuid}: {response_data}")
             
             return JsonResponse(response_data)
+            
+    # Handle CSRF errors specifically
+    except PermissionDenied as e:
+        if 'CSRF' in str(e) or 'csrf' in str(e).lower():
+            logger.error(f"CSRF error for interview {interview_uuid}: {e}")
+            return JsonResponse({
+                'error': 'Session expired. Please refresh the page.',
+                'response': 'Your session has expired. Please refresh the page to continue.',
+                'success': False,
+                'csrf_error': True,
+                'refresh_required': True
+            }, status=403)
+        else:
+            raise  # Re-raise if not CSRF related
 
         # GET: Show interview UI with first question
         first_prompt = f"""
@@ -623,6 +639,7 @@ START: Say hello, mention you can communicate via text if they have audio issues
             'job_title': job_title,
             'company_name': company_name,
             'has_audio': bool(audio_path),  # Helper flag for template
+            'csrf_token': get_token(request),  # Ensure fresh CSRF token
         }
         
         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
@@ -1022,3 +1039,10 @@ def serve_media(request, path):
         return FileResponse(open(file_path, 'rb'), content_type=content_type)
     else:
         raise Http404("Media file not found")
+
+# CSRF token endpoint
+def get_csrf_token(request):
+    """Return fresh CSRF token for AJAX requests"""
+    return JsonResponse({
+        'csrf_token': get_token(request)
+    })

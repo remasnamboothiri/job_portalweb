@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>AI Interview - {{ interview.job.title|default:"Job Position" }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -626,6 +627,10 @@
 
     <!-- Hidden Audio Element -->
     <audio id="aiAudio" preload="auto"></audio>
+    
+    <!-- CSRF Token -->
+    {% csrf_token %}
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
 
 
@@ -659,10 +664,56 @@ const interviewEnded = document.getElementById('interviewEnded');
 const viewResultsBtn = document.getElementById('viewResultsBtn');
 const firstMessageTime = document.getElementById('firstMessageTime');
 
-// Get CSRF token
+// Get CSRF token with fallback
 function getCSRFToken() {
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    return csrfToken ? csrfToken.value : '';
+    // Try to get from hidden input first
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput && csrfInput.value) {
+        return csrfInput.value;
+    }
+    
+    // Fallback to cookie method
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    // Last resort - try meta tag
+    const csrfMeta = document.querySelector('meta[name=csrf-token]');
+    if (csrfMeta) {
+        return csrfMeta.getAttribute('content');
+    }
+    
+    console.warn('⚠️ CSRF token not found');
+    return '';
+}
+
+// Refresh CSRF token from server
+async function refreshCSRFToken() {
+    try {
+        const response = await fetch('/get-csrf-token/', {
+            method: 'GET',
+            credentials: 'same-origin'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            const csrfMeta = document.querySelector('meta[name=csrf-token]');
+            
+            if (csrfInput) csrfInput.value = data.csrf_token;
+            if (csrfMeta) csrfMeta.setAttribute('content', data.csrf_token);
+            
+            console.log('✅ CSRF token refreshed');
+            return data.csrf_token;
+        }
+    } catch (error) {
+        console.error('❌ Failed to refresh CSRF token:', error);
+    }
+    return null;
 }
 
 // Initialize timer
@@ -955,22 +1006,85 @@ function initializeSpeechRecognition() {
                 const formData = new URLSearchParams();
                 formData.append('text', userText);
                 
+                const csrfToken = getCSRFToken();
+                console.log('🔐 Using CSRF token:', csrfToken ? 'Found' : 'Missing');
+                
                 const response = await fetch(window.location.href, {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': getCSRFToken(),
+                        'X-CSRFToken': csrfToken,
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: formData
                 });
                 
                 if (!response.ok) {
+                    if (response.status === 403) {
+                        console.error('❌ CSRF token error - attempting refresh');
+                        
+                        // Try to refresh CSRF token first
+                        const newToken = await refreshCSRFToken();
+                        if (newToken) {
+                            console.log('🔄 Retrying request with new CSRF token');
+                            // Retry the request with new token
+                            const retryFormData = new URLSearchParams();
+                            retryFormData.append('text', userText);
+                            
+                            const retryResponse = await fetch(window.location.href, {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-CSRFToken': newToken,
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: retryFormData
+                            });
+                            
+                            if (retryResponse.ok) {
+                                const retryData = await retryResponse.json();
+                                console.log('✅ Retry successful:', retryData);
+                                // Process the successful response
+                                if (retryData.question_count) {
+                                    questionCount = retryData.question_count;
+                                    questionCounter.textContent = `Question ${Math.min(questionCount, 8)}/8`;
+                                }
+                                addTranscriptMessage(retryData.response);
+                                if (retryData.audio && retryData.audio !== '') {
+                                    await playAIResponse(retryData.audio);
+                                } else {
+                                    updateParticipantStatus(false, false);
+                                }
+                                if (retryData.is_final || questionCount > 8) {
+                                    setTimeout(() => endInterview(), 3000);
+                                }
+                                return;
+                            }
+                        }
+                        
+                        // If refresh failed, show reload prompt
+                        alert('Session expired. The page will refresh to restore your session.');
+                        window.location.reload();
+                        return;
+                    }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
                 console.log('📥 Server response:', data);
+                
+                // Handle CSRF errors from server response
+                if (data.csrf_error || data.refresh_required) {
+                    console.error('🔒 Server reported CSRF error');
+                    addTranscriptMessage(data.response || "Your session has expired. Please refresh the page to continue.");
+                    
+                    setTimeout(() => {
+                        if (confirm('Your session has expired. Would you like to refresh the page to continue?')) {
+                            window.location.reload();
+                        }
+                    }, 2000);
+                    return;
+                }
                 
                 // Update question count
                 if (data.question_count) {
@@ -999,7 +1113,22 @@ function initializeSpeechRecognition() {
                 
             } catch (error) {
                 console.error('❌ Request failed:', error);
-                addTranscriptMessage("Sorry, I encountered a technical issue. Please try again.");
+                
+                // Check if it's a CSRF error
+                if (error.message && error.message.includes('403')) {
+                    console.error('🔒 CSRF token error detected');
+                    addTranscriptMessage("Your session has expired. Please refresh the page to continue.");
+                    
+                    // Show refresh prompt after a delay
+                    setTimeout(() => {
+                        if (confirm('Your session has expired. Would you like to refresh the page to continue?')) {
+                            window.location.reload();
+                        }
+                    }, 2000);
+                } else {
+                    addTranscriptMessage("Sorry, I encountered a technical issue. Please try again.");
+                }
+                
                 updateParticipantStatus(false, false);
             } finally {
                 // Re-enable mic

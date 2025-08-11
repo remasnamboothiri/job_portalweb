@@ -24,8 +24,8 @@
 
     <!-- Interview Info Panel -->
     <div class="interview-info">
-        <h3>AI Interview Session</h3>
-        <p>{{ job_title }} at {{ company_name }}</p>
+        <h3 style="color:white">AI Interview Session</h3>
+        <p style="color: white">{{ job_title }} at {{ company_name }}</p>
     </div>
 
     <!-- Interview Stats -->
@@ -173,7 +173,7 @@
                 <button class="btn-google-outline" id="feedbackBtn">
                     Leave Feedback
                 </button>
-                <button class="btn-google" onclick="window.location.href='{% url "jobseeker-dashboard" %}'">
+                <button class="btn-google" onclick="window.location.href='{% url "jobseeker_dashboard" %}'">
                     Back to Dashboard
                 </button>
             </div>

@@ -557,24 +557,25 @@ This was the final question.
 
         # GET: Show interview UI with first question
         first_prompt = f"""
-You are Alex interviewing {candidate_name} for {job_title} at {company_name}.
+You are Alex, a friendly HR interviewer at {company_name}. You're interviewing {candidate_name} for the {job_title} position.
 
 Resume highlights: {resume_text[:300]}
 
-RULES:
-- Only output what you say - no quotes, labels, or descriptions
-- Maximum 2 sentences per response
-- Sound natural and conversational
-- Show interest in their answers
+INSTRUCTIONS:
+- Give a warm, professional greeting
+- Ask them to tell you about themselves and why they're interested in this specific role
+- Keep it natural and conversational (2-3 sentences max)
+- Don't mention audio issues or technical details
+- Just focus on starting the interview naturally
 
-START: Say hello, mention you can communicate via text if they have audio issues, then ask why they want this role.
+Output only what you would say as the interviewer - no quotes or labels.
 """        
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
         except Exception as e:
             logger.error(f"AI API Error on initial question for interview {interview_uuid}: {e}")
-            ai_question = f"Hi {candidate_name}! Thanks for joining me today. If you have any audio issues, we can communicate via text. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+            ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
         logger.info(f"Initial AI Question for interview {interview_uuid}: {ai_question}")
         

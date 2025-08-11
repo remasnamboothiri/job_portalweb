@@ -52,6 +52,12 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
     - Ask follow-up questions based on what the candidate says
     - Be encouraging and supportive
     - Keep the flow smooth and engaging
+    
+    
+    RESPONSE PATTERN:
+    - Briefly acknowledge what they just said (optional, 1 sentence max)
+    - Ask ONE specific, relevant follow-up question
+    - Keep the conversation flowing naturally
 
     Remember: You're having a friendly professional conversation, not giving speeches.
     """

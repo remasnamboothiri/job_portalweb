@@ -11,15 +11,15 @@
     
     <style>
         :root {
-            --primary-color: #1a73e8;
-            --secondary-color: #34a853;
-            --danger-color: #ea4335;
-            --warning-color: #fbbc04;
+            --primary-color: #000000ff;
+            --secondary-color: #051309ff;
+            --danger-color: #2a2828ff;
+            --warning-color: #0e0e0bff;
             --dark-bg: #202124;
             --card-bg: #303134;
-            --text-light: #ffffff;
-            --text-muted: #9aa0a6;
-            --border-color: #5f6368;
+            --text-light: #090909ff;
+            --text-muted: #1f2021ff;
+            --border-color: #0b0b0bff;
         }
 
         * {
@@ -689,6 +689,7 @@ let questionCount = 1;
 let timeRemaining = 25 * 60; // 25 minutes in seconds
 let timerInterval = null;
 let audioContext = null;
+let hasPlayedInitialAudio = false; // Flag to prevent duplicate audio playback
 
 // DOM Elements
 const micBtn = document.getElementById('micBtn');
@@ -917,6 +918,13 @@ async function playAIResponse(audioUrl) {
         console.log('❌ No valid audio URL provided:', audioUrl);
         updateParticipantStatus(false, false);
         return;
+    }
+    
+    // Stop any currently playing audio to prevent overlaps
+    if (aiAudio && !aiAudio.paused) {
+        console.log('🛑 Stopping currently playing audio');
+        aiAudio.pause();
+        aiAudio.currentTime = 0;
     }
     
     try {
@@ -1463,9 +1471,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         initialAudio !== 'null' && 
         initialAudio !== 'undefined' &&
         !initialAudio.includes('None') &&
-        initialAudio.trim().length > 0) {
+        initialAudio.trim().length > 0 &&
+        !hasPlayedInitialAudio) {
         
         console.log('✅ Valid initial audio found');
+        hasPlayedInitialAudio = true; // Set flag to prevent duplicate playback
         
         // Create a function to play initial audio
         const playInitialAudio = async () => {
@@ -1484,13 +1494,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             playInitialAudio();
         }, 2000);
         
-        // Also set up click handler for autoplay restrictions
+        // Also set up click handler for autoplay restrictions (but only once)
         const enableAudioOnInteraction = async () => {
-            await initializeAudio();
-            playInitialAudio();
+            if (!hasPlayedInitialAudio) {
+                hasPlayedInitialAudio = true;
+                await initializeAudio();
+                playInitialAudio();
+            }
         };
         
-        // Listen for any user interaction
+        // Listen for any user interaction (only once)
         const interactionEvents = ['click', 'touchstart', 'keydown'];
         const removeListeners = () => {
             interactionEvents.forEach(event => {

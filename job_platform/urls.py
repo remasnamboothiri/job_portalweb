@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
-from jobapp.views import serve_media, get_csrf_token
+from jobapp.views import serve_media, get_csrf_token, test_tts, generate_audio
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,6 +27,8 @@ urlpatterns = [
     path('api/', include('jobapp.api.urls')),
     path('media/<path:path>', serve_media, name='serve_media'),
     path('get-csrf-token/', get_csrf_token, name='get_csrf_token'),
+    path('test-tts/', test_tts, name='test_tts'),
+    path('generate-audio/', generate_audio, name='generate_audio'),
 ]
 
 # Serve media files

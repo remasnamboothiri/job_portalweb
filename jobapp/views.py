@@ -21,7 +21,7 @@ from gtts import gTTS
 from django.utils import timezone
 from django.contrib import messages
 from django.http import JsonResponse
-from jobapp.tts import generate_tts, generate_gtts_fallback
+from jobapp.tts import generate_tts, generate_gtts_fallback, test_tts_generation, check_tts_system
 import json
 from django.conf import settings
 import logging
@@ -1047,3 +1047,106 @@ def get_csrf_token(request):
     return JsonResponse({
         'csrf_token': get_token(request)
     })
+
+# TTS test endpoint
+@csrf_exempt
+def test_tts(request):
+    """Test TTS generation system"""
+    if request.method == 'POST':
+        try:
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                text = data.get('text', 'This is a test of the text to speech system')
+            else:
+                text = request.POST.get('text', 'This is a test of the text to speech system')
+            
+            logger.info(f"TTS test requested with text: '{text}'")
+            
+            # Test TTS generation
+            from jobapp.tts import test_tts_generation, check_tts_system
+            
+            # Run system health check
+            health_info = check_tts_system()
+            logger.info(f"TTS system health: {health_info}")
+            
+            # Test generation
+            audio_path = test_tts_generation(text)
+            
+            response_data = {
+                'success': bool(audio_path),
+                'audio_url': audio_path if audio_path else None,
+                'text': text,
+                'health_check': health_info,
+                'message': 'TTS test completed successfully' if audio_path else 'TTS test failed'
+            }
+            
+            logger.info(f"TTS test result: {response_data}")
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            logger.error(f"TTS test error: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'message': 'TTS test failed with error'
+            }, status=500)
+    
+    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+# Audio generation endpoint
+@csrf_exempt
+def generate_audio(request):
+    """Generate audio for given text"""
+    if request.method == 'POST':
+        try:
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                text = data.get('text', '')
+            else:
+                text = request.POST.get('text', '')
+            
+            if not text.strip():
+                return JsonResponse({'error': 'No text provided'}, status=400)
+            
+            logger.info(f"Audio generation requested for: '{text[:50]}...'")
+            
+            # Generate audio
+            audio_path = generate_tts(text)
+            
+            if audio_path:
+                # Verify file exists
+                full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                if os.path.exists(full_path):
+                    file_size = os.path.getsize(full_path)
+                    logger.info(f"Audio generated successfully: {audio_path} ({file_size} bytes)")
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'audio_url': audio_path,
+                        'file_size': file_size,
+                        'message': 'Audio generated successfully'
+                    })
+                else:
+                    logger.error(f"Generated audio file not found: {full_path}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Audio file was not created',
+                        'message': 'Audio generation failed'
+                    }, status=500)
+            else:
+                logger.error("Audio generation returned None")
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Audio generation failed',
+                    'message': 'TTS system returned no audio'
+                }, status=500)
+                
+        except Exception as e:
+            logger.error(f"Audio generation error: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'message': 'Audio generation failed with error'
+            }, status=500)
+    
+    return JsonResponse({'error': 'Only POST method allowed'}, status=405)

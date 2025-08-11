@@ -1,0 +1,412 @@
+/* Google Meet Style Interview Interface */
+.meet-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #202124;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Video Grid Layout */
+.video-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 16px;
+  max-height: calc(100vh - 200px);
+}
+
+.video-participant {
+  position: relative;
+  background: #3c4043;
+  border-radius: var(--google-radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.participant-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--google-radius);
+}
+
+.participant-name {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ai-interviewer {
+  position: relative;
+}
+
+.ai-avatar {
+  width: 120px;
+  height: 120px;
+  background: var(--google-blue);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 48px;
+  margin: 0 auto;
+}
+
+.ai-avatar.speaking {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.speaking-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  background: var(--google-red);
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* Subtitle Overlay */
+.subtitle-overlay {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 16px;
+  max-width: 80%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.subtitle-overlay.show {
+  opacity: 1;
+}
+
+.subtitle-text {
+  line-height: 1.4;
+}
+
+.subtitle-typing {
+  overflow: hidden;
+  border-right: 2px solid white;
+  white-space: nowrap;
+  animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: white; }
+}
+
+/* Meet Controls */
+.meet-controls {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(60, 64, 67, 0.9);
+  padding: 16px 24px;
+  border-radius: 32px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: var(--google-transition);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.control-btn.muted {
+  background: var(--google-red);
+}
+
+.control-btn.camera-off {
+  background: var(--google-red);
+}
+
+.control-btn.end-btn {
+  background: var(--google-red);
+}
+
+.control-btn.end-btn:hover {
+  background: #d93025;
+}
+
+/* Interview Progress */
+.interview-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 20;
+}
+
+.interview-progress-bar {
+  height: 100%;
+  background: var(--google-blue);
+  transition: width 0.5s ease;
+}
+
+/* Interview Info Panel */
+.interview-info {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 16px;
+  border-radius: var(--google-radius);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.interview-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.interview-info p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.interview-stats {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 16px;
+  border-radius: var(--google-radius);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  display: flex;
+  gap: 24px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Recording Indicator */
+.recording-indicator {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--google-red);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+/* Settings Panel */
+.settings-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 100px;
+  width: 300px;
+  background: var(--google-surface);
+  border-radius: var(--google-radius);
+  box-shadow: 0 8px 32px rgba(60,64,67,0.3);
+  padding: 24px;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 15;
+}
+
+.settings-panel.show {
+  transform: translateX(0);
+}
+
+.settings-panel h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.setting-item {
+  margin-bottom: 16px;
+}
+
+.setting-item label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--google-grey-700);
+}
+
+.setting-item select,
+.setting-item input[type="range"] {
+  width: 100%;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  .video-participant {
+    min-height: 200px;
+  }
+  
+  .subtitle-overlay {
+    bottom: 100px;
+    max-width: 90%;
+    font-size: 14px;
+    padding: 10px 20px;
+  }
+  
+  .meet-controls {
+    bottom: 16px;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  
+  .control-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .interview-info,
+  .interview-stats {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    margin: 16px;
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .interview-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .settings-panel {
+    width: calc(100% - 32px);
+    right: 16px;
+    bottom: 80px;
+  }
+}
+
+/* Accessibility */
+.control-btn:focus {
+  outline: 2px solid var(--google-blue);
+  outline-offset: 2px;
+}
+
+.subtitle-overlay[aria-live="polite"] {
+  /* Screen reader support */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .meet-container {
+    background: #000;
+  }
+  
+  .video-participant {
+    background: #333;
+    border: 2px solid #fff;
+  }
+  
+  .subtitle-overlay {
+    background: #000;
+    border: 2px solid #fff;
+  }
+}

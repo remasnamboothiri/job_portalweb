@@ -9,6 +9,24 @@
     <link rel="stylesheet" href="{% static 'assets/css/google-components.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/google-interview.css' %}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <style>
+        .control-btn.mic-active {
+            background-color: #34a853 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(52, 168, 83, 0.3);
+        }
+        .control-btn.mic-muted {
+            background-color: #ea4335 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(234, 67, 53, 0.3);
+        }
+        .control-btn.mic-active:hover {
+            background-color: #2d7a3e !important;
+        }
+        .control-btn.mic-muted:hover {
+            background-color: #d33b2c !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Interview Progress Bar -->
@@ -72,15 +90,12 @@
         <div id="voiceResponsePanel" style="position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; background: var(--google-surface); border-radius: var(--google-radius); padding: 24px; box-shadow: 0 8px 32px rgba(60,64,67,0.3); display: none; z-index: 20;">
             <h4 style="margin-bottom: 16px;">Your Voice Response</h4>
             <div id="responseStatus" style="margin-bottom: 16px; padding: 12px; border-radius: var(--google-radius); background: var(--google-grey-50); text-align: center;">
-                Click the microphone to start speaking
+                Microphone is ready. You can speak anytime.
             </div>
             <div style="display: flex; justify-content: center; align-items: center; gap: 16px;">
-                <button class="btn-google" id="startRecordingBtn" style="font-size: 18px; padding: 12px 24px;">
-                    🎤 Start Speaking
-                </button>
-                <button class="btn-google-outline" id="stopRecordingBtn" style="display: none; font-size: 18px; padding: 12px 24px;">
-                    🛑 Stop Speaking
-                </button>
+                <div style="color: var(--google-grey-600); font-size: 14px; text-align: center;">
+                    🎤 Microphone is always listening. Just speak naturally!
+                </div>
                 <button class="btn-google-outline" id="skipQuestionBtn">
                     Skip Question
                 </button>
@@ -89,7 +104,7 @@
 
         <!-- Meet Controls -->
         <div class="meet-controls">
-            <button class="control-btn" id="muteBtn" title="Mute/Unmute (Ctrl+M)">
+            <button class="control-btn mic-active" id="muteBtn" title="Mute/Unmute (Ctrl+M)">
                 🎤
             </button>
             <button class="control-btn" id="cameraBtn" title="Turn camera on/off (Ctrl+E)">
@@ -192,13 +207,16 @@
     
     <script>
         // Global variables
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let isRecording = false;
+        let isMicOn = true; // Mic is ON by default
+        let isListening = false;
         let currentQuestionCount = 1;
         let interviewTimer = null;
         let startTime = new Date();
         let stream = null;
+        let currentRecognition = null;
+        let continuousRecognition = null;
+        let speechTimeout = null;
+        let lastSpeechTime = null;
         
         // Get CSRF token
         function getCSRFToken() {
@@ -248,81 +266,157 @@
             }
         }
 
-        // Start voice recording with improved speech recognition
-        async function startRecording() {
+        // Start continuous speech recognition (always listening)
+        async function startContinuousListening() {
+            if (!isMicOn || isListening) return;
+            
             try {
                 if (!stream) {
                     await initializeCamera();
                 }
                 
-                // Start speech recognition directly (no need for MediaRecorder)
-                isRecording = true;
-                
-                // Update UI
-                document.getElementById('startRecordingBtn').style.display = 'none';
-                document.getElementById('stopRecordingBtn').style.display = 'block';
-                document.getElementById('recordingIndicator').style.display = 'block';
-                document.getElementById('userSpeakingIndicator').style.display = 'block';
-                document.getElementById('responseStatus').innerHTML = '🎤 Listening... Speak now, then click "Stop Speaking"';
-                
-                console.log('Recording started');
-            } catch (error) {
-                console.error('Error starting recording:', error);
-                document.getElementById('responseStatus').innerHTML = '❌ Could not start recording. Please check your microphone permissions.';
-            }
-        }
-
-        // Stop voice recording and process speech
-        async function stopRecording() {
-            if (isRecording) {
-                isRecording = false;
-                
-                // Update UI immediately
-                document.getElementById('startRecordingBtn').style.display = 'none';
-                document.getElementById('stopRecordingBtn').style.display = 'none';
-                document.getElementById('recordingIndicator').style.display = 'none';
-                document.getElementById('userSpeakingIndicator').style.display = 'none';
-                document.getElementById('responseStatus').innerHTML = '🔄 Processing your speech...';
-                
-                console.log('Recording stopped, processing speech...');
-                
-                // Process speech directly (no audio blob needed)
-                await sendAudioResponse(null);
-            }
-        }
-
-        // Process speech and send to backend
-        async function sendAudioResponse(audioBlob) {
-            try {
-                // Show processing immediately
-                document.getElementById('responseStatus').innerHTML = '🔄 Converting speech to text...';
-                
-                // Convert speech to text with better error handling
-                let responseText;
-                try {
-                    responseText = await convertSpeechToText(audioBlob);
-                    console.log('Speech converted:', responseText);
-                } catch (speechError) {
-                    console.error('Speech recognition failed:', speechError);
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    continuousRecognition = new SpeechRecognition();
                     
-                    if (speechError.message.includes('timeout')) {
-                        document.getElementById('responseStatus').innerHTML = '⏱️ Speech recognition timeout. Please try speaking again or use the Skip button.';
-                    } else if (speechError.message.includes('No speech detected')) {
-                        document.getElementById('responseStatus').innerHTML = '🎤 No speech detected. Please try speaking louder or closer to the microphone.';
-                    } else if (speechError.message.includes('Microphone access denied')) {
-                        document.getElementById('responseStatus').innerHTML = '🚫 Microphone access denied. Please allow microphone access and refresh the page.';
-                    } else {
-                        document.getElementById('responseStatus').innerHTML = '❌ Speech recognition error. Please try again or use the Skip button.';
-                    }
+                    continuousRecognition.lang = 'en-US';
+                    continuousRecognition.interimResults = true;
+                    continuousRecognition.continuous = true;
+                    continuousRecognition.maxAlternatives = 1;
                     
-                    // Re-enable recording buttons
-                    document.getElementById('startRecordingBtn').style.display = 'block';
-                    document.getElementById('stopRecordingBtn').style.display = 'none';
-                    return;
+                    let currentTranscript = '';
+                    let finalTranscript = '';
+                    
+                    continuousRecognition.onstart = () => {
+                        console.log('Continuous speech recognition started');
+                        isListening = true;
+                        document.getElementById('userSpeakingIndicator').style.display = 'block';
+                    };
+                    
+                    continuousRecognition.onresult = (event) => {
+                        let interimTranscript = '';
+                        finalTranscript = '';
+                        
+                        for (let i = 0; i < event.results.length; i++) {
+                            const transcript = event.results[i][0].transcript;
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript + ' ';
+                            } else {
+                                interimTranscript += transcript;
+                            }
+                        }
+                        
+                        currentTranscript = finalTranscript + interimTranscript;
+                        lastSpeechTime = Date.now();
+                        
+                        // Show real-time transcription
+                        if (currentTranscript.trim()) {
+                            document.getElementById('voiceResponsePanel').style.display = 'block';
+                            document.getElementById('responseStatus').innerHTML = `🎤 "${currentTranscript.trim()}..."`;
+                            
+                            // Clear existing timeout
+                            if (speechTimeout) {
+                                clearTimeout(speechTimeout);
+                            }
+                            
+                            // Set timeout to process speech after user stops talking
+                            speechTimeout = setTimeout(() => {
+                                if (finalTranscript.trim()) {
+                                    processSpeechResult(finalTranscript.trim());
+                                    finalTranscript = '';
+                                    currentTranscript = '';
+                                }
+                            }, 2000); // Wait 2 seconds after user stops talking
+                        }
+                    };
+                    
+                    continuousRecognition.onerror = (error) => {
+                        console.error('Continuous speech recognition error:', error);
+                        
+                        if (error.error === 'not-allowed') {
+                            document.getElementById('responseStatus').innerHTML = '🚫 Microphone access denied. Please allow microphone access.';
+                            toggleMicrophone(); // Turn off mic
+                        } else if (error.error !== 'no-speech') {
+                            // Restart recognition for other errors (except no-speech)
+                            setTimeout(() => {
+                                if (isMicOn) {
+                                    startContinuousListening();
+                                }
+                            }, 1000);
+                        }
+                    };
+                    
+                    continuousRecognition.onend = () => {
+                        console.log('Continuous speech recognition ended');
+                        isListening = false;
+                        document.getElementById('userSpeakingIndicator').style.display = 'none';
+                        
+                        // Restart recognition if mic is still on
+                        if (isMicOn) {
+                            setTimeout(() => {
+                                startContinuousListening();
+                            }, 500);
+                        }
+                    };
+                    
+                    continuousRecognition.start();
+                    
+                } else {
+                    throw new Error('Speech recognition not supported in this browser');
                 }
+                
+            } catch (error) {
+                console.error('Error starting continuous listening:', error);
+                document.getElementById('responseStatus').innerHTML = '❌ Speech recognition not available in this browser.';
+            }
+        }
+
+        // Toggle microphone on/off
+        function toggleMicrophone() {
+            isMicOn = !isMicOn;
+            const muteBtn = document.getElementById('muteBtn');
+            
+            if (isMicOn) {
+                // Turn mic ON
+                muteBtn.classList.add('mic-active');
+                muteBtn.classList.remove('mic-muted');
+                muteBtn.innerHTML = '🎤';
+                muteBtn.title = 'Mute microphone';
+                console.log('Microphone turned ON');
+                startContinuousListening();
+            } else {
+                // Turn mic OFF
+                muteBtn.classList.remove('mic-active');
+                muteBtn.classList.add('mic-muted');
+                muteBtn.innerHTML = '🔇';
+                muteBtn.title = 'Unmute microphone';
+                console.log('Microphone turned OFF');
+                stopContinuousListening();
+            }
+        }
+        
+        // Stop continuous listening
+        function stopContinuousListening() {
+            if (continuousRecognition) {
+                continuousRecognition.stop();
+                continuousRecognition = null;
+            }
+            if (speechTimeout) {
+                clearTimeout(speechTimeout);
+                speechTimeout = null;
+            }
+            isListening = false;
+            document.getElementById('userSpeakingIndicator').style.display = 'none';
+        }
+
+        // Process speech result and send to backend
+        async function processSpeechResult(speechText) {
+            try {
+                console.log('Processing speech result:', speechText);
                 
                 // Show sending status
                 document.getElementById('responseStatus').innerHTML = '📤 Sending your response...';
+                resetRecordingUI();
                 
                 // Send to backend
                 const response = await fetch(window.location.href, {
@@ -331,7 +425,7 @@
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-CSRFToken': getCSRFToken(),
                     },
-                    body: new URLSearchParams({ text: responseText })
+                    body: new URLSearchParams({ text: speechText })
                 });
                 
                 const data = await response.json();
@@ -341,95 +435,19 @@
                 } else {
                     console.error('Backend error:', data.error);
                     document.getElementById('responseStatus').innerHTML = '❌ Error processing response. Please try again.';
-                    // Re-enable recording buttons
-                    document.getElementById('startRecordingBtn').style.display = 'block';
-                    document.getElementById('stopRecordingBtn').style.display = 'none';
+                    resetRecordingUI();
                 }
             } catch (error) {
                 console.error('Error sending response:', error);
                 document.getElementById('responseStatus').innerHTML = '❌ Network error. Please check your connection and try again.';
-                // Re-enable recording buttons
-                document.getElementById('startRecordingBtn').style.display = 'block';
-                document.getElementById('stopRecordingBtn').style.display = 'none';
+                resetRecordingUI();
             }
         }
 
-        // Convert speech to text with improved processing
+        // This function is no longer needed as we handle speech recognition directly in startRecording
+        // Keeping it for compatibility but it won't be used
         async function convertSpeechToText(audioBlob) {
-            return new Promise((resolve, reject) => {
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    const recognition = new SpeechRecognition();
-                    
-                    recognition.lang = 'en-US';
-                    recognition.interimResults = true;
-                    recognition.continuous = false;
-                    recognition.maxAlternatives = 1;
-                    
-                    let finalTranscript = '';
-                    let hasResult = false;
-                    
-                    let timeout = setTimeout(() => {
-                        recognition.stop();
-                        if (!hasResult) {
-                            reject(new Error('Speech recognition timeout'));
-                        }
-                    }, 15000); // Increased to 15 seconds
-                    
-                    recognition.onresult = (event) => {
-                        let interimTranscript = '';
-                        
-                        for (let i = event.resultIndex; i < event.results.length; i++) {
-                            const transcript = event.results[i][0].transcript;
-                            if (event.results[i].isFinal) {
-                                finalTranscript += transcript;
-                                hasResult = true;
-                            } else {
-                                interimTranscript += transcript;
-                            }
-                        }
-                        
-                        // Update status with interim results
-                        if (interimTranscript) {
-                            document.getElementById('responseStatus').innerHTML = `🎤 Listening: "${interimTranscript}..."`;
-                        }
-                        
-                        // If we have final results, resolve immediately
-                        if (finalTranscript.trim()) {
-                            clearTimeout(timeout);
-                            recognition.stop();
-                            resolve(finalTranscript.trim());
-                        }
-                    };
-                    
-                    recognition.onerror = (error) => {
-                        clearTimeout(timeout);
-                        console.error('Speech recognition error:', error);
-                        
-                        if (error.error === 'no-speech') {
-                            reject(new Error('No speech detected. Please try speaking again.'));
-                        } else if (error.error === 'not-allowed') {
-                            reject(new Error('Microphone access denied. Please allow microphone access.'));
-                        } else {
-                            resolve("I provided a spoken response"); // Fallback
-                        }
-                    };
-                    
-                    recognition.onend = () => {
-                        clearTimeout(timeout);
-                        if (!hasResult && finalTranscript.trim()) {
-                            resolve(finalTranscript.trim());
-                        } else if (!hasResult) {
-                            reject(new Error('No speech detected'));
-                        }
-                    };
-                    
-                    recognition.start();
-                } else {
-                    // Fallback for browsers without speech recognition
-                    resolve("I provided a spoken response");
-                }
-            });
+            return "I provided a spoken response";
         }
 
         // Handle AI response
@@ -529,6 +547,11 @@
             // Initialize camera
             initializeCamera();
             
+            // Start continuous listening immediately (mic is ON by default)
+            setTimeout(() => {
+                startContinuousListening();
+            }, 1000);
+            
             // Show initial subtitle and play audio if available
             setTimeout(() => {
                 const subtitleOverlay = document.getElementById('subtitleOverlay');
@@ -539,6 +562,7 @@
                 {% else %}
                     setTimeout(() => {
                         document.getElementById('voiceResponsePanel').style.display = 'block';
+                        document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak anytime.';
                     }, 3000);
                 {% endif %}
             }, 2000);
@@ -562,8 +586,7 @@
         });
 
         // Button event listeners
-        document.getElementById('startRecordingBtn').addEventListener('click', startRecording);
-        document.getElementById('stopRecordingBtn').addEventListener('click', stopRecording);
+        document.getElementById('muteBtn').addEventListener('click', toggleMicrophone);
         document.getElementById('skipQuestionBtn').addEventListener('click', skipQuestion);
 
         // Settings button functionality
@@ -614,6 +637,7 @@
             if (interviewTimer) {
                 clearInterval(interviewTimer);
             }
+            stopContinuousListening();
         });
     </script>
 </body>

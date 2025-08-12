@@ -248,26 +248,14 @@
             }
         }
 
-        // Start voice recording
+        // Start voice recording with improved speech recognition
         async function startRecording() {
             try {
                 if (!stream) {
                     await initializeCamera();
                 }
                 
-                audioChunks = [];
-                mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-                
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    await sendAudioResponse(audioBlob);
-                };
-                
-                mediaRecorder.start();
+                // Start speech recognition directly (no need for MediaRecorder)
                 isRecording = true;
                 
                 // Update UI
@@ -275,45 +263,68 @@
                 document.getElementById('stopRecordingBtn').style.display = 'block';
                 document.getElementById('recordingIndicator').style.display = 'block';
                 document.getElementById('userSpeakingIndicator').style.display = 'block';
-                document.getElementById('responseStatus').innerHTML = '🎤 Recording... Click "Stop Speaking" when finished';
+                document.getElementById('responseStatus').innerHTML = '🎤 Listening... Speak now, then click "Stop Speaking"';
                 
                 console.log('Recording started');
             } catch (error) {
                 console.error('Error starting recording:', error);
-                alert('Could not start recording. Please check your microphone permissions.');
+                document.getElementById('responseStatus').innerHTML = '❌ Could not start recording. Please check your microphone permissions.';
             }
         }
 
-        // Stop voice recording
-        function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
+        // Stop voice recording and process speech
+        async function stopRecording() {
+            if (isRecording) {
                 isRecording = false;
                 
-                // Update UI
-                document.getElementById('startRecordingBtn').style.display = 'block';
+                // Update UI immediately
+                document.getElementById('startRecordingBtn').style.display = 'none';
                 document.getElementById('stopRecordingBtn').style.display = 'none';
                 document.getElementById('recordingIndicator').style.display = 'none';
                 document.getElementById('userSpeakingIndicator').style.display = 'none';
-                document.getElementById('responseStatus').innerHTML = '🔄 Processing your response...';
+                document.getElementById('responseStatus').innerHTML = '🔄 Processing your speech...';
                 
-                console.log('Recording stopped');
+                console.log('Recording stopped, processing speech...');
+                
+                // Process speech directly (no audio blob needed)
+                await sendAudioResponse(null);
             }
         }
 
-        // Send audio response to backend with faster processing
+        // Process speech and send to backend
         async function sendAudioResponse(audioBlob) {
             try {
                 // Show processing immediately
-                document.getElementById('responseStatus').innerHTML = '🔄 Processing your response...';
+                document.getElementById('responseStatus').innerHTML = '🔄 Converting speech to text...';
                 
-                // Convert audio to text with timeout
-                const responseText = await Promise.race([
-                    convertSpeechToText(audioBlob),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Speech recognition timeout')), 10000))
-                ]);
+                // Convert speech to text with better error handling
+                let responseText;
+                try {
+                    responseText = await convertSpeechToText(audioBlob);
+                    console.log('Speech converted:', responseText);
+                } catch (speechError) {
+                    console.error('Speech recognition failed:', speechError);
+                    
+                    if (speechError.message.includes('timeout')) {
+                        document.getElementById('responseStatus').innerHTML = '⏱️ Speech recognition timeout. Please try speaking again or use the Skip button.';
+                    } else if (speechError.message.includes('No speech detected')) {
+                        document.getElementById('responseStatus').innerHTML = '🎤 No speech detected. Please try speaking louder or closer to the microphone.';
+                    } else if (speechError.message.includes('Microphone access denied')) {
+                        document.getElementById('responseStatus').innerHTML = '🚫 Microphone access denied. Please allow microphone access and refresh the page.';
+                    } else {
+                        document.getElementById('responseStatus').innerHTML = '❌ Speech recognition error. Please try again or use the Skip button.';
+                    }
+                    
+                    // Re-enable recording buttons
+                    document.getElementById('startRecordingBtn').style.display = 'block';
+                    document.getElementById('stopRecordingBtn').style.display = 'none';
+                    return;
+                }
                 
-                // Send to backend immediately
+                // Show sending status
+                document.getElementById('responseStatus').innerHTML = '📤 Sending your response...';
+                
+                // Send to backend
                 const response = await fetch(window.location.href, {
                     method: 'POST',
                     headers: {
@@ -330,18 +341,20 @@
                 } else {
                     console.error('Backend error:', data.error);
                     document.getElementById('responseStatus').innerHTML = '❌ Error processing response. Please try again.';
+                    // Re-enable recording buttons
+                    document.getElementById('startRecordingBtn').style.display = 'block';
+                    document.getElementById('stopRecordingBtn').style.display = 'none';
                 }
             } catch (error) {
                 console.error('Error sending response:', error);
-                if (error.message.includes('timeout')) {
-                    document.getElementById('responseStatus').innerHTML = '⏱️ Speech recognition timeout. Please try again.';
-                } else {
-                    document.getElementById('responseStatus').innerHTML = '❌ Network error. Please try again.';
-                }
+                document.getElementById('responseStatus').innerHTML = '❌ Network error. Please check your connection and try again.';
+                // Re-enable recording buttons
+                document.getElementById('startRecordingBtn').style.display = 'block';
+                document.getElementById('stopRecordingBtn').style.display = 'none';
             }
         }
 
-        // Convert speech to text with faster processing
+        // Convert speech to text with improved processing
         async function convertSpeechToText(audioBlob) {
             return new Promise((resolve, reject) => {
                 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -349,28 +362,66 @@
                     const recognition = new SpeechRecognition();
                     
                     recognition.lang = 'en-US';
-                    recognition.interimResults = false;
+                    recognition.interimResults = true;
+                    recognition.continuous = false;
                     recognition.maxAlternatives = 1;
+                    
+                    let finalTranscript = '';
+                    let hasResult = false;
                     
                     let timeout = setTimeout(() => {
                         recognition.stop();
-                        reject(new Error('Speech recognition timeout'));
-                    }, 8000); // 8 second timeout
+                        if (!hasResult) {
+                            reject(new Error('Speech recognition timeout'));
+                        }
+                    }, 15000); // Increased to 15 seconds
                     
                     recognition.onresult = (event) => {
-                        clearTimeout(timeout);
-                        const transcript = event.results[0][0].transcript;
-                        resolve(transcript);
+                        let interimTranscript = '';
+                        
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            const transcript = event.results[i][0].transcript;
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript;
+                                hasResult = true;
+                            } else {
+                                interimTranscript += transcript;
+                            }
+                        }
+                        
+                        // Update status with interim results
+                        if (interimTranscript) {
+                            document.getElementById('responseStatus').innerHTML = `🎤 Listening: "${interimTranscript}..."`;
+                        }
+                        
+                        // If we have final results, resolve immediately
+                        if (finalTranscript.trim()) {
+                            clearTimeout(timeout);
+                            recognition.stop();
+                            resolve(finalTranscript.trim());
+                        }
                     };
                     
                     recognition.onerror = (error) => {
                         clearTimeout(timeout);
                         console.error('Speech recognition error:', error);
-                        resolve("I provided a spoken response"); // Fallback
+                        
+                        if (error.error === 'no-speech') {
+                            reject(new Error('No speech detected. Please try speaking again.'));
+                        } else if (error.error === 'not-allowed') {
+                            reject(new Error('Microphone access denied. Please allow microphone access.'));
+                        } else {
+                            resolve("I provided a spoken response"); // Fallback
+                        }
                     };
                     
                     recognition.onend = () => {
                         clearTimeout(timeout);
+                        if (!hasResult && finalTranscript.trim()) {
+                            resolve(finalTranscript.trim());
+                        } else if (!hasResult) {
+                            reject(new Error('No speech detected'));
+                        }
                     };
                     
                     recognition.start();

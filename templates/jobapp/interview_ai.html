@@ -82,7 +82,9 @@
         <!-- Subtitle Overlay -->
         <div class="subtitle-overlay" id="subtitleOverlay" aria-live="polite">
             <div class="subtitle-text" id="subtitleText">
-                AI: "{{ ai_question }}"
+                <span class="question-preview" id="questionPreview">AI: "{{ ai_question|truncatechars:50 }}..."</span>
+                <span class="question-full" id="questionFull" style="display: none;">AI: "{{ ai_question }}"</span>
+                <button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()">Show Full Question</button>
             </div>
         </div>
 
@@ -204,6 +206,7 @@
     <!-- Scripts -->
     <script src="{% static 'assets/js/google-interactions.js' %}"></script>
     <script src="{% static 'assets/js/interview-meet.js' %}"></script>
+    <script src="{% static 'js/interview-echo-fix.js' %}"></script>
     
     <script>
         // Global variables
@@ -223,16 +226,42 @@
             return document.querySelector('[name=csrfmiddlewaretoken]').value;
         }
 
-        // Initialize camera access
+        // Initialize camera access with WebRTC AEC
         async function initializeCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true, 
-                    audio: true 
-                });
+                // WebRTC constraints with Acoustic Echo Cancellation
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100,
+                        channelCount: 1
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const userVideo = document.getElementById('userVideo');
                 userVideo.srcObject = stream;
-                console.log('Camera and microphone access granted');
+                
+                // Log audio track settings for debugging
+                const audioTrack = stream.getAudioTracks()[0];
+                if (audioTrack) {
+                    const settings = audioTrack.getSettings();
+                    console.log('Audio track settings:', {
+                        echoCancellation: settings.echoCancellation,
+                        noiseSuppression: settings.noiseSuppression,
+                        autoGainControl: settings.autoGainControl,
+                        sampleRate: settings.sampleRate
+                    });
+                }
+                
+                console.log('Camera and microphone access granted with AEC enabled');
             } catch (error) {
                 console.error('Error accessing camera/microphone:', error);
                 alert('Camera and microphone access is required for this interview. Please allow access and refresh the page.');
@@ -279,13 +308,43 @@
             }
         }
 
-        // Start continuous speech recognition (always listening)
+        // Show full question function
+        function showFullQuestion() {
+            const preview = document.getElementById('questionPreview');
+            const full = document.getElementById('questionFull');
+            const btn = document.getElementById('showFullBtn');
+            
+            if (preview && full && btn) {
+                preview.style.display = 'none';
+                full.style.display = 'inline';
+                btn.style.display = 'none';
+            }
+        }
+        
+        // Start continuous speech recognition with AEC support
         async function startContinuousListening() {
             if (!isMicOn || isListening) return;
             
             try {
                 if (!stream) {
                     await initializeCamera();
+                }
+                
+                // Ensure audio track has AEC enabled
+                const audioTrack = stream.getAudioTracks()[0];
+                if (audioTrack) {
+                    const constraints = {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    };
+                    
+                    try {
+                        await audioTrack.applyConstraints(constraints);
+                        console.log('AEC constraints applied to audio track');
+                    } catch (constraintError) {
+                        console.warn('Could not apply AEC constraints:', constraintError);
+                    }
                 }
                 
                 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -472,7 +531,7 @@
             return "I provided a spoken response";
         }
 
-        // Handle AI response
+        // Handle AI response with partial question display
         function handleAIResponse(data) {
             // Hide voice response panel
             document.getElementById('voiceResponsePanel').style.display = 'none';
@@ -485,9 +544,16 @@
             const progress = (currentQuestionCount / 8) * 100;
             document.getElementById('progressBar').style.width = `${progress}%`;
             
-            // Show AI response in subtitles
+            // Show AI response in subtitles with partial display
             const subtitleText = document.getElementById('subtitleText');
-            subtitleText.textContent = `AI: "${data.response}"`;
+            const response = data.response;
+            const truncatedResponse = response.length > 50 ? response.substring(0, 50) + '...' : response;
+            
+            subtitleText.innerHTML = `
+                <span class="question-preview" id="questionPreview">AI: "${truncatedResponse}"</span>
+                <span class="question-full" id="questionFull" style="display: none;">AI: "${response}"</span>
+                ${response.length > 50 ? '<button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()">Show Full Question</button>' : ''}
+            `;
             
             const subtitleOverlay = document.getElementById('subtitleOverlay');
             subtitleOverlay.classList.add('show');

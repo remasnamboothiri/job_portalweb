@@ -437,34 +437,11 @@ def start_interview_by_uuid(request, interview_uuid):
                 
                 return JsonResponse(response_data)
             
-            # Create simplified prompt for faster processing
+            # Ultra-simplified prompt for maximum speed
             if question_count < 8:
-                prompt = f"""
-You are Alex, an HR interviewer for {context.get('job_title')} at {context.get('company_name')}.
-
-Candidate said: "{user_text}"
-
-Respond with:
-1. Brief acknowledgment (1 sentence)
-2. One follow-up question
-
-Keep it under 30 words total. Be natural and professional.
-
-Question {question_count}/8.
-"""
+                prompt = f"Candidate said: '{user_text}'. Give a brief acknowledgment and ask one follow-up question. Max 20 words total. Question {question_count}/8."
             else:
-                prompt = f"""
-You are Alex ending the interview.
-
-Candidate said: "{user_text}"
-
-Respond with:
-1. Brief acknowledgment
-2. Thank them
-3. Mention next steps
-
-Keep under 25 words total.
-"""
+                prompt = f"Candidate said: '{user_text}'. Briefly thank them and mention next steps. Max 15 words total."
             
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)

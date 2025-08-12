@@ -26,225 +26,57 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
         clean_text = clean_text[:5000]
         logger.warning("Text truncated to 5000 characters for TTS")
     
-    # Skip primary API if force_gtts is True
-    if force_gtts:
-        logger.info("Forcing gTTS fallback")
+    # Skip slow primary API and use fast gTTS directly for better performance
+    if force_gtts or True:  # Always use gTTS for speed
+        logger.info("Using fast gTTS for better response speed")
         return generate_gtts_fallback(clean_text)
-    
-    # FIXED: Correct API base URL (remove /docs/)
-    TTS_BASE_URL = "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net"
-    
+        
+    # This code is now skipped - using gTTS directly above
+    pass
+
+def generate_gtts_fallback(text, max_retries=1):  # Single attempt for speed
+    """
+    Generate TTS using gTTS - optimized for speed
+    """
     try:
-        logger.info(f"Starting TTS generation for: '{clean_text[:50]}...'")
-        logger.info(f"Using API URL: {TTS_BASE_URL}")
+        logger.info(f"Fast gTTS generation for: '{text[:50]}...'")
         
-        # Test API connectivity first
-        try:
-            connectivity_response = requests.get(f"{TTS_BASE_URL}/health", timeout=5)
-            logger.info(f"API health check: {connectivity_response.status_code}")
-        except:
-            logger.warning("API health check failed, proceeding anyway")
-        
-        payload = {
-            'text': clean_text,
-            'voice_id': voice_id,
-            'exaggeration': 0.5,
-            'temperature': 0.3,
-            'cfg_weight': 0.5,
-            'seed': 0
-        }
-        
-        logger.info(f"Request payload: {payload}")
-        
-        # Step 1: Synthesize speech with shorter timeout
-        synthesize_url = f"{TTS_BASE_URL}/synthesize"
-        logger.info(f"Sending POST request to: {synthesize_url}")
-        
-        response = requests.post(
-            synthesize_url,
-            json=payload,
-            timeout=8,  # Further reduced timeout for speed
-            headers={
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        )
-        
-        logger.info(f"Response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                logger.info(f"API Response: {result}")
-                
-                if result.get('success') and result.get('audio_id'):
-                    audio_id = result['audio_id']
-                    logger.info(f"Audio ID received: {audio_id}")
-                    
-                    # Step 2: Download audio with retry logic
-                    audio_url = f"{TTS_BASE_URL}/audio/{audio_id}"
-                    logger.info(f"Downloading audio from: {audio_url}")
-                    
-                    # Retry logic for audio download
-                    max_retries = 3
-                    for attempt in range(max_retries):
-                        try:
-                            audio_response = requests.get(audio_url, timeout=15)
-                            logger.info(f"Audio download attempt {attempt + 1}: {audio_response.status_code}")
-                            
-                            if audio_response.status_code == 200:
-                                content_length = len(audio_response.content)
-                                logger.info(f"Audio content length: {content_length} bytes")
-                                
-                                if content_length > 100:  # Minimum valid audio file size
-                                    # Save audio file
-                                    filename = f"tts_{uuid.uuid4().hex[:8]}.wav"
-                                    tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
-                                    os.makedirs(tts_dir, exist_ok=True)
-                                    filepath = os.path.join(tts_dir, filename)
-                                    
-                                    logger.info(f"Saving audio to: {filepath}")
-                                    
-                                    with open(filepath, 'wb') as f:
-                                        f.write(audio_response.content)
-                                    
-                                    # Verify file was created and has content
-                                    if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
-                                        file_size = os.path.getsize(filepath)
-                                        logger.info(f"Audio file saved successfully: {filepath} ({file_size} bytes)")
-                                        
-                                        media_url = f"/media/tts/{filename}"
-                                        logger.info(f"Media URL: {media_url}")
-                                        return media_url
-                                    else:
-                                        logger.error("Saved file is empty or too small")
-                                        if os.path.exists(filepath):
-                                            os.remove(filepath)
-                                        continue
-                                else:
-                                    logger.warning("Audio content too small, retrying...")
-                                    time.sleep(1)  # Wait before retry
-                                    continue
-                            else:
-                                logger.warning(f"Audio download failed with status {audio_response.status_code}")
-                                if attempt < max_retries - 1:
-                                    time.sleep(1)
-                                    continue
-                                
-                        except requests.exceptions.Timeout:
-                            logger.warning(f"Audio download timeout on attempt {attempt + 1}")
-                            if attempt < max_retries - 1:
-                                time.sleep(1)
-                                continue
-                        except Exception as e:
-                            logger.warning(f"Audio download error on attempt {attempt + 1}: {e}")
-                            if attempt < max_retries - 1:
-                                time.sleep(1)
-                                continue
-                    
-                    # If all retries failed
-                    raise Exception("Audio download failed after all retries")
-                        
-                else:
-                    logger.error(f"Invalid API response structure: {result}")
-                    if 'error' in result:
-                        logger.error(f"API Error: {result['error']}")
-                    raise Exception("API returned invalid response structure")
-                    
-            except ValueError as json_error:
-                logger.error(f"JSON decode error: {json_error}")
-                logger.error(f"Raw response content: {response.text[:200]}...")
-                raise Exception(f"Invalid JSON response: {json_error}")
-                
-        else:
-            logger.error(f"API request failed with status: {response.status_code}")
-            logger.error(f"Response content: {response.text[:200]}...")
+        # Clean text for gTTS
+        clean_text = text.strip()
+        if not clean_text:
+            logger.error("Empty text provided to gTTS")
+            return None
             
-            # Try to parse error message
-            try:
-                error_data = response.json()
-                if 'detail' in error_data:
-                    logger.error(f"API Error detail: {error_data['detail']}")
-            except:
-                pass
-                
-            raise Exception(f"API request failed with status {response.status_code}")
-            
-    except requests.exceptions.Timeout:
-        logger.error("Request timeout after 15 seconds")
-        logger.info("Falling back to gTTS...")
-        return generate_gtts_fallback(clean_text)
+        if len(clean_text) > 1000:  # Shorter limit for faster processing
+            clean_text = clean_text[:1000]
+            logger.warning("Text truncated to 1000 characters for speed")
         
-    except requests.exceptions.ConnectionError as conn_error:
-        logger.error(f"Connection error: {conn_error}")
-        logger.info("Falling back to gTTS...")
-        return generate_gtts_fallback(clean_text)
+        filename = f"gtts_{uuid.uuid4().hex[:8]}.mp3"
+        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
+        os.makedirs(tts_dir, exist_ok=True)
+        filepath = os.path.join(tts_dir, filename)
+        
+        # Generate gTTS quickly
+        tts = gTTS(text=clean_text, lang='en', slow=False)
+        tts.save(filepath)
+        
+        # Minimal wait for file write
+        time.sleep(0.1)
+        
+        # Quick verification
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+            if file_size > 100:  # Very low threshold for speed
+                media_url = f"/media/tts/{filename}"
+                logger.info(f"Fast gTTS complete: {media_url} ({file_size} bytes)")
+                return media_url
+            else:
+                logger.warning(f"gTTS file too small: {file_size} bytes")
+                if os.path.exists(filepath):
+                    os.remove(filepath)
         
     except Exception as e:
-        logger.error(f"Primary TTS failed: {type(e).__name__}: {e}")
-        logger.info("Falling back to gTTS...")
-        return generate_gtts_fallback(clean_text)
-
-def generate_gtts_fallback(text, max_retries=2):  # Reduced retries
-    """
-    Generate TTS using gTTS as fallback with enhanced error handling and retry logic
-    """
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Starting gTTS fallback attempt {attempt + 1} for: '{text[:50]}...'")
-            
-            # Clean text for gTTS
-            clean_text = text.strip()
-            if not clean_text:
-                logger.error("Empty text provided to gTTS")
-                return None
-                
-            if len(clean_text) > 5000:  # gTTS has character limits
-                clean_text = clean_text[:5000]
-                logger.warning("Text truncated to 5000 characters for gTTS")
-            
-            filename = f"gtts_{uuid.uuid4().hex[:8]}.mp3"
-            tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
-            os.makedirs(tts_dir, exist_ok=True)
-            filepath = os.path.join(tts_dir, filename)
-            
-            logger.info("Generating gTTS audio...")
-            
-            # Generate gTTS with error handling
-            tts = gTTS(text=clean_text, lang='en', slow=False)
-            tts.save(filepath)
-            
-            # Wait a moment for file to be written
-            time.sleep(0.5)
-            
-            # Verify file was created and has content
-            if os.path.exists(filepath):
-                file_size = os.path.getsize(filepath)
-                logger.info(f"gTTS file created: {filepath} ({file_size} bytes)")
-                
-                if file_size > 500:  # Reduced minimum size for speed
-                    media_url = f"/media/tts/{filename}"
-                    logger.info(f"gTTS Media URL: {media_url}")
-                    return media_url
-                else:
-                    logger.warning(f"gTTS file too small: {file_size} bytes")
-                    os.remove(filepath)  # Clean up small file
-                    if attempt < max_retries - 1:
-                        time.sleep(0.5)  # Reduced wait time
-                        continue
-            else:
-                logger.warning("gTTS file was not created")
-                if attempt < max_retries - 1:
-                    time.sleep(0.5)  # Reduced wait time
-                    continue
-                    
-        except Exception as e:
-            logger.error(f"gTTS attempt {attempt + 1} failed: {type(e).__name__}: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(1)  # Reduced wait time between retries
-                continue
-            else:
-                logger.error("All gTTS attempts failed")
+        logger.error(f"Fast gTTS failed: {type(e).__name__}: {e}")
     
     return None
 

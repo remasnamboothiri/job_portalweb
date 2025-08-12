@@ -513,7 +513,12 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
             logger.info(f"Response data: {response_data}")
             
-            return JsonResponse(response_data)
+            # Add CORS headers for better compatibility
+            response = JsonResponse(response_data)
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
+            return response
 
         # GET: Show interview UI with first question
         first_prompt = f"""

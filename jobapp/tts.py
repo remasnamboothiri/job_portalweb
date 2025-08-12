@@ -34,9 +34,9 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
     # This code is now skipped - using gTTS directly above
     pass
 
-def generate_gtts_fallback(text, max_retries=1):  # Single attempt for speed
+def generate_gtts_fallback(text, max_retries=1):
     """
-    Generate TTS using gTTS - optimized for speed
+    Generate TTS using gTTS - optimized for speed and reliability
     """
     try:
         logger.info(f"Fast gTTS generation for: '{text[:50]}...'")
@@ -47,26 +47,32 @@ def generate_gtts_fallback(text, max_retries=1):  # Single attempt for speed
             logger.error("Empty text provided to gTTS")
             return None
             
-        if len(clean_text) > 1000:  # Shorter limit for faster processing
+        if len(clean_text) > 1000:
             clean_text = clean_text[:1000]
             logger.warning("Text truncated to 1000 characters for speed")
         
-        filename = f"gtts_{uuid.uuid4().hex[:8]}.mp3"
+        # Use hash for consistent filenames (enables caching)
+        import hashlib
+        text_hash = hashlib.md5(clean_text.encode()).hexdigest()[:8]
+        filename = f"gtts_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         os.makedirs(tts_dir, exist_ok=True)
         filepath = os.path.join(tts_dir, filename)
         
-        # Generate gTTS quickly
+        # Check if file already exists (caching)
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+            media_url = f"/media/tts/{filename}"
+            logger.info(f"Using cached gTTS: {media_url}")
+            return media_url
+        
+        # Generate gTTS
         tts = gTTS(text=clean_text, lang='en', slow=False)
         tts.save(filepath)
         
-        # Minimal wait for file write
-        time.sleep(0.1)
-        
-        # Quick verification
+        # Verify file was created
         if os.path.exists(filepath):
             file_size = os.path.getsize(filepath)
-            if file_size > 100:  # Very low threshold for speed
+            if file_size > 100:
                 media_url = f"/media/tts/{filename}"
                 logger.info(f"Fast gTTS complete: {media_url} ({file_size} bytes)")
                 return media_url

@@ -437,50 +437,33 @@ def start_interview_by_uuid(request, interview_uuid):
                 
                 return JsonResponse(response_data)
             
-            # Create contextual prompt based on question number
+            # Create simplified prompt for faster processing
             if question_count < 8:
                 prompt = f"""
-You are Alex, a friendly HR interviewer. Keep your responses natural and conversational.
+You are Alex, an HR interviewer for {context.get('job_title')} at {context.get('company_name')}.
 
-CONTEXT:
-- Candidate: {context.get('candidate_name', 'the candidate')}
-- Position: {context.get('job_title')} at {context.get('company_name')}
-- Job Description: {context.get('job_description', '')}
-- Resume Summary: {context.get('resume_text', '')[:500]}...
+Candidate said: "{user_text}"
 
-The candidate just said: "{user_text}"
+Respond with:
+1. Brief acknowledgment (1 sentence)
+2. One follow-up question
 
-INSTRUCTIONS:
-- Give a brief, natural acknowledgment of their answer (1 sentence max)
-- Briefly mention the interview format (8 questions, about 25 minutes)
-- Ask ONE follow-up question related to their response OR move to the next interview topic
-- Keep it natural and conversational
-- Maximum 2-3 sentences total
-- Don't give lengthy explanations or multiple questions
+Keep it under 30 words total. Be natural and professional.
 
-RULES:
-- Maximum 2-3 sentences total
-- Keep it conversational and professional
-- Don't ask multiple questions at once
-- Make it feel like a natural conversation, not an interrogation
-- Focus on getting specific examples and stories
-
-Current question #{question_count} of 8.
+Question {question_count}/8.
 """
             else:
                 prompt = f"""
-You are Alex, a friendly HR interviewer wrapping up the interview.
+You are Alex ending the interview.
 
-The candidate just said: "{user_text}"
+Candidate said: "{user_text}"
 
-INSTRUCTIONS:
-- Briefly acknowledge their response
-- Thank them for their time
-- Let them know next steps will be communicated soon
-- Keep it warm but concise (2-3 sentences max)
-- End the interview naturally
+Respond with:
+1. Brief acknowledgment
+2. Thank them
+3. Mention next steps
 
-This was the final question.
+Keep under 25 words total.
 """
             
             try:

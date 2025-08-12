@@ -63,7 +63,7 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
         response = requests.post(
             synthesize_url,
             json=payload,
-            timeout=15,  # Reduced timeout
+            timeout=8,  # Further reduced timeout for speed
             headers={
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -185,7 +185,7 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
         logger.info("Falling back to gTTS...")
         return generate_gtts_fallback(clean_text)
 
-def generate_gtts_fallback(text, max_retries=3):
+def generate_gtts_fallback(text, max_retries=2):  # Reduced retries
     """
     Generate TTS using gTTS as fallback with enhanced error handling and retry logic
     """
@@ -222,7 +222,7 @@ def generate_gtts_fallback(text, max_retries=3):
                 file_size = os.path.getsize(filepath)
                 logger.info(f"gTTS file created: {filepath} ({file_size} bytes)")
                 
-                if file_size > 1000:  # Minimum size for MP3
+                if file_size > 500:  # Reduced minimum size for speed
                     media_url = f"/media/tts/{filename}"
                     logger.info(f"gTTS Media URL: {media_url}")
                     return media_url
@@ -230,18 +230,18 @@ def generate_gtts_fallback(text, max_retries=3):
                     logger.warning(f"gTTS file too small: {file_size} bytes")
                     os.remove(filepath)  # Clean up small file
                     if attempt < max_retries - 1:
-                        time.sleep(1)
+                        time.sleep(0.5)  # Reduced wait time
                         continue
             else:
                 logger.warning("gTTS file was not created")
                 if attempt < max_retries - 1:
-                    time.sleep(1)
+                    time.sleep(0.5)  # Reduced wait time
                     continue
                     
         except Exception as e:
             logger.error(f"gTTS attempt {attempt + 1} failed: {type(e).__name__}: {e}")
             if attempt < max_retries - 1:
-                time.sleep(2)  # Wait longer between retries
+                time.sleep(1)  # Reduced wait time between retries
                 continue
             else:
                 logger.error("All gTTS attempts failed")

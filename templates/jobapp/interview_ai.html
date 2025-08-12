@@ -241,6 +241,9 @@
 
         // Play AI audio response
         function playAIAudio(audioUrl) {
+            // STOP listening completely while AI is speaking
+            stopContinuousListening();
+            
             if (audioUrl) {
                 const audioPlayer = document.getElementById('aiAudioPlayer');
                 audioPlayer.src = audioUrl;
@@ -255,13 +258,23 @@
                 
                 audioPlayer.onended = () => {
                     aiSpeakingIndicator.style.display = 'none';
-                    // Show voice response panel after AI finishes speaking
-                    document.getElementById('voiceResponsePanel').style.display = 'block';
+                    // Wait 1 second after AI finishes, then start listening
+                    setTimeout(() => {
+                        document.getElementById('voiceResponsePanel').style.display = 'block';
+                        document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak now.';
+                        if (isMicOn) {
+                            startContinuousListening();
+                        }
+                    }, 1000);
                 };
             } else {
-                // No audio, show response panel immediately
+                // No audio, wait then start listening
                 setTimeout(() => {
                     document.getElementById('voiceResponsePanel').style.display = 'block';
+                    document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak now.';
+                    if (isMicOn) {
+                        startContinuousListening();
+                    }
                 }, 2000);
             }
         }
@@ -414,9 +427,12 @@
             try {
                 console.log('Processing speech result:', speechText);
                 
+                // Stop listening immediately to prevent feedback
+                stopContinuousListening();
+                
                 // Show sending status
                 document.getElementById('responseStatus').innerHTML = '📤 Sending your response...';
-                resetRecordingUI();
+                document.getElementById('voiceResponsePanel').style.display = 'none';
                 
                 // Send to backend
                 const response = await fetch(window.location.href, {
@@ -435,12 +451,18 @@
                 } else {
                     console.error('Backend error:', data.error);
                     document.getElementById('responseStatus').innerHTML = '❌ Error processing response. Please try again.';
-                    resetRecordingUI();
+                    // Restart listening after error
+                    setTimeout(() => {
+                        if (isMicOn) startContinuousListening();
+                    }, 2000);
                 }
             } catch (error) {
                 console.error('Error sending response:', error);
                 document.getElementById('responseStatus').innerHTML = '❌ Network error. Please check your connection and try again.';
-                resetRecordingUI();
+                // Restart listening after error
+                setTimeout(() => {
+                    if (isMicOn) startContinuousListening();
+                }, 3000);
             }
         }
 
@@ -547,10 +569,8 @@
             // Initialize camera
             initializeCamera();
             
-            // Start continuous listening immediately (mic is ON by default)
-            setTimeout(() => {
-                startContinuousListening();
-            }, 1000);
+            // DON'T start listening immediately - wait for AI to finish
+            // startContinuousListening(); // Removed to prevent feedback
             
             // Show initial subtitle and play audio if available
             setTimeout(() => {

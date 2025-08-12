@@ -378,6 +378,9 @@ def start_interview_by_uuid(request, interview_uuid):
             'question_count': 0
         }
         
+        # Initialize conversation history
+        request.session['conversation_history'] = []
+        
         if request.method == "POST":
             # Handle both AJAX and regular form submissions
             try:
@@ -402,6 +405,19 @@ def start_interview_by_uuid(request, interview_uuid):
                 })
             
             logger.info(f"User input for interview {interview_uuid}: {user_text}")
+            
+            # Check for duplicate requests (prevent double processing)
+            last_processed = request.session.get('last_processed_input', '')
+            if last_processed == user_text:
+                logger.warning(f"Duplicate request detected for interview {interview_uuid}, ignoring")
+                return JsonResponse({
+                    'error': 'Duplicate request detected',
+                    'response': 'Please wait for the previous response to complete.',
+                    'success': False
+                })
+            
+            # Store current input to prevent duplicates
+            request.session['last_processed_input'] = user_text
             
             # Get context from session
             context = request.session.get('interview_context', {})
@@ -437,11 +453,114 @@ def start_interview_by_uuid(request, interview_uuid):
                 
                 return JsonResponse(response_data)
             
-            # Ultra-simplified prompt for maximum speed
+            # Create contextual prompt based on conversation flow
             if question_count < 8:
-                prompt = f"Candidate said: '{user_text}'. Give a brief acknowledgment and ask one follow-up question. Max 20 words total. Question {question_count}/8."
+                # Build conversation context from session
+                conversation_history = request.session.get('conversation_history', [])
+                
+                # Add current response to history
+                conversation_history.append({
+                    'speaker': 'candidate',
+                    'message': user_text,
+                    'question_number': question_count
+                })
+                
+                # Keep only last 4 exchanges to avoid token limits
+                if len(conversation_history) > 8:  # 4 exchanges = 8 messages
+                    conversation_history = conversation_history[-8:]
+                
+                # Update session
+                request.session['conversation_history'] = conversation_history
+                
+                # Build context string
+                context_str = ""
+                for entry in conversation_history[-6:]:  # Last 3 exchanges
+                    speaker = "Interviewer" if entry['speaker'] == 'interviewer' else "Candidate"
+                    context_str += f"{speaker}: {entry['message']}\n"
+                
+                # Create different prompts based on question number for variety
+                if question_count == 1:
+                    prompt = f"""
+You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
+
+Candidate's response: "{user_text}"
+
+Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
+"""
+                elif question_count == 2:
+                    prompt = f"""
+You are Alex continuing the interview. Based on their previous responses:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max).
+"""
+                elif question_count == 3:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max).
+"""
+                elif question_count == 4:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max).
+"""
+                elif question_count == 5:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max).
+"""
+                elif question_count == 6:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max).
+"""
+                else:  # question_count == 7
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
+"""
             else:
-                prompt = f"Candidate said: '{user_text}'. Briefly thank them and mention next steps. Max 15 words total."
+                prompt = f"""
+You are Alex wrapping up the interview with {candidate_name}.
+
+The candidate just said: "{user_text}"
+
+INSTRUCTIONS:
+- Briefly acknowledge their final response
+- Thank them for their time
+- Mention next steps will be communicated soon
+- Keep it warm and professional (2-3 sentences max)
+
+Respond as Alex would naturally speak:
+"""
             
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
@@ -450,6 +569,16 @@ def start_interview_by_uuid(request, interview_uuid):
                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
             
             logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
+            
+            # Add AI response to conversation history
+            if question_count < 8:
+                conversation_history = request.session.get('conversation_history', [])
+                conversation_history.append({
+                    'speaker': 'interviewer',
+                    'message': ai_response,
+                    'question_number': question_count
+                })
+                request.session['conversation_history'] = conversation_history
             
             # Generate TTS for response with enhanced error handling and fallback
             audio_path = None
@@ -513,6 +642,10 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
             logger.info(f"Response data: {response_data}")
             
+            # Clear duplicate prevention after successful processing
+            if 'last_processed_input' in request.session:
+                del request.session['last_processed_input']
+            
             # Add CORS headers for better compatibility
             response = JsonResponse(response_data)
             response['Access-Control-Allow-Origin'] = '*'
@@ -522,18 +655,18 @@ def start_interview_by_uuid(request, interview_uuid):
 
         # GET: Show interview UI with first question
         first_prompt = f"""
-You are Alex, a friendly HR interviewer at {company_name}. You're interviewing {candidate_name} for the {job_title} position.
+You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
 
 Resume highlights: {resume_text[:300]}
 
 INSTRUCTIONS:
 - Give a warm, professional greeting
-- Ask them to tell you about themselves and why they're interested in this specific role
+- Ask them to tell you about themselves and what drew them to this role
 - Keep it natural and conversational (2-3 sentences max)
-- Don't mention audio issues or technical details
-- Just focus on starting the interview naturally
+- Sound like a real human interviewer, not a robot
+- Be welcoming and put them at ease
 
-Output only what you would say as the interviewer - no quotes or labels.
+Respond as Alex would naturally speak:
 """        
         
         try:
@@ -543,6 +676,24 @@ Output only what you would say as the interviewer - no quotes or labels.
             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
         logger.info(f"Initial AI Question for interview {interview_uuid}: {ai_question}")
+        
+        # Add initial question to conversation history
+        conversation_history = request.session.get('conversation_history', [])
+        conversation_history.append({
+            'speaker': 'interviewer',
+            'message': ai_question,
+            'question_number': 0
+        })
+        request.session['conversation_history'] = conversation_history
+        
+        # Add initial question to conversation history
+        conversation_history = request.session.get('conversation_history', [])
+        conversation_history.append({
+            'speaker': 'interviewer',
+            'message': ai_question,
+            'question_number': 0
+        })
+        request.session['conversation_history'] = conversation_history
         
         # Generate initial TTS with enhanced error handling
         audio_path = None

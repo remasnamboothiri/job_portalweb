@@ -16,11 +16,20 @@ class LoginForm(forms.Form):
     password=forms.CharField(widget=forms.PasswordInput)        
     
     
+# class ProfileForm(forms.ModelForm):
+#     class Meta:
+#         model = Profile
+#         fields = ['full_name', 'contact', 'resume', 'profile_picture']  
+        
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ['full_name', 'contact', 'resume', 'profile_picture']  
-        
+        fields = ['first_name', 'last_name', 'email', 'phone', 'location', 'bio', 'skills', 'resume', 'profile_picture']
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Tell us about yourself...'}),
+            'skills': forms.TextInput(attrs={'placeholder': 'React, JavaScript, Python, Django...'}),
+            'location': forms.TextInput(attrs={'placeholder': 'City, State'}),
+        }        
 
    
 

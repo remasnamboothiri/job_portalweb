@@ -15,14 +15,31 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
+# class Profile(models.Model):
+#     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     full_name = models.CharField(max_length=100)
+#     contact = models.CharField(max_length=20)
+#     resume = models.FileField(upload_to='resumes/')
+#     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    
+    
+#     def __str__(self):
+#         return f"{self.user.username}'s Profile"
+
+
+
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=100)
-    contact = models.CharField(max_length=20)
-    resume = models.FileField(upload_to='resumes/')
+    first_name = models.CharField(max_length=50, blank=True)
+    last_name = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    bio = models.TextField(max_length=500, blank=True, null=True)
+    skills = models.CharField(max_length=300, blank=True, help_text="Separate skills with commas")
+    resume = models.FileField(upload_to='resumes/', blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    
-    
+               
     def __str__(self):
         return f"{self.user.username}'s Profile"
     

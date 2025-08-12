@@ -25,7 +25,12 @@ def send_registration_email(sender , instance , created, **kwargs):
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
+        Profile.objects.create(
+            user=instance,
+            first_name=instance.first_name or '',
+            last_name=instance.last_name or '',
+            email=instance.email or ''
+        )
        
        
 # 2. Application Submitted Email 

@@ -32,7 +32,7 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
         return generate_gtts_fallback(clean_text)
     
     # FIXED: Correct API base URL (remove /docs/)
-    TTS_BASE_URL = "https://dwcsm71jpojpkb-8000.proxy.runpod.net"
+    TTS_BASE_URL = "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net"
     
     try:
         logger.info(f"Starting TTS generation for: '{clean_text[:50]}...'")
@@ -348,7 +348,7 @@ def check_tts_system():
         'media_root': settings.MEDIA_ROOT,
         'media_url': settings.MEDIA_URL,
         'tts_dir_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
-        'tts_api_url': "https://dwcsm71jpojpkb-8000.proxy.runpod.net",
+        'tts_api_url': "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net",
     }
     
     # Check if we can create TTS directory
@@ -388,7 +388,7 @@ def check_tts_system():
     
     # Check network connectivity to TTS API with detailed testing
     try:
-        response = requests.get("https://dwcsm71jpojpkb-8000.proxy.runpod.net", timeout=10)
+        response = requests.get("https://mjgqbrf2sl7dqj-8000.proxy.runpod.net", timeout=10)
         health_info['api_reachable'] = True
         health_info['api_status'] = response.status_code
         health_info['api_response_time'] = response.elapsed.total_seconds()
@@ -397,7 +397,7 @@ def check_tts_system():
         try:
             test_payload = {'text': 'test', 'voice_id': 'female_default'}
             synth_response = requests.post(
-                "https://dwcsm71jpojpkb-8000.proxy.runpod.net/synthesize",
+                "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net/synthesize",
                 json=test_payload,
                 timeout=10,
                 headers={'Content-Type': 'application/json'}

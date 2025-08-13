@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'assets/css/google-base.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/google-components.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/google-interview.css' %}">
+    <link rel="stylesheet" href="{% static 'css/interview-improvements.css' %}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
     <style>
         .control-btn.mic-active {
@@ -38,6 +39,11 @@
     <div class="recording-indicator" id="recordingIndicator" style="display: none;">
         <div class="recording-dot"></div>
         <span>Recording</span>
+    </div>
+    
+    <!-- WebRTC Status Indicator -->
+    <div class="webrtc-status" id="webrtcStatus">
+        <span id="webrtcStatusText">WebRTC AEC: Initializing...</span>
     </div>
 
     <!-- Interview Info Panel -->
@@ -82,9 +88,15 @@
         <!-- Subtitle Overlay -->
         <div class="subtitle-overlay" id="subtitleOverlay" aria-live="polite">
             <div class="subtitle-text" id="subtitleText">
-                <span class="question-preview" id="questionPreview">AI: "{{ ai_question|truncatechars:50 }}..."</span>
-                <span class="question-full" id="questionFull" style="display: none;">AI: "{{ ai_question }}"</span>
-                <button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()">Show Full Question</button>
+                {% with question=ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself and why you're interested in this position?" %}
+                    {% if question|length > 60 %}
+                        <span class="question-preview" id="questionPreview">AI: "{{ question|truncatechars:60 }}"</span>
+                        <span class="question-full" id="questionFull" style="display: none;">AI: "{{ question }}"</span>
+                        <button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()" style="margin-left: 10px; padding: 4px 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Show Full Question</button>
+                    {% else %}
+                        <span class="question-full" id="questionFull">AI: "{{ question }}"</span>
+                    {% endif %}
+                {% endwith %}
             </div>
         </div>
 
@@ -204,6 +216,7 @@
     {% csrf_token %}
 
     <!-- Scripts -->
+    <script src="{% static 'js/webrtc-audio.js' %}"></script>
     <script src="{% static 'assets/js/google-interactions.js' %}"></script>
     <script src="{% static 'assets/js/interview-meet.js' %}"></script>
     <script src="{% static 'js/speech-isolation-fix.js' %}"></script>
@@ -226,76 +239,81 @@
             return document.querySelector('[name=csrfmiddlewaretoken]').value;
         }
 
-        // Initialize camera access with WebRTC AEC
+        // Initialize camera and WebRTC AEC
         async function initializeCamera() {
             try {
-                // WebRTC constraints with Acoustic Echo Cancellation
-                const constraints = {
+                // Initialize WebRTC Audio Manager with AEC
+                const aecInitialized = await window.webrtcAudio.initialize();
+                if (!aecInitialized) {
+                    console.warn('WebRTC AEC initialization failed, using fallback');
+                }
+                
+                // Get video stream separately to avoid conflicts
+                const videoStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
                         frameRate: { ideal: 30 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        sampleRate: 44100,
-                        channelCount: 1
                     }
-                };
+                });
                 
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const userVideo = document.getElementById('userVideo');
-                userVideo.srcObject = stream;
+                userVideo.srcObject = videoStream;
                 
-                // Log audio track settings for debugging
-                const audioTrack = stream.getAudioTracks()[0];
-                if (audioTrack) {
-                    const settings = audioTrack.getSettings();
-                    console.log('Audio track settings:', {
-                        echoCancellation: settings.echoCancellation,
-                        noiseSuppression: settings.noiseSuppression,
-                        autoGainControl: settings.autoGainControl,
-                        sampleRate: settings.sampleRate
-                    });
-                }
+                // Log WebRTC AEC settings
+                const aecConstraints = window.webrtcAudio.getAudioConstraints();
+                console.log('WebRTC AEC settings:', aecConstraints);
                 
-                console.log('Camera and microphone access granted with AEC enabled');
+                console.log('Camera and WebRTC AEC initialized successfully');
             } catch (error) {
-                console.error('Error accessing camera/microphone:', error);
+                console.error('Error initializing camera/WebRTC AEC:', error);
                 alert('Camera and microphone access is required for this interview. Please allow access and refresh the page.');
             }
         }
 
-        // Play AI audio response
-        function playAIAudio(audioUrl) {
+        // Play AI audio response with WebRTC AEC
+        async function playAIAudio(audioUrl) {
             // STOP listening completely while AI is speaking
             stopContinuousListening();
             
             if (audioUrl) {
-                const audioPlayer = document.getElementById('aiAudioPlayer');
-                audioPlayer.src = audioUrl;
-                
                 // Show AI speaking indicator
                 const aiSpeakingIndicator = document.getElementById('aiSpeakingIndicator');
                 aiSpeakingIndicator.style.display = 'block';
                 
-                audioPlayer.play().catch(error => {
-                    console.error('Error playing AI audio:', error);
-                });
+                // Use WebRTC Audio Manager for better echo cancellation
+                const playSuccess = await window.webrtcAudio.playAudio(audioUrl);
                 
-                audioPlayer.onended = () => {
-                    aiSpeakingIndicator.style.display = 'none';
-                    // Wait 1 second after AI finishes, then start listening
+                if (!playSuccess) {
+                    // Fallback to regular audio element
+                    const audioPlayer = document.getElementById('aiAudioPlayer');
+                    audioPlayer.src = audioUrl;
+                    
+                    audioPlayer.play().catch(error => {
+                        console.error('Error playing AI audio:', error);
+                    });
+                    
+                    audioPlayer.onended = () => {
+                        aiSpeakingIndicator.style.display = 'none';
+                        setTimeout(() => {
+                            document.getElementById('voiceResponsePanel').style.display = 'block';
+                            document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak now.';
+                            if (isMicOn) {
+                                startContinuousListening();
+                            }
+                        }, 1000);
+                    };
+                } else {
+                    // WebRTC audio played successfully
                     setTimeout(() => {
+                        aiSpeakingIndicator.style.display = 'none';
                         document.getElementById('voiceResponsePanel').style.display = 'block';
                         document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak now.';
                         if (isMicOn) {
                             startContinuousListening();
                         }
-                    }, 1000);
-                };
+                    }, 3000); // Adjust timing based on audio length
+                }
             } else {
                 // No audio, wait then start listening
                 setTimeout(() => {
@@ -321,30 +339,20 @@
             }
         }
         
-        // Start continuous speech recognition with AEC support
+        // Start continuous speech recognition with WebRTC AEC
         async function startContinuousListening() {
             if (!isMicOn || isListening) return;
             
             try {
-                if (!stream) {
-                    await initializeCamera();
+                // Ensure WebRTC AEC is initialized
+                if (!window.webrtcAudio.mediaStream) {
+                    await window.webrtcAudio.initialize();
                 }
                 
-                // Ensure audio track has AEC enabled
-                const audioTrack = stream.getAudioTracks()[0];
-                if (audioTrack) {
-                    const constraints = {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    };
-                    
-                    try {
-                        await audioTrack.applyConstraints(constraints);
-                        console.log('AEC constraints applied to audio track');
-                    } catch (constraintError) {
-                        console.warn('Could not apply AEC constraints:', constraintError);
-                    }
+                // Start WebRTC recording for better AEC
+                const recordingStarted = window.webrtcAudio.startRecording();
+                if (!recordingStarted) {
+                    console.warn('WebRTC recording failed, using fallback');
                 }
                 
                 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -467,8 +475,8 @@
             }
         }
         
-        // Stop continuous listening
-        function stopContinuousListening() {
+        // Stop continuous listening with WebRTC AEC
+        async function stopContinuousListening() {
             if (continuousRecognition) {
                 continuousRecognition.stop();
                 continuousRecognition = null;
@@ -477,6 +485,12 @@
                 clearTimeout(speechTimeout);
                 speechTimeout = null;
             }
+            
+            // Stop WebRTC recording
+            if (window.webrtcAudio.isRecording) {
+                await window.webrtcAudio.stopRecording();
+            }
+            
             isListening = false;
             document.getElementById('userSpeakingIndicator').style.display = 'none';
         }
@@ -531,7 +545,7 @@
             return "I provided a spoken response";
         }
 
-        // Handle AI response with partial question display
+        // Handle AI response with improved partial question display
         function handleAIResponse(data) {
             // Hide voice response panel
             document.getElementById('voiceResponsePanel').style.display = 'none';
@@ -544,15 +558,40 @@
             const progress = (currentQuestionCount / 8) * 100;
             document.getElementById('progressBar').style.width = `${progress}%`;
             
-            // Show AI response in subtitles with partial display
+            // Show AI response in subtitles with smart partial display
             const subtitleText = document.getElementById('subtitleText');
             const response = data.response;
-            const truncatedResponse = response.length > 50 ? response.substring(0, 50) + '...' : response;
+            
+            // Smart truncation - find a good breaking point
+            let truncatedResponse = response;
+            let showButton = false;
+            
+            if (response.length > 60) {
+                // Try to break at sentence end first
+                const sentences = response.split(/[.!?]/);
+                if (sentences.length > 1 && sentences[0].length > 30 && sentences[0].length < 80) {
+                    truncatedResponse = sentences[0] + '.';
+                } else {
+                    // Break at word boundary near 60 characters
+                    const words = response.split(' ');
+                    let wordCount = 0;
+                    let charCount = 0;
+                    
+                    for (let word of words) {
+                        if (charCount + word.length + 1 > 60) break;
+                        charCount += word.length + 1;
+                        wordCount++;
+                    }
+                    
+                    truncatedResponse = words.slice(0, wordCount).join(' ') + '...';
+                }
+                showButton = true;
+            }
             
             subtitleText.innerHTML = `
                 <span class="question-preview" id="questionPreview">AI: "${truncatedResponse}"</span>
                 <span class="question-full" id="questionFull" style="display: none;">AI: "${response}"</span>
-                ${response.length > 50 ? '<button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()">Show Full Question</button>' : ''}
+                ${showButton ? '<button class="show-full-btn" id="showFullBtn" onclick="showFullQuestion()" style="margin-left: 10px; padding: 4px 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Show Full Question</button>' : ''}
             `;
             
             const subtitleOverlay = document.getElementById('subtitleOverlay');
@@ -566,23 +605,26 @@
                 setTimeout(() => {
                     if (!data.is_final) {
                         document.getElementById('voiceResponsePanel').style.display = 'block';
-                        document.getElementById('responseStatus').innerHTML = 'Click the microphone to start speaking';
+                        document.getElementById('responseStatus').innerHTML = 'Microphone is ready. You can speak now.';
+                        if (isMicOn) {
+                            startContinuousListening();
+                        }
                     } else {
                         showCompletionModal();
                     }
-                }, 1500); // Reduced from 3000ms to 1500ms
+                }, 1500);
             }
             
-            // Hide subtitles after some time
+            // Hide subtitles after some time, but keep them longer if there's a button
             setTimeout(() => {
                 subtitleOverlay.classList.remove('show');
-            }, 8000);
+            }, showButton ? 12000 : 8000);
             
-            // Check if interview is complete with faster transition
+            // Check if interview is complete
             if (data.is_final || currentQuestionCount >= 8) {
                 setTimeout(() => {
                     showCompletionModal();
-                }, 2000); // Reduced from 5000ms to 2000ms
+                }, 2000);
             }
         }
 
@@ -630,10 +672,36 @@
             }
         }
 
+        // Update WebRTC status indicator
+        function updateWebRTCStatus(status, message) {
+            const statusElement = document.getElementById('webrtcStatus');
+            const statusText = document.getElementById('webrtcStatusText');
+            
+            if (statusElement && statusText) {
+                statusText.textContent = message;
+                statusElement.className = 'webrtc-status ' + status;
+                
+                // Auto-hide after 3 seconds if active
+                if (status === 'active') {
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+        
         // Event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize camera
-            initializeCamera();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Update WebRTC status
+            updateWebRTCStatus('', 'WebRTC AEC: Initializing...');
+            
+            // Initialize camera and WebRTC
+            try {
+                await initializeCamera();
+                updateWebRTCStatus('active', 'WebRTC AEC: Active - Echo Cancellation Enabled');
+            } catch (error) {
+                updateWebRTCStatus('error', 'WebRTC AEC: Failed - Using Fallback Audio');
+            }
             
             // DON'T start listening immediately - wait for AI to finish
             // startContinuousListening(); // Removed to prevent feedback
@@ -724,6 +792,11 @@
                 clearInterval(interviewTimer);
             }
             stopContinuousListening();
+            
+            // Cleanup WebRTC resources
+            if (window.webrtcAudio) {
+                window.webrtcAudio.cleanup();
+            }
         });
     </script>
 </body>

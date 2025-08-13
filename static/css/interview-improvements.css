@@ -1,0 +1,77 @@
+/* Interview improvements for WebRTC AEC and partial questions */
+
+.show-full-btn {
+    margin-left: 10px !important;
+    padding: 4px 8px !important;
+    background: #1a73e8 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.show-full-btn:hover {
+    background: #1557b0 !important;
+}
+
+.subtitle-text {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.question-preview, .question-full {
+    flex: 1;
+    min-width: 0;
+}
+
+/* WebRTC Audio Status Indicator */
+.webrtc-status {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    z-index: 1000;
+    display: none;
+}
+
+.webrtc-status.active {
+    display: block;
+    background: rgba(52, 168, 83, 0.9);
+}
+
+.webrtc-status.error {
+    display: block;
+    background: rgba(234, 67, 53, 0.9);
+}
+
+/* Improved subtitle overlay */
+.subtitle-overlay {
+    max-width: 90%;
+    word-wrap: break-word;
+}
+
+.subtitle-overlay .subtitle-text {
+    line-height: 1.4;
+}
+
+/* Better responsive design for question display */
+@media (max-width: 768px) {
+    .subtitle-text {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .show-full-btn {
+        margin-left: 0 !important;
+        margin-top: 8px !important;
+        align-self: flex-start;
+    }
+}

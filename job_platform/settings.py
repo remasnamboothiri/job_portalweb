@@ -13,7 +13,10 @@ import os
 
 from pathlib import Path
 from decouple import config
-import dj_database_url
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 
 #based on Smtp
@@ -132,13 +135,21 @@ if 'job-portal-23qb.onrender.com' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['job-portal-23qb.onrender.com', '.onrender.com'])
 
 # Database configuration
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+if dj_database_url:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # CSRF settings for production
 CSRF_TRUSTED_ORIGINS = [

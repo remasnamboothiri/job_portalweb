@@ -6,7 +6,68 @@
   <link rel="stylesheet" href="{% static 'css/interview.css' %}">
 </head>
 <body>
-  <div class="container">
+
+<div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2>Schedule Interview</h2>
+    <p>Fill out the details below to schedule an interview and send the link to the candidate.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Display form errors if any -->
+        {% if form.errors %}
+            <div style="color: red; margin-bottom: 15px;">
+                <strong>Please fix the following errors:</strong>
+                <ul>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <!-- Render form fields -->
+        <div style="margin-bottom: 10px;">
+            {{ form.job_position.label_tag }}<br>
+            {{ form.job_position }}
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            {{ form.candidate_name.label_tag }}<br>
+            {{ form.candidate_name }}
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            {{ form.candidate_email.label_tag }}<br>
+            {{ form.candidate_email }}
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            {{ form.interview_date.label_tag }}<br>
+            {{ form.interview_date }}
+        </div>
+
+        <!-- Submit button -->
+        <button type="submit" style="background-color: #4CAF50; color: white; 
+            padding: 10px 20px; border: none; cursor: pointer;">
+            Schedule Interview
+        </button>
+    </form>
+</div>
+
+
+  
+</body>
+</html> 
+
+
+
+{% comment %} <div class="container">
     <h2>Schedule Interview for {{ candidate.username }}</h2>
 
     <form method="post">
@@ -22,6 +83,4 @@
 
       <button type="submit">Schedule</button>
     </form>
-  </div>
-</body>
-</html> 
+  </div> {% endcomment %}

@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404 , HttpResponse
 from django.contrib.auth import login, authenticate, logout
-from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm
+from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm , ScheduleInterviewForm
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
@@ -25,6 +25,9 @@ from jobapp.tts import generate_tts, generate_gtts_fallback, test_tts_generation
 import json
 from django.conf import settings
 import logging
+
+
+from django.core.mail import send_mail
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -302,31 +305,57 @@ def recruiter_dashboard(request):
 
 
 # schedule interview view for recruiter only
+# @login_required
+# @user_passes_test(lambda u: u.is_recruiter)
+# def schedule_interview(request, job_id, applicant_id):
+#     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+#     candidate = get_object_or_404(User, id=applicant_id)
+
+#     if request.method == 'POST':
+#         link = request.POST.get('link')
+#         date = request.POST.get('date')
+#         time = request.POST.get('time')
+#         dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+        
+#         # Create Interview
+#         Interview.objects.create(
+#             job=job,
+#             candidate=candidate,
+#             # link=link,
+#             scheduled_at=dt,
+#         )
+        
+        
+        
+#         return redirect('recruiter_dashboard')
+
+#     return render(request, 'jobapp/schedule_interview.html', {'job': job, 'candidate': candidate})
+
+
+def is_recruiter(user):
+    return user.groups.filter(name='Recruiter').exists()
 @login_required
-@user_passes_test(lambda u: u.is_recruiter)
-def schedule_interview(request, job_id, applicant_id):
-    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
-    candidate = get_object_or_404(User, id=applicant_id)
-
+@user_passes_test(is_recruiter)
+def schedule_interview(request):
     if request.method == 'POST':
-        link = request.POST.get('link')
-        date = request.POST.get('date')
-        time = request.POST.get('time')
-        dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
-        
-        # Create Interview
-        Interview.objects.create(
-            job=job,
-            candidate=candidate,
-            # link=link,
-            scheduled_at=dt,
-        )
-        
-        
-        
-        return redirect('recruiter_dashboard')
-
-    return render(request, 'jobapp/schedule_interview.html', {'job': job, 'candidate': candidate})
+        form = ScheduleInterviewForm(request.POST)
+        if form.is_valid():
+            interview = form.save()
+            # Send email to candidate with interview link
+            send_mail(
+                'Your Interview Details',
+                f"Hello {interview.candidate_name},\n\n"
+                f"Your interview for {interview.job_position.title} is scheduled at {interview.interview_date}.\n"
+                f"Click this link to join: {interview.interview_link}\n\n"
+                "Best of luck!",
+                'recruiter@yourdomain.com',
+                [interview.candidate_email],
+                fail_silently=False
+            )
+            return redirect('recruiter_dashboard')
+    else:
+        form = ScheduleInterviewForm()
+    return render(request, 'schedule_interview.html', {'form': form})
 
 
 

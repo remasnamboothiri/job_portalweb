@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import CustomUser, Profile, Job, Application
+from .models import CustomUser, Profile, Job, Application , Interview
     
 
 
@@ -108,4 +108,23 @@ class ApplicationForm(forms.ModelForm):
     
     class Meta:
         model = Application
-        fields = ['resume']        
+        fields = ['resume']       
+        
+        
+        
+        
+#interview form
+class ScheduleInterviewForm(forms.ModelForm):
+    class Meta:
+        model = Interview
+        fields = ['job_position', 'candidate_name', 'candidate_email', 'interview_date']
+        widgets = {
+            'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+        labels = {
+            'job_position': 'Job Position',
+            'candidate_name': 'Candidate Name',
+            'candidate_email': 'Candidate Email',
+            'interview_date': 'Interview Date & Time',
+        }
+        

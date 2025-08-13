@@ -5,6 +5,11 @@ from taggit.managers import TaggableManager
 
 import uuid
 
+# for integrating timestamp 
+import hashlib
+import time
+from django.utils import timezone
+
 
 
 # Create your models here.
@@ -157,18 +162,49 @@ class Application(models.Model):
 
   
     
-class Interview(models.Model):
-    id = models.AutoField(primary_key=True)
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    job = models.ForeignKey(Job, on_delete=models.CASCADE)
-    candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    link = models.URLField(blank=True, null=True)
-    scheduled_at = models.DateTimeField()
-    transcript = models.TextField(blank=True, null=True)
-    summary = models.TextField(blank=True, null=True)
+# class Interview(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+#     job = models.ForeignKey(Job, on_delete=models.CASCADE)
+#     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     link = models.URLField(blank=True, null=True)
+#     scheduled_at = models.DateTimeField()
+#     transcript = models.TextField(blank=True, null=True)
+#     summary = models.TextField(blank=True, null=True)
     
-    def __str__(self):
-        return f"Interview for {self.candidate.username} - {self.job.title} "
+#     def __str__(self):
+#         return f"Interview for {self.candidate.username} - {self.job.title} "
+
+class Interview(models.Model):
+    job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
+    candidate_name = models.CharField(max_length=255, default='Unknown Candidate')
+    candidate_email = models.EmailField(default='unknown@example.com')
+    interview_id = models.CharField(max_length=11, unique=True, blank=True)
+    interview_link = models.URLField(max_length=500, blank=True)
+    interview_date = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.interview_id:
+            self.interview_id = self.generate_unique_id()
+            self.interview_link = f"https://yourdomain.com/interview/{self.interview_id}"
+        super().save(*args, **kwargs)
+
+    def generate_unique_id(self):
+        job_name = self.job_position.title.strip().lower()
+        candidate = self.candidate_name.strip().lower()
+        timestamp = str(int(time.time() * 1000000))  # microseconds
+        raw_string = f"{job_name}{candidate}{timestamp}"
+        hash_value = hashlib.md5(raw_string.encode()).hexdigest()
+        hex_9 = hash_value[:9]
+        formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
+
+        while Interview.objects.filter(interview_id=formatted_id).exists():
+            timestamp = str(int(time.time() * 1000000))
+            raw_string = f"{job_name}{candidate}{timestamp}"
+            hash_value = hashlib.md5(raw_string.encode()).hexdigest()
+            hex_9 = hash_value[:9]
+            formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
+        return formatted_id
     
 
 

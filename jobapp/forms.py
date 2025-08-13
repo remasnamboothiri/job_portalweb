@@ -108,7 +108,29 @@ class ApplicationForm(forms.ModelForm):
     
     class Meta:
         model = Application
-        fields = ['resume']       
+        fields = ['resume']
+        widgets = {
+            'resume': forms.FileInput(attrs={
+                'id': 'resume-file',
+                'accept': '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'class': 'file-upload-input'
+            })
+        }
+    
+    def clean_resume(self):
+        resume = self.cleaned_data.get('resume')
+        if resume:
+            # Check file size (5MB limit)
+            if resume.size > 5 * 1024 * 1024:
+                raise forms.ValidationError('File size must be less than 5MB.')
+            
+            # Check file extension
+            allowed_extensions = ['.pdf', '.doc', '.docx']
+            file_extension = resume.name.lower().split('.')[-1]
+            if f'.{file_extension}' not in allowed_extensions:
+                raise forms.ValidationError('Please upload a PDF, DOC, or DOCX file.')
+        
+        return resume       
         
         
         
@@ -119,7 +141,10 @@ class ScheduleInterviewForm(forms.ModelForm):
         model = Interview
         fields = ['job_position', 'candidate_name', 'candidate_email', 'interview_date']
         widgets = {
-            'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'job_position': forms.Select(attrs={'class': 'form-control'}),
+            'candidate_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter candidate full name'}),
+            'candidate_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'candidate@example.com'}),
         }
         labels = {
             'job_position': 'Job Position',
@@ -127,4 +152,16 @@ class ScheduleInterviewForm(forms.ModelForm):
             'candidate_email': 'Candidate Email',
             'interview_date': 'Interview Date & Time',
         }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # If user is provided, filter job_position to only show jobs posted by this user
+        if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
+            self.fields['job_position'].queryset = Job.objects.filter(posted_by=user)
+        
+        # Make job_position field read-only if it's already set in initial data
+        if self.initial.get('job_position'):
+            self.fields['job_position'].widget.attrs['readonly'] = True
         

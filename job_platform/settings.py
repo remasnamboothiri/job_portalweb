@@ -240,8 +240,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR , 'media')
 os.makedirs(MEDIA_ROOT, exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'tts'), exist_ok=True)
 
-# Also ensure you have this for file uploads
+# File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Ensure applications/resumes directory exists
+os.makedirs(os.path.join(MEDIA_ROOT, 'applications', 'resumes'), exist_ok=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

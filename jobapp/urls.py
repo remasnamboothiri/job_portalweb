@@ -57,6 +57,7 @@ urlpatterns = [
     
     # debugging
     path('debug/', views.debug_db, name='debug'),
+    path('test-auth/', views.test_recruiter_auth, name='test_auth'),
     
     path('chat/', views.chat_view, name='chat'),
 ]

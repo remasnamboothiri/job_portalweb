@@ -3,65 +3,90 @@
 <html>
 <head>
   <title>Schedule Interview</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/interview.css' %}">
 </head>
-<body>
+<body class="bg-light">
 
-<div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2>Schedule Interview</h2>
-    <p>Fill out the details below to schedule an interview and send the link to the candidate.</p>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Schedule Interview</h2>
+                </div>
+                <div class="card-body">
+                    {% if job and applicant %}
+                        <div class="alert alert-info">
+                            <h5>Interview Details</h5>
+                            <p class="mb-1"><strong>Job:</strong> {{ job.title }}</p>
+                            <p class="mb-1"><strong>Candidate:</strong> {{ applicant.get_full_name|default:applicant.username }}</p>
+                            <p class="mb-0"><strong>Email:</strong> {{ applicant.email }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    <p class="text-muted">Fill out the details below to schedule an interview and send the link to the candidate.</p>
 
-    <form method="post">
-        {% csrf_token %}
-        
-        <!-- Display form errors if any -->
-        {% if form.errors %}
-            <div style="color: red; margin-bottom: 15px;">
-                <strong>Please fix the following errors:</strong>
-                <ul>
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                    {% for error in form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Display form errors if any -->
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <strong>Please fix the following errors:</strong>
+                                <ul class="mb-0">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <li>{{ field.label }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Render form fields -->
+                        <div class="mb-3">
+                            {{ form.job_position.label_tag }}
+                            {{ form.job_position }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.candidate_name.label_tag }}
+                            {{ form.candidate_name }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.candidate_email.label_tag }}
+                            {{ form.candidate_email }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.interview_date.label_tag }}
+                            {{ form.interview_date }}
+                        </div>
+
+                        <!-- Submit button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-calendar-plus"></i> Schedule Interview
+                            </button>
+                            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
-        {% endif %}
-        
-        <!-- Render form fields -->
-        <div style="margin-bottom: 10px;">
-            {{ form.job_position.label_tag }}<br>
-            {{ form.job_position }}
         </div>
-        
-        <div style="margin-bottom: 10px;">
-            {{ form.candidate_name.label_tag }}<br>
-            {{ form.candidate_name }}
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-            {{ form.candidate_email.label_tag }}<br>
-            {{ form.candidate_email }}
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-            {{ form.interview_date.label_tag }}<br>
-            {{ form.interview_date }}
-        </div>
-
-        <!-- Submit button -->
-        <button type="submit" style="background-color: #4CAF50; color: white; 
-            padding: 10px 20px; border: none; cursor: pointer;">
-            Schedule Interview
-        </button>
-    </form>
+    </div>
 </div>
 
 
-  
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
 </body>
 </html> 
 

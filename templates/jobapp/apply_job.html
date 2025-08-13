@@ -154,6 +154,26 @@
     }
     
     .file-upload-area {
+      border: {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apply for {{ job.title }}</title>
+  
+  <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
+  <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
+  <link rel="stylesheet" href="fonts/icomoon/style.css">
+  <link rel="stylesheet" href="fonts/line-icons/style.css">  
+  <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  
+  <style>
+    .file-upload-area {
       border: 2px dashed #89c442;
       border-radius: 12px;
       padding: 40px;
@@ -191,37 +211,50 @@
       display: none;
     }
     
-    .two-column {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 25px;
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin: 30px 0;
     }
     
-    @media (max-width: 768px) {
-      .two-column {
-        grid-template-columns: 1fr;
-      }
-      
-      .post-job-actions {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .btn-preview,
-      .btn-save {
-        text-align: center;
-        justify-content: center;
-      }
-      
-      .form-card {
-        padding: 25px;
-      }
-      
-      .post-job-header h1 {
-        font-size: 2rem;
-      }
+    .form-section-title {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
     }
-
+    
+    .form-label {
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    .btn-apply {
+      background: #89c442;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-apply:hover {
+      background: #7ab839;
+      transform: translateY(-2px);
+    }
+    
+    .job-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
     .footer {
       background: #343a40;
       color: white;
@@ -241,7 +274,7 @@
 
   </style>
 </head>
-<body class="bg-gray-50">
+<body>
 
 
   <div class="site-wrap">
@@ -320,44 +353,73 @@
     </section>
  
 
-    <!-- POST JOB FORM -->
-    <div class="post-job-container">
-      {% comment %} <!-- Header -->
-      <div class="post-job-header">
-        <h1>Apply Job</h1>
-      </div> {% endcomment %}
-
-      {% comment %} <!-- Action Buttons -->
-      <div class="post-job-actions">
-        <a href="#" class="btn-preview">
-          <i class="fas fa-eye"></i> Preview
-        </a>
-        <button type="submit" form="post-job-form" class="btn-save">
-          Save Job
-        </button>
-      </div> {% endcomment %}
-
-      <!-- Form -->
-      <form id="post-job-form" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <div class="form-card">
-          <h2 class="form-section-title">Apply Job</h2>
+    <!-- JOB APPLICATION FORM -->
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
           
-          <!-- Featured Image Upload -->
-          <div class="form-group">
-            <label class="form-label">Upload Resume</label>
-            <div class="file-upload-area" onclick="document.getElementById('featured-image').click()">
-              <div class="file-upload-icon">📁</div>
-              <div class="file-upload-text">
-                <span class="file-upload-browse">Browse File</span>
-              </div>
-              <input type="file" id="featured-image" name="featured_image" class="file-upload-input" accept="image/*">
-            </div>
+          <!-- Job Information -->
+          <div class="job-info">
+            <h3>{{ job.title }}</h3>
+            <p><strong>Company:</strong> {{ job.company }}</p>
+            <p><strong>Location:</strong> {{ job.location }}</p>
+            <p><strong>Department:</strong> {{ job.get_department_display }}</p>
+            <p><strong>Employment Type:</strong> {{ job.get_employment_type_display }}</p>
           </div>
 
-          
- <!-- ✅ Footer -->
+          <!-- Application Form -->
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-card">
+              <h2 class="form-section-title">Submit Your Application</h2>
+              
+              <!-- Display form errors -->
+              {% if form.errors %}
+                <div class="alert alert-danger">
+                  <strong>Please fix the following errors:</strong>
+                  <ul>
+                    {% for field in form %}
+                      {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                      {% endfor %}
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+              
+              <!-- Resume Upload -->
+              <div class="form-group mb-4">
+                <label class="form-label">Upload Resume *</label>
+                <div class="file-upload-area" onclick="document.getElementById('resume-file').click()">
+                  <div class="file-upload-icon">📄</div>
+                  <div class="file-upload-text">
+                    <strong>Click to upload your resume</strong><br>
+                    <small>Supported formats: PDF, DOC, DOCX (Max 5MB)</small><br>
+                    <span class="file-upload-browse">Browse File</span>
+                  </div>
+                  {{ form.resume }}
+                </div>
+                <small class="text-muted">Please upload your most recent resume in PDF or Word format.</small>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="text-center">
+                <button type="submit" class="btn-apply">
+                  <i class="fas fa-paper-plane"></i> Submit Application
+                </button>
+                <br><br>
+                <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary">
+                  <i class="fas fa-arrow-left"></i> Back to Job Details
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <div class="row">
@@ -403,23 +465,50 @@
     <script src="{% static 'js/custom.js' %}"></script>
 
     <script>
-      // File upload interaction
+      // Resume file upload interaction
       document.addEventListener('DOMContentLoaded', function() {
-        const fileInput = document.getElementById('featured-image');
+        const fileInput = document.querySelector('input[type="file"]');
         const fileUploadArea = document.querySelector('.file-upload-area');
         
-        fileInput.addEventListener('change', function() {
-          if (this.files && this.files[0]) {
-            const fileName = this.files[0].name;
-            fileUploadArea.innerHTML = `
-              <div class="file-upload-icon">✓</div>
-              <div class="file-upload-text">
-                <strong>${fileName}</strong><br>
-                <span class="file-upload-browse">Change file</span>
-              </div>
-            `;
-          }
-        });
+        if (fileInput && fileUploadArea) {
+          fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+              const file = this.files[0];
+              const fileName = file.name;
+              const fileSize = (file.size / 1024 / 1024).toFixed(2); // Size in MB
+              
+              // Check file type
+              const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+              const allowedExtensions = ['.pdf', '.doc', '.docx'];
+              const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+              
+              if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+                alert('Please upload a PDF, DOC, or DOCX file.');
+                this.value = '';
+                return;
+              }
+              
+              // Check file size (5MB limit)
+              if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB.');
+                this.value = '';
+                return;
+              }
+              
+              // Update UI
+              fileUploadArea.innerHTML = `
+                <div class="file-upload-icon">✓</div>
+                <div class="file-upload-text">
+                  <strong>${fileName}</strong><br>
+                  <small>Size: ${fileSize} MB</small><br>
+                  <span class="file-upload-browse">Change file</span>
+                </div>
+              `;
+              fileUploadArea.style.background = '#e8f5e8';
+              fileUploadArea.style.borderColor = '#28a745';
+            }
+          });
+        }
       });
     </script>
   

@@ -259,21 +259,27 @@ def add_candidates(request, job_id):
 def apply_to_job(request, job_id):
     job = get_object_or_404(Job, id=job_id)
     
-    # prevent duplicate application
-    
+    # Prevent duplicate application
     if Application.objects.filter(applicant=request.user, job=job).exists():
         return render(request, 'jobapp/already_applied.html', {'job': job})
-    
     
     if request.method == 'POST':
         form = ApplicationForm(request.POST, request.FILES)
         if form.is_valid():
-            application = form.save(commit=False)
-            application.applicant = request.user
-            application.job = job
-            application.save()
-            return redirect('job_list')  # or to 'my_applications'
-    
+            try:
+                application = form.save(commit=False)
+                application.applicant = request.user
+                application.job = job
+                application.save()
+                
+                messages.success(request, f'Your application for {job.title} has been submitted successfully!')
+                return render(request, 'jobapp/application_success.html', {'job': job})
+                
+            except Exception as e:
+                logger.error(f"Error saving application: {e}")
+                messages.error(request, 'There was an error submitting your application. Please try again.')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = ApplicationForm()
    
@@ -332,30 +338,60 @@ def recruiter_dashboard(request):
 #     return render(request, 'jobapp/schedule_interview.html', {'job': job, 'candidate': candidate})
 
 
-def is_recruiter(user):
-    return user.groups.filter(name='Recruiter').exists()
 @login_required
-@user_passes_test(is_recruiter)
-def schedule_interview(request):
+def schedule_interview(request, job_id, applicant_id):
+    logger.info(f"Schedule interview accessed by user {request.user.id} (is_recruiter: {request.user.is_recruiter}) for job {job_id}, applicant {applicant_id}")
+    
+    # Check if user is recruiter using the correct field
+    if not request.user.is_recruiter:
+        logger.warning(f"Non-recruiter user {request.user.id} attempted to access schedule interview")
+        messages.error(request, 'Only recruiters can schedule interviews.')
+        return redirect('login')
+    
+    # Get the job and ensure the recruiter owns it
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    
+    # Get the applicant
+    applicant = get_object_or_404(User, id=applicant_id)
+    
     if request.method == 'POST':
-        form = ScheduleInterviewForm(request.POST)
+        form = ScheduleInterviewForm(request.POST, user=request.user)
         if form.is_valid():
-            interview = form.save()
+            interview = form.save(commit=False)
+            interview.job_position = job
+            interview.save()
+            
             # Send email to candidate with interview link
-            send_mail(
-                'Your Interview Details',
-                f"Hello {interview.candidate_name},\n\n"
-                f"Your interview for {interview.job_position.title} is scheduled at {interview.interview_date}.\n"
-                f"Click this link to join: {interview.interview_link}\n\n"
-                "Best of luck!",
-                'recruiter@yourdomain.com',
-                [interview.candidate_email],
-                fail_silently=False
-            )
+            try:
+                send_mail(
+                    'Your Interview Details',
+                    f"Hello {interview.candidate_name},\n\n"
+                    f"Your interview for {interview.job_position.title} is scheduled at {interview.interview_date}.\n"
+                    f"Click this link to join: {interview.interview_link}\n\n"
+                    "Best of luck!",
+                    'recruiter@yourdomain.com',
+                    [interview.candidate_email],
+                    fail_silently=False
+                )
+                messages.success(request, 'Interview scheduled successfully and email sent to candidate.')
+            except Exception as e:
+                messages.warning(request, f'Interview scheduled but email could not be sent: {str(e)}')
+            
             return redirect('recruiter_dashboard')
     else:
-        form = ScheduleInterviewForm()
-    return render(request, 'schedule_interview.html', {'form': form})
+        # Pre-populate form with job and applicant data
+        initial_data = {
+            'job_position': job,
+            'candidate_name': applicant.get_full_name() or applicant.username,
+            'candidate_email': applicant.email,
+        }
+        form = ScheduleInterviewForm(initial=initial_data, user=request.user)
+    
+    return render(request, 'jobapp/schedule_interview.html', {
+        'form': form,
+        'job': job,
+        'applicant': applicant
+    })
 
 
 
@@ -1322,3 +1358,22 @@ def generate_audio(request):
             }, status=500)
     
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+# Test authentication view
+@login_required
+def test_recruiter_auth(request):
+    """Simple test view to check recruiter authentication"""
+    user_info = {
+        'user_id': request.user.id,
+        'username': request.user.username,
+        'is_authenticated': request.user.is_authenticated,
+        'is_recruiter': getattr(request.user, 'is_recruiter', 'Field not found'),
+        'user_type': type(request.user).__name__,
+        'groups': list(request.user.groups.values_list('name', flat=True)) if hasattr(request.user, 'groups') else 'No groups'
+    }
+    
+    return HttpResponse(f"""
+    <h2>Authentication Test</h2>
+    <pre>{user_info}</pre>
+    <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
+    """)

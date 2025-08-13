@@ -186,7 +186,7 @@ def check_tts_system():
         'media_root': settings.MEDIA_ROOT,
         'media_url': settings.MEDIA_URL,
         'tts_dir_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
-        'tts_api_url': "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net",
+        'tts_api_url': "https://3obn1g343qy9uk-8000.proxy.runpod.net",
     }
     
     # Check if we can create TTS directory
@@ -226,7 +226,7 @@ def check_tts_system():
     
     # Check network connectivity to TTS API with detailed testing
     try:
-        response = requests.get("https://mjgqbrf2sl7dqj-8000.proxy.runpod.net", timeout=10)
+        response = requests.get("https://3obn1g343qy9uk-8000.proxy.runpod.net", timeout=10)
         health_info['api_reachable'] = True
         health_info['api_status'] = response.status_code
         health_info['api_response_time'] = response.elapsed.total_seconds()
@@ -235,7 +235,7 @@ def check_tts_system():
         try:
             test_payload = {'text': 'test', 'voice_id': 'female_default'}
             synth_response = requests.post(
-                "https://mjgqbrf2sl7dqj-8000.proxy.runpod.net/synthesize",
+                "https://3obn1g343qy9uk-8000.proxy.runpod.net/synthesize",
                 json=test_payload,
                 timeout=10,
                 headers={'Content-Type': 'application/json'}

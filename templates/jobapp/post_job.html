@@ -101,6 +101,920 @@
       border-radius: 20px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
       overflow: hidden;
+      margin: 2rem 0;
+    }
+
+    .form-header {
+      background: linear-gradient(135deg, #d6ded3ff, #e4eae2ff);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .form-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .form-header p {
+      color: #2d3748;
+    }
+
+    .form-content {
+      padding: 3rem;
+    }
+
+    .section-title {
+      color: #2d3748;
+      font-weight: 700;
+      font-size: 1.4rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 3px solid #d1d6eaff;
+      position: relative;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      width: 50px;
+      height: 3px;
+      background: #ece1e1ff;
+    }
+
+    .form-group {
+      margin-bottom: 2rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    /* Updated form control styles with better height and padding for dropdowns */
+    .form-control {
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+      min-height: 50px; /* Ensure minimum height */
+      line-height: 1.5; /* Better line height for text visibility */
+    }
+
+    /* Specific styling for select elements */
+    select.form-control {
+      height: 50px; /* Fixed height for select dropdowns */
+      line-height: 1.5;
+      padding: 0.75rem 2.5rem 0.75rem 1rem; /* Extra padding for dropdown arrow */
+      background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 12px 12px;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    .form-control:focus {
+      border-color: #41e912ec;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: white;
+    }
+
+    .form-control::placeholder {
+      color: #a0aec0;
+    }
+
+    textarea.form-control {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    /* Input field specific styling */
+    input.form-control {
+      height: 50px;
+      line-height: 1.5;
+    }
+
+    .file-upload-area {
+      border: 2px dashed #cbd5e0;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      background: #f8fafc;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .file-upload-area:hover {
+      border-color: #667eea;
+      background: #edf2f7;
+    }
+
+    .file-upload-area.dragover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    .file-upload-icon {
+      font-size: 3rem;
+      color: #a0aec0;
+      margin-bottom: 1rem;
+    }
+
+    .file-upload-text {
+      color: #4a5568;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .file-upload-subtext {
+      color: #a0aec0;
+      font-size: 0.875rem;
+    }
+
+    .btn-upload {
+      background: linear-gradient(135deg, #41e912ec, #41e912ec);
+      border: none;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      margin-top: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-upload:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+      color: white;
+    }
+
+    .action-buttons {
+      background: #f8fafc;
+      padding: 2rem 3rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-primary-custom {
+      background: #007bff;
+      border: none;
+      color: white;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary-custom:hover {
+      background: #0056b3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+      color: white;
+      text-decoration: none;
+    }
+
+    .btn-outline-custom {
+      border: 2px solid #6c757d;
+      color: #6c757d;
+      background: white;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-outline-custom:hover {
+      background: #6c757d;
+      color: white;
+      text-decoration: none;
+    }
+
+    .btn-secondary-custom {
+      background: #6c757d;
+      border: none;
+      color: white;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-secondary-custom:hover {
+      background: #5a6268;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+      color: white;
+      text-decoration: none;
+    }
+
+    .back-link {
+      color: #41e912ec;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: #41e912ec;
+      text-decoration: none;
+    }
+
+    .selected-file {
+      background: #e6fffa;
+      border: 1px solid #38b2ac;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .selected-file.show {
+      display: block;
+    }
+
+    .selected-file-name {
+      color: #2d3748;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .selected-file-size {
+      color: #4a5568;
+      font-size: 0.875rem;
+    }
+
+    /* Enhanced checkbox styling */
+    .form-check {
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 2px solid #e2e8f0;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-check-input {
+      margin-right: 0.5rem;
+      width: 1.2rem;
+      height: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .form-check-label {
+      color: #2d3748;
+      font-weight: 600;
+      margin: 0;
+      flex: 1;
+    }
+
+    @media (max-width: 768px) {
+      .form-content {
+        padding: 2rem;
+      }
+      
+      .action-buttons {
+        padding: 1.5rem 2rem;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+
+
+  </style>  
+
+</head>
+<body>
+  <div class="site-wrap">
+
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close mt-3">
+          <span class="icon-close2 js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div> <!-- .site-mobile-menu -->
+    
+
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
+
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  
+                  
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  
+                </ul>
+              </li>
+              
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
+            </ul>
+          </nav>
+          
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-7">
+            <h1 class="text-white font-weight-bold">Post A Job</h1>
+              <div class="custom-breadcrumbs">
+                <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
+                <a href="{% url 'post_job' %}">Job</a> <span class="mx-2 slash">/</span>
+                <span class="text-white"><strong>Post A Job</strong></span>
+              </div>
+          </div>
+        </div>
+       </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="site-section">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-10">
+            <div class="form-container">
+              
+              <!-- Form Header -->
+              <div class="form-header">
+                <h2><i class="fas fa-briefcase me-3"></i>Post a New Job</h2>
+                <p class="mb-0">Fill in the details below to create a job posting</p>
+              </div>
+
+              <!-- Form Content -->
+              <div class="form-content">
+                <form method="post" enctype="multipart/form-data" id="jobForm">
+                  {% csrf_token %}
+                  
+                  <!-- Job Details Section -->
+                  <h3 class="section-title">
+                    <i class="fas fa-info-circle me-2"></i>Job Details
+                  </h3>
+
+                  <!-- Featured Image Upload -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-image me-2"></i>Upload Featured Image
+                    </label>
+                    <div class="file-upload-area" onclick="document.getElementById('id_featured_image').click()">
+                      <div class="file-upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                      </div>
+                      <div class="file-upload-text">Click to upload or drag and drop</div>
+                      <div class="file-upload-subtext">PNG, JPG, GIF up to 5MB</div>
+                      {{ form.featured_image }}
+                    </div>
+                    <div class="selected-file" id="selectedFile">
+                      <div class="selected-file-name" id="fileName"></div>
+                      <div class="selected-file-size" id="fileSize"></div>
+                    </div>
+                    {% if form.featured_image.errors %}
+                      <div class="text-danger">{{ form.featured_image.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Job Title -->
+                  <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}" class="form-label">
+                      <i class="fas fa-briefcase me-2"></i>Job Title *
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                      <div class="text-danger">{{ form.title.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Department and Location Row -->
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.department.id_for_label }}" class="form-label">
+                          <i class="fas fa-building me-2"></i>Department *
+                        </label>
+                        {{ form.department }}
+                        {% if form.department.errors %}
+                          <div class="text-danger">{{ form.department.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.location.id_for_label }}" class="form-label">
+                          <i class="fas fa-map-marker-alt me-2"></i>Location *
+                        </label>
+                        {{ form.location }}
+                        {% if form.location.errors %}
+                          <div class="text-danger">{{ form.location.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Employment Type and Experience Level Row -->
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.employment_type.id_for_label }}" class="form-label">
+                          <i class="fas fa-clock me-2"></i>Employment Type *
+                        </label>
+                        {{ form.employment_type }}
+                        {% if form.employment_type.errors %}
+                          <div class="text-danger">{{ form.employment_type.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.experience_level.id_for_label }}" class="form-label">
+                          <i class="fas fa-star me-2"></i>Experience Level *
+                        </label>
+                        {{ form.experience_level }}
+                        {% if form.experience_level.errors %}
+                          <div class="text-danger">{{ form.experience_level.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Salary Range Row -->
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.salary_min.id_for_label }}" class="form-label">
+                          <i class="fas fa-dollar-sign me-2"></i>Salary Min ($) *
+                        </label>
+                        {{ form.salary_min }}
+                        {% if form.salary_min.errors %}
+                          <div class="text-danger">{{ form.salary_min.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.salary_max.id_for_label }}" class="form-label">
+                          <i class="fas fa-dollar-sign me-2"></i>Salary Max ($) *
+                        </label>
+                        {{ form.salary_max }}
+                        {% if form.salary_max.errors %}
+                          <div class="text-danger">{{ form.salary_max.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Job Description -->
+                  <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                      <i class="fas fa-align-left me-2"></i>Job Description *
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                      <div class="text-danger">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Required Skills -->
+                  <div class="form-group">
+                    <label for="{{ form.required_skills.id_for_label }}" class="form-label">
+                      <i class="fas fa-code me-2"></i>Required Skills *
+                    </label>
+                    {{ form.required_skills }}
+                    {% if form.required_skills.errors %}
+                      <div class="text-danger">{{ form.required_skills.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- AI Interview Settings Section -->
+                  <h3 class="section-title mt-4">
+                    <i class="fas fa-robot me-2"></i>AI Interview Settings
+                  </h3>
+
+                  <!-- Enable AI Interview Checkbox -->
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.enable_ai_interview }}
+                      <label class="form-check-label" for="{{ form.enable_ai_interview.id_for_label }}">
+                        <i class="fas fa-brain me-2"></i>Enable AI Interview for this position
+                      </label>
+                    </div>
+                    {% if form.enable_ai_interview.errors %}
+                      <div class="text-danger">{{ form.enable_ai_interview.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Interview Duration and Question Count Row -->
+                  <div class="row" id="aiInterviewSettings" style="display: none;">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.interview_duration.id_for_label }}" class="form-label">
+                          <i class="fas fa-clock me-2"></i>Default Duration
+                        </label>
+                        {{ form.interview_duration }}
+                        {% if form.interview_duration.errors %}
+                          <div class="text-danger">{{ form.interview_duration.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label for="{{ form.interview_question_count.id_for_label }}" class="form-label">
+                          <i class="fas fa-question-circle me-2"></i>Question Count
+                        </label>
+                        {{ form.interview_question_count }}
+                        {% if form.interview_question_count.errors %}
+                          <div class="text-danger">{{ form.interview_question_count.errors.0 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="action-buttons">
+                <div class="left-actions">
+                  <a href="{% url 'job_list' %}" class="btn-outline-custom">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                  </a>
+                  <button type="button" class="btn-secondary-custom ms-3" onclick="saveAsDraft()">
+                    <i class="fas fa-save me-2"></i>Save as Draft
+                  </button>
+                </div>
+                <div class="right-actions">
+                  <button type="submit" form="jobForm" class="btn-primary-custom">
+                    <i class="fas fa-paper-plane me-2"></i>Post Job
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- .site-wrap -->
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4">
+          <h5>JobPortal</h5>
+          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+        </div>
+        <div class="col-md-4">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'job_list' %}">Jobs</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h6>Contact</h6>
+          <p>Email: support@jobportal.com</p>
+          <p>Phone: +91-9876543210</p>
+          <p>Kochi, Kerala</p>
+        </div>
+      </div>
+      <div class="text-center pt-3 border-top">
+        <p>&copy; 2025 JobPortal. All rights reserved.</p>
+      </div>
+    </div>
+  </footer> 
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // File upload functionality
+    const fileInput = document.getElementById('id_featured_image');
+    const fileUploadArea = document.querySelector('.file-upload-area');
+    const selectedFile = document.getElementById('selectedFile');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+
+    // Hide the default file input
+    if (fileInput) {
+      fileInput.style.display = 'none';
+
+      // Handle file selection
+      fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          displaySelectedFile(file);
+        }
+      });
+    }
+
+    // Handle drag and drop
+    if (fileUploadArea) {
+      fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+      });
+
+      fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+      });
+
+      fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          const file = files[0];
+          if (file.type.startsWith('image/')) {
+            fileInput.files = files;
+            displaySelectedFile(file);
+          }
+        }
+      });
+    }
+
+    // Display selected file info
+    function displaySelectedFile(file) {
+      if (fileName && fileSize && selectedFile) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        selectedFile.classList.add('show');
+      }
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Show/hide AI interview settings based on checkbox
+    document.addEventListener('DOMContentLoaded', function() {
+      const aiInterviewCheckbox = document.getElementById('{{ form.enable_ai_interview.id_for_label }}');
+      const aiInterviewSettings = document.getElementById('aiInterviewSettings');
+      
+      function toggleAISettings() {
+        if (aiInterviewCheckbox && aiInterviewSettings) {
+          if (aiInterviewCheckbox.checked) {
+            aiInterviewSettings.style.display = 'block';
+          } else {
+            aiInterviewSettings.style.display = 'none';
+          }
+        }
+      }
+      
+      // Initial check
+      toggleAISettings();
+      
+      // Listen for changes
+      if (aiInterviewCheckbox) {
+        aiInterviewCheckbox.addEventListener('change', toggleAISettings);
+      }
+
+      // Add Bootstrap classes to form fields
+      const formControls = document.querySelectorAll('#jobForm input, #jobForm textarea, #jobForm select');
+      formControls.forEach(function(control) {
+        if (!control.classList.contains('form-control')) {
+          control.classList.add('form-control');
+        }
+        
+        // Add placeholders
+        if (control.name === 'title') {
+          control.placeholder = 'e.g. Senior Frontend Developer';
+        } else if (control.name === 'department') {
+          control.placeholder = 'e.g. Engineering';
+        } else if (control.name === 'location') {
+          control.placeholder = 'e.g. San Francisco, CA';
+        } else if (control.name === 'description') {
+          control.placeholder = 'Describe the role, responsibilities, requirements, and what makes this opportunity exciting...';
+        } else if (control.name === 'required_skills') {
+          control.placeholder = 'e.g. JavaScript, React, Node.js, Python';
+        } else if (control.name === 'salary_min') {
+          control.placeholder = 'e.g. 50000';
+        } else if (control.name === 'salary_max') {
+          control.placeholder = 'e.g. 80000';
+        }
+      });
+    });
+
+    // Form validation
+    document.getElementById('jobForm').addEventListener('submit', function(e) {
+      const requiredFields = ['title', 'department', 'location', 'employment_type', 'experience_level', 'salary_min', 'salary_max', 'description', 'required_skills'];
+      let isValid = true;
+      
+      requiredFields.forEach(function(fieldName) {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field && !field.value.trim()) {
+          field.style.borderColor = '#e53e3e';
+          isValid = false;
+        } else if (field) {
+          field.style.borderColor = '#e2e8f0';
+        }
+      });
+      
+      // Validate salary range
+      const salaryMin = document.querySelector('[name="salary_min"]');
+      const salaryMax = document.querySelector('[name="salary_max"]');
+      
+      if (salaryMin && salaryMax && parseInt(salaryMin.value) >= parseInt(salaryMax.value)) {
+        alert('Maximum salary should be greater than minimum salary.');
+        isValid = false;
+      }
+      
+      if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields correctly.');
+      }
+    });
+
+    // Save as draft functionality
+    function saveAsDraft() {
+      // Add a hidden field to indicate this is a draft
+      const form = document.getElementById('jobForm');
+      const draftInput = document.createElement('input');
+      draftInput.type = 'hidden';
+      draftInput.name = 'save_as_draft';
+      draftInput.value = 'true';
+      form.appendChild(draftInput);
+      
+      // Submit the form
+      form.submit();
+    }
+
+  </script>
+</body>
+</html>
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Post a Job - JobBoard</title>
+
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>JobBoard &mdash; Website Template by Colorlib</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
+  <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
+  <link rel="stylesheet" href="fonts/icomoon/style.css">
+  <link rel="stylesheet" href="fonts/line-icons/style.css">
+  <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
+  <!-- MAIN CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">    
+
+
+<style>
+
+  
+  .footer {
+    background: #343a40;
+    color: white;
+    padding: 40px 0 20px;
+  }
+
+  .footer a {
+    color: #ccc;
+    text-decoration: none;
+  }
+
+    .footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+    .navbar {
+      padding: 10px 20px;
+      fixed: top;
+    }
+
+
+    .navbar.transparent {
+      background-color: transparent !important;
+
+    
+    }
+
+    .hero {
+      background: url("{% static 'images/hero_1.jpg' %}") no-repeat center center/cover;
+      color: white;
+      padding: 250px 0 60px;
+      text-align: center;
+      
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 0;
+    }
+
+    .hero > .container {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: bold;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+    }
+
+    .search-box {
+      margin-top: 30px;
+    }
+
+    .site-section {
+      padding: 4rem 0;
+    }
+
+    .form-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     }
 
     .form-header {
@@ -925,4 +1839,4 @@ document.getElementById('jobForm').addEventListener('submit', function(e) {
 
 
 
-
+ {% endcomment %}

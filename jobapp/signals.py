@@ -72,9 +72,9 @@ def send_interview_email(sender, instance, created, **kwargs):
         send_mail(
             subject="Interview Scheduled",
             message="Hi {}, your Interview for '{}' is scheduled. \nlink: {}".format(
-                instance.candidate.username, instance.job.title, instance.link),
+                instance.candidate_name, instance.job_position.title, instance.interview_link),
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[instance.candidate.email],
+            recipient_list=[instance.candidate_email],
         )              
             
               

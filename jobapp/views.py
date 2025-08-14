@@ -323,10 +323,16 @@ def jobseeker_dashboard(request):
     except Exception:
         profile = None
     
-    # Get scheduled interviews for this candidate
-    scheduled_interviews = Interview.objects.filter(
-        candidate=request.user
-    ).order_by('-interview_date')
+    # Get scheduled interviews for this candidate with error handling
+    scheduled_interviews = []
+    try:
+        scheduled_interviews = Interview.objects.filter(
+            candidate=request.user
+        ).order_by('-interview_date')
+    except Exception as e:
+        logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
+        # Fallback: empty list if Interview model has schema issues
+        scheduled_interviews = []
     
     return render(request, 'jobapp/jobseeker_dashboard.html', {
         'applications': applications, 
@@ -340,10 +346,16 @@ def jobseeker_dashboard(request):
 def recruiter_dashboard(request):
     applications = Application.objects.filter(job__posted_by=request.user)
     
-    # Get scheduled interviews for jobs posted by this recruiter
-    scheduled_interviews = Interview.objects.filter(
-        job_position__posted_by=request.user
-    ).order_by('-interview_date')
+    # Get scheduled interviews for jobs posted by this recruiter with error handling
+    scheduled_interviews = []
+    try:
+        scheduled_interviews = Interview.objects.filter(
+            job_position__posted_by=request.user
+        ).order_by('-interview_date')
+    except Exception as e:
+        logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
+        # Fallback: empty list if Interview model has schema issues
+        scheduled_interviews = []
     
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,

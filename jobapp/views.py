@@ -325,7 +325,7 @@ def jobseeker_dashboard(request):
     
     # Get scheduled interviews for this candidate
     scheduled_interviews = Interview.objects.filter(
-        candidate_email=request.user.email
+        candidate=request.user
     ).order_by('-interview_date')
     
     return render(request, 'jobapp/jobseeker_dashboard.html', {
@@ -403,11 +403,24 @@ def schedule_interview(request, job_id, applicant_id):
         if form.is_valid():
             interview = form.save(commit=False)
             interview.job_position = job
+            interview.candidate = applicant  # Link the actual user
             interview.save()
             
             # Send email to candidate with interview link
             try:
                 email_subject = f'Interview Scheduled - {interview.job_position.title}'
+                # Generate full interview URL
+                from django.urls import reverse
+                from django.contrib.sites.models import Site
+                
+                try:
+                    current_site = Site.objects.get_current()
+                    domain = current_site.domain
+                except:
+                    domain = 'localhost:8000'
+                
+                interview_url = f"http://{domain}{reverse('interview_ready', args=[interview.uuid])}"
+                
                 email_body = f"""Hello {interview.candidate_name},
 
 Your interview for the position of {interview.job_position.title} has been scheduled.
@@ -416,9 +429,9 @@ Interview Details:
 - Date & Time: {interview.interview_date.strftime('%B %d, %Y at %I:%M %p')}
 - Position: {interview.job_position.title}
 - Company: {interview.job_position.company}
-- Interview Link: {interview.interview_link}
+- Interview Link: {interview_url}
 
-Please join the interview using the link above at the scheduled time.
+Please click the link above to start your interview at the scheduled time.
 
 Best regards,
 HR Team
@@ -429,11 +442,12 @@ HR Team
                     email_body,
                     settings.DEFAULT_FROM_EMAIL,
                     [interview.candidate_email],
-                    fail_silently=False
+                    fail_silently=True  # Don't fail if email can't be sent
                 )
-                messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}')
+                messages.success(request, f'Interview scheduled successfully! The candidate can see the interview link on their dashboard.')
             except Exception as e:
-                messages.warning(request, f'Interview scheduled but email could not be sent: {str(e)}')
+                logger.warning(f'Email sending failed for interview {interview.uuid}: {str(e)}')
+                messages.warning(request, f'Interview scheduled successfully! Email notification could not be sent, but the candidate can see the interview on their dashboard.')
             
             return redirect('recruiter_dashboard')
         else:

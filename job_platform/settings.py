@@ -258,8 +258,8 @@ LOGIN_URL = '/login/'  # or the path where your login page is
 LOGIN_REDIRECT_URL = '/profile/'  # 👈 after login redirect
 LOGOUT_REDIRECT_URL = '/login/'  # or wherever you want
 ACCOUNT_LOGOUT_ON_GET = True
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'  # or 'mandatory'
 
 #based on google login intergrtion

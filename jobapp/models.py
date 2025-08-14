@@ -181,17 +181,24 @@ class Application(models.Model):
 #         return f"Interview for {self.candidate.username} - {self.job.title} "
 
 class Interview(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, null=True, blank=True)
     job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
+    candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     candidate_name = models.CharField(max_length=255, default='Unknown Candidate')
     candidate_email = models.EmailField(default='unknown@example.com')
     interview_id = models.CharField(max_length=11, unique=True, blank=True)
     interview_link = models.URLField(max_length=500, blank=True)
     interview_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        if not self.uuid:
+            self.uuid = uuid.uuid4()
         if not self.interview_id:
             self.interview_id = self.generate_unique_id()
-            self.interview_link = f"https://yourdomain.com/interview/{self.interview_id}"
+        if not self.interview_link:
+            # Generate proper interview link using UUID
+            self.interview_link = f"/interview/ready/{self.uuid}/"
         super().save(*args, **kwargs)
 
     def generate_unique_id(self):
@@ -210,6 +217,8 @@ class Interview(models.Model):
             hex_9 = hash_value[:9]
             formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
         return formatted_id
+    
+
     
 
 

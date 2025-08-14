@@ -8,6 +8,7 @@ from django.http import HttpResponseForbidden , JsonResponse, Http404, FileRespo
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.middleware.csrf import CsrfViewMiddleware
 from django.db.models import Q
+from django.db import models
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from datetime import datetime
@@ -326,9 +327,10 @@ def jobseeker_dashboard(request):
     # Get scheduled interviews for this candidate with error handling
     scheduled_interviews = []
     try:
+        # Use only() to avoid selecting problematic fields
         scheduled_interviews = Interview.objects.filter(
             candidate=request.user
-        ).order_by('-interview_date')
+        ).only('id', 'job_position', 'candidate_name', 'candidate_email', 'interview_date').order_by('-interview_date')
     except Exception as e:
         logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
         # Fallback: empty list if Interview model has schema issues
@@ -349,9 +351,10 @@ def recruiter_dashboard(request):
     # Get scheduled interviews for jobs posted by this recruiter with error handling
     scheduled_interviews = []
     try:
+        # Use only() to avoid selecting problematic fields
         scheduled_interviews = Interview.objects.filter(
             job_position__posted_by=request.user
-        ).order_by('-interview_date')
+        ).only('id', 'job_position', 'candidate_name', 'candidate_email', 'interview_date').order_by('-interview_date')
     except Exception as e:
         logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
         # Fallback: empty list if Interview model has schema issues
@@ -431,7 +434,9 @@ def schedule_interview(request, job_id, applicant_id):
                 except:
                     domain = 'localhost:8000'
                 
-                interview_url = f"http://{domain}{reverse('interview_ready', args=[interview.uuid])}"
+                # Use get_uuid property for safe UUID access
+                interview_uuid = interview.get_uuid
+                interview_url = f"http://{domain}{reverse('interview_ready', args=[interview_uuid])}"
                 
                 email_body = f"""Hello {interview.candidate_name},
 
@@ -488,8 +493,13 @@ def interview_ready(request, interview_uuid):
     Display the interview ready page before starting the actual AI interview
     """
     try:
-        # Get the interview record
-        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        # Get the interview record with error handling for missing uuid field
+        try:
+            interview = get_object_or_404(Interview, uuid=interview_uuid)
+        except Exception as e:
+            # If uuid field doesn't exist, try to find by interview_id as fallback
+            logger.warning(f"UUID lookup failed for {interview_uuid}, trying interview_id: {e}")
+            interview = get_object_or_404(Interview, interview_id=interview_uuid)
         
         # Check if the user is authorized (optional security check)
         if hasattr(request.user, 'profile'):
@@ -501,7 +511,7 @@ def interview_ready(request, interview_uuid):
         })
         
     except Exception as e:
-        print(f"Interview Ready Error: {e}")
+        logger.error(f"Interview Ready Error: {e}")
         return HttpResponse(f'Interview ready page could not be loaded. Error: {str(e)}', status=500)
 
 
@@ -511,8 +521,13 @@ def interview_ready(request, interview_uuid):
 @csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
-        # Get the interview record
-        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        # Get the interview record with error handling for missing uuid field
+        try:
+            interview = get_object_or_404(Interview, uuid=interview_uuid)
+        except Exception as e:
+            # If uuid field doesn't exist, try to find by interview_id as fallback
+            logger.warning(f"UUID lookup failed for {interview_uuid}, trying interview_id: {e}")
+            interview = get_object_or_404(Interview, interview_id=interview_uuid)
         
         candidate_name = interview.candidate.get_full_name() or "the candidate"
         job_title = interview.job.title or "Software Developer"

@@ -207,7 +207,7 @@
                         </div>
                         <div class="col-md-4 text-center">
                           <div class="d-grid gap-2">
-                            <a href="{% url 'interview_ready' interview.uuid %}" class="interview-ready-btn">
+                            <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
                               <i class="fas fa-video"></i> Start Interview
                             </a>
                             <small class="text-muted">Click to begin your AI interview</small>
@@ -257,7 +257,7 @@
                         </div>
                         <div class="col-md-4 text-center">
                           <div class="d-grid gap-2">
-                            <a href="{% url 'interview_ready' interview.uuid %}" class="interview-ready-btn">
+                            <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
                               <i class="fas fa-video"></i> Start Interview
                             </a>
                             <small class="text-muted">Click to begin your AI interview</small>

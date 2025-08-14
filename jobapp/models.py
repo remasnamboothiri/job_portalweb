@@ -192,13 +192,28 @@ class Interview(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        if not self.uuid:
-            self.uuid = uuid.uuid4()
+        # Handle uuid field gracefully in case it doesn't exist in database
+        try:
+            if not self.uuid:
+                self.uuid = uuid.uuid4()
+        except Exception:
+            # If uuid field doesn't exist in database, skip it
+            pass
+            
         if not self.interview_id:
             self.interview_id = self.generate_unique_id()
+            
         if not self.interview_link:
-            # Generate proper interview link using UUID
-            self.interview_link = f"/interview/ready/{self.uuid}/"
+            # Generate proper interview link using UUID if available, otherwise use interview_id
+            try:
+                if self.uuid:
+                    self.interview_link = f"/interview/ready/{self.uuid}/"
+                else:
+                    self.interview_link = f"/interview/ready/{self.interview_id}/"
+            except Exception:
+                # Fallback to interview_id if uuid field doesn't exist
+                self.interview_link = f"/interview/ready/{self.interview_id}/"
+                
         super().save(*args, **kwargs)
 
     def generate_unique_id(self):
@@ -217,6 +232,14 @@ class Interview(models.Model):
             hex_9 = hash_value[:9]
             formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
         return formatted_id
+    
+    @property
+    def get_uuid(self):
+        """Get UUID safely, return interview_id as fallback"""
+        try:
+            return self.uuid if self.uuid else self.interview_id
+        except Exception:
+            return self.interview_id
     
 
     

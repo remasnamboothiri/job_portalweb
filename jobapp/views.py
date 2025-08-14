@@ -264,7 +264,19 @@ def apply_to_job(request, job_id):
         return render(request, 'jobapp/already_applied.html', {'job': job})
     
     if request.method == 'POST':
+        logger.info(f"Application form submitted for job {job_id} by user {request.user.id}")
+        logger.info(f"POST data keys: {list(request.POST.keys())}")
+        logger.info(f"FILES data keys: {list(request.FILES.keys())}")
+        logger.info(f"Resume file present: {'resume' in request.FILES}")
+        
+        if 'resume' in request.FILES:
+            resume_file = request.FILES['resume']
+            logger.info(f"Resume file details: name={resume_file.name}, size={resume_file.size}, content_type={resume_file.content_type}")
+        
         form = ApplicationForm(request.POST, request.FILES)
+        logger.info(f"Form data after initialization: {form.data}")
+        logger.info(f"Form files after initialization: {form.files}")
+        
         if form.is_valid():
             try:
                 application = form.save(commit=False)
@@ -272,20 +284,23 @@ def apply_to_job(request, job_id):
                 application.job = job
                 application.save()
                 
+                logger.info(f"Application saved successfully for job {job_id} by user {request.user.id}")
                 messages.success(request, f'Your application for {job.title} has been submitted successfully!')
                 return redirect('jobseeker_dashboard')
                 
             except Exception as e:
-                logger.error(f"Error saving application: {e}")
+                logger.error(f"Error saving application for job {job_id}: {e}")
                 messages.error(request, 'There was an error submitting your application. Please try again.')
         else:
+            logger.error(f"Form validation failed for job {job_id}: {form.errors}")
             # Display form errors to user
             for field, errors in form.errors.items():
                 for error in errors:
                     if field == '__all__':
                         messages.error(request, error)
                     else:
-                        messages.error(request, f'{field.title()}: {error}')
+                        field_name = 'Resume' if field == 'resume' else field.title()
+                        messages.error(request, f'{field_name}: {error}')
     else:
         form = ApplicationForm()
    
@@ -1417,3 +1432,29 @@ def test_recruiter_auth(request):
     <pre>{user_info}</pre>
     <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
     """)
+
+# Test application form view
+@login_required
+def test_apply_form(request, job_id):
+    """Test view for debugging application form"""
+    job = get_object_or_404(Job, id=job_id)
+    
+    if request.method == 'POST':
+        logger.info(f"TEST: Form submitted with POST: {request.POST}")
+        logger.info(f"TEST: Files submitted: {request.FILES}")
+        
+        form = ApplicationForm(request.POST, request.FILES)
+        logger.info(f"TEST: Form is bound: {form.is_bound}")
+        logger.info(f"TEST: Form is valid: {form.is_valid()}")
+        logger.info(f"TEST: Form errors: {form.errors}")
+        
+        if form.is_valid():
+            messages.success(request, 'Form is valid!')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = ApplicationForm()
+    
+    return render(request, 'jobapp/test_apply.html', {'form': form, 'job': job})

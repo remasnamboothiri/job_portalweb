@@ -151,7 +151,9 @@ class Application(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     resume = models.FileField(
         upload_to='applications/resumes/',
-        help_text='Upload your resume in PDF, DOC, or DOCX format (max 5MB)'
+        help_text='Upload your resume in PDF, DOC, or DOCX format (max 5MB)',
+        blank=False,
+        null=False
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     applied_at = models.DateTimeField(auto_now_add=True)

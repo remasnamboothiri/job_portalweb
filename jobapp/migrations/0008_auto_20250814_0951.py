@@ -10,29 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Update Interview model to match current structure
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS job_position_id INTEGER;",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS job_position_id;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS candidate_name VARCHAR(255) DEFAULT 'Unknown Candidate';",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS candidate_name;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS candidate_email VARCHAR(254) DEFAULT 'unknown@example.com';",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS candidate_email;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS interview_id VARCHAR(11);",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS interview_id;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS interview_link VARCHAR(500);",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS interview_link;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE jobapp_interview ADD COLUMN IF NOT EXISTS interview_date TIMESTAMP;",
-            reverse_sql="ALTER TABLE jobapp_interview DROP COLUMN IF EXISTS interview_date;"
-        ),
+        # Skip this migration for now - will be handled by model changes
     ]

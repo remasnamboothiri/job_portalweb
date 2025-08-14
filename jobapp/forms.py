@@ -105,25 +105,21 @@ class JobForm(forms.ModelForm):
         }
         
 class ApplicationForm(forms.ModelForm):
-    resume = forms.FileField(
-        required=True,
-        help_text='Upload your resume in PDF, DOC, or DOCX format (max 5MB)',
-        widget=forms.FileInput(attrs={
-            'id': 'resume-file',
-            'accept': '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'class': 'form-control file-upload-input',
-            'required': True
-        })
-    )
-    
     class Meta:
         model = Application
         fields = ['resume']
+        widgets = {
+            'resume': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx',
+                'required': True
+            })
+        }
     
     def clean_resume(self):
         resume = self.cleaned_data.get('resume')
         if not resume:
-            raise forms.ValidationError('Resume file is required.')
+            raise forms.ValidationError('Please select a resume file to upload.')
             
         # Check file size (5MB limit)
         if resume.size > 5 * 1024 * 1024:
@@ -131,8 +127,8 @@ class ApplicationForm(forms.ModelForm):
         
         # Check file extension
         allowed_extensions = ['.pdf', '.doc', '.docx']
-        file_extension = resume.name.lower().split('.')[-1]
-        if f'.{file_extension}' not in allowed_extensions:
+        file_name = resume.name.lower()
+        if not any(file_name.endswith(ext) for ext in allowed_extensions):
             raise forms.ValidationError('Please upload a PDF, DOC, or DOCX file.')
         
         return resume       

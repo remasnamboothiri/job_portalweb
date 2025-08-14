@@ -105,30 +105,35 @@ class JobForm(forms.ModelForm):
         }
         
 class ApplicationForm(forms.ModelForm):
+    resume = forms.FileField(
+        required=True,
+        help_text='Upload your resume in PDF, DOC, or DOCX format (max 5MB)',
+        widget=forms.FileInput(attrs={
+            'id': 'resume-file',
+            'accept': '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'class': 'form-control file-upload-input',
+            'required': True
+        })
+    )
     
     class Meta:
         model = Application
         fields = ['resume']
-        widgets = {
-            'resume': forms.FileInput(attrs={
-                'id': 'resume-file',
-                'accept': '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'class': 'file-upload-input'
-            })
-        }
     
     def clean_resume(self):
         resume = self.cleaned_data.get('resume')
-        if resume:
-            # Check file size (5MB limit)
-            if resume.size > 5 * 1024 * 1024:
-                raise forms.ValidationError('File size must be less than 5MB.')
+        if not resume:
+            raise forms.ValidationError('Resume file is required.')
             
-            # Check file extension
-            allowed_extensions = ['.pdf', '.doc', '.docx']
-            file_extension = resume.name.lower().split('.')[-1]
-            if f'.{file_extension}' not in allowed_extensions:
-                raise forms.ValidationError('Please upload a PDF, DOC, or DOCX file.')
+        # Check file size (5MB limit)
+        if resume.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('File size must be less than 5MB.')
+        
+        # Check file extension
+        allowed_extensions = ['.pdf', '.doc', '.docx']
+        file_extension = resume.name.lower().split('.')[-1]
+        if f'.{file_extension}' not in allowed_extensions:
+            raise forms.ValidationError('Please upload a PDF, DOC, or DOCX file.')
         
         return resume       
         
@@ -137,9 +142,18 @@ class ApplicationForm(forms.ModelForm):
         
 #interview form
 class ScheduleInterviewForm(forms.ModelForm):
+    interview_link = forms.URLField(
+        required=False,
+        help_text='Enter Google Meet, Zoom, or any video call link',
+        widget=forms.URLInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'https://meet.google.com/abc-defg-hij or https://zoom.us/j/123456789'
+        })
+    )
+    
     class Meta:
         model = Interview
-        fields = ['job_position', 'candidate_name', 'candidate_email', 'interview_date']
+        fields = ['job_position', 'candidate_name', 'candidate_email', 'interview_date', 'interview_link']
         widgets = {
             'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'job_position': forms.Select(attrs={'class': 'form-control'}),
@@ -151,6 +165,7 @@ class ScheduleInterviewForm(forms.ModelForm):
             'candidate_name': 'Candidate Name',
             'candidate_email': 'Candidate Email',
             'interview_date': 'Interview Date & Time',
+            'interview_link': 'Interview Link',
         }
     
     def __init__(self, *args, **kwargs):
@@ -164,4 +179,15 @@ class ScheduleInterviewForm(forms.ModelForm):
         # Make job_position field read-only if it's already set in initial data
         if self.initial.get('job_position'):
             self.fields['job_position'].widget.attrs['readonly'] = True
+    
+    def save(self, commit=True):
+        interview = super().save(commit=False)
+        
+        # If no custom link provided, generate a default one
+        if not interview.interview_link:
+            interview.interview_link = f"https://meet.google.com/{interview.interview_id or 'generated-link'}"
+        
+        if commit:
+            interview.save()
+        return interview
         

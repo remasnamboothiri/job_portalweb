@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404 , HttpResponse
 from django.contrib.auth import login, authenticate, logout
-from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm , ScheduleInterviewForm
+from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm, ScheduleInterviewForm
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
@@ -273,13 +273,19 @@ def apply_to_job(request, job_id):
                 application.save()
                 
                 messages.success(request, f'Your application for {job.title} has been submitted successfully!')
-                return render(request, 'jobapp/application_success.html', {'job': job})
+                return redirect('jobseeker_dashboard')
                 
             except Exception as e:
                 logger.error(f"Error saving application: {e}")
                 messages.error(request, 'There was an error submitting your application. Please try again.')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            # Display form errors to user
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        messages.error(request, f'{field.title()}: {error}')
     else:
         form = ApplicationForm()
    
@@ -296,17 +302,32 @@ def jobseeker_dashboard(request):
         profile = Profile.objects.filter(user=request.user).first()
     except Exception:
         profile = None
-    return render(request, 'jobapp/jobseeker_dashboard.html', {'applications': applications, 'profile': profile})        
+    
+    # Get scheduled interviews for this candidate
+    scheduled_interviews = Interview.objects.filter(
+        candidate_email=request.user.email
+    ).order_by('-interview_date')
+    
+    return render(request, 'jobapp/jobseeker_dashboard.html', {
+        'applications': applications, 
+        'profile': profile,
+        'scheduled_interviews': scheduled_interviews
+    })        
 
 #recruiter dashboard
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def recruiter_dashboard(request):
-    applications = Application.objects.filter(job__posted_by=request.user)  
-    # jobs = Job.objects.filter(posted_by=request.user)
-    # return render(request, 'jobapp/recruiter_dashboard.html', {'jobs': jobs})
+    applications = Application.objects.filter(job__posted_by=request.user)
+    
+    # Get scheduled interviews for jobs posted by this recruiter
+    scheduled_interviews = Interview.objects.filter(
+        job_position__posted_by=request.user
+    ).order_by('-interview_date')
+    
     return render(request, 'jobapp/recruiter_dashboard.html', {
-        'applications': applications
+        'applications': applications,
+        'scheduled_interviews': scheduled_interviews
     })
 
 
@@ -340,9 +361,12 @@ def recruiter_dashboard(request):
 
 @login_required
 def schedule_interview(request, job_id, applicant_id):
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
     logger.info(f"Schedule interview accessed by user {request.user.id} (is_recruiter: {request.user.is_recruiter}) for job {job_id}, applicant {applicant_id}")
     
-    # Check if user is recruiter using the correct field
+    # Check if user is recruiter
     if not request.user.is_recruiter:
         logger.warning(f"Non-recruiter user {request.user.id} attempted to access schedule interview")
         messages.error(request, 'Only recruiters can schedule interviews.')
@@ -363,21 +387,37 @@ def schedule_interview(request, job_id, applicant_id):
             
             # Send email to candidate with interview link
             try:
+                email_subject = f'Interview Scheduled - {interview.job_position.title}'
+                email_body = f"""Hello {interview.candidate_name},
+
+Your interview for the position of {interview.job_position.title} has been scheduled.
+
+Interview Details:
+- Date & Time: {interview.interview_date.strftime('%B %d, %Y at %I:%M %p')}
+- Position: {interview.job_position.title}
+- Company: {interview.job_position.company}
+- Interview Link: {interview.interview_link}
+
+Please join the interview using the link above at the scheduled time.
+
+Best regards,
+HR Team
+{interview.job_position.company}"""
+                
                 send_mail(
-                    'Your Interview Details',
-                    f"Hello {interview.candidate_name},\n\n"
-                    f"Your interview for {interview.job_position.title} is scheduled at {interview.interview_date}.\n"
-                    f"Click this link to join: {interview.interview_link}\n\n"
-                    "Best of luck!",
-                    'recruiter@yourdomain.com',
+                    email_subject,
+                    email_body,
+                    settings.DEFAULT_FROM_EMAIL,
                     [interview.candidate_email],
                     fail_silently=False
                 )
-                messages.success(request, 'Interview scheduled successfully and email sent to candidate.')
+                messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}')
             except Exception as e:
                 messages.warning(request, f'Interview scheduled but email could not be sent: {str(e)}')
             
             return redirect('recruiter_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         # Pre-populate form with job and applicant data
         initial_data = {

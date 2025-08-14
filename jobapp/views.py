@@ -263,7 +263,7 @@ def apply_to_job(request, job_id):
     if Application.objects.filter(applicant=request.user, job=job).exists():
         return render(request, 'jobapp/already_applied.html', {'job': job})
     
-    if request.method == 'POST':
+    if request.method == 'POST' and request.POST.get('form_submitted'):
         logger.info(f"Application form submitted for job {job_id} by user {request.user.id}")
         logger.info(f"POST data keys: {list(request.POST.keys())}")
         logger.info(f"FILES data keys: {list(request.FILES.keys())}")
@@ -303,6 +303,11 @@ def apply_to_job(request, job_id):
                         messages.error(request, f'{field_name}: {error}')
     else:
         form = ApplicationForm()
+        
+    # Handle case where form is submitted without the hidden field (shouldn't happen with proper form)
+    if request.method == 'POST' and not request.POST.get('form_submitted'):
+        logger.warning(f"Form submitted without form_submitted flag for job {job_id}")
+        messages.warning(request, 'Please use the form below to submit your application.')
    
     return render(request, 'jobapp/apply_job.html', {'form': form, 'job': job})   
 

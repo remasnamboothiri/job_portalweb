@@ -168,13 +168,13 @@
   
   <div class="container py-5">
     <div class="mb-4 text-center">
-      <h2 class="text-Black">👋 Hi {{ user.get_full_name|default:user.username }}, you're looking for the right job!</h2>
+      <h2 class="text-Black">Hi {{ user.get_full_name|default:user.username }}, you're looking for the right job!</h2>
       <a href="{% url 'job_list' %}" class="btn btn-primary mt-3">
-        🔍 Go to Job Listings
+        Go to Job Listings
       </a>
     </div>
 
-    {% if applications or scheduled_interviews %}
+    {% if applications %}
       <div class="row g-4">
         <!-- Show Applications -->
         {% for app in applications %}
@@ -188,93 +188,100 @@
                   <strong>Applied:</strong> {{ app.applied_at|date:"M d, Y" }}
                 </p>
 
-                <!-- Check for scheduled interviews -->
-                {% for interview in scheduled_interviews %}
-                  {% if interview.job_position == app.job %}
-                    <div class="alert interview-info mt-3">
-                      <div class="row align-items-center">
-                        <div class="col-md-8">
-                          <h6 class="mb-2"><i class="fas fa-calendar-alt"></i> Interview Scheduled</h6>
-                          <p class="mb-1">
-                            <strong>Date:</strong> {{ interview.interview_date|date:"M d, Y" }} at {{ interview.interview_date|time:"H:i" }}
-                          </p>
-                          <p class="mb-1">
-                            <strong>Position:</strong> {{ interview.job_position.title }}
-                          </p>
-                          <p class="mb-0">
-                            <strong>Duration:</strong> 15 minutes | <strong>Questions:</strong> 8
-                          </p>
-                        </div>
-                        <div class="col-md-4 text-center">
-                          <div class="d-grid gap-2">
-                            <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
-                              <i class="fas fa-video"></i> Start Interview
-                            </a>
-                            <small class="text-muted">Click to begin your AI interview</small>
+                <!-- Check for scheduled interviews (with error handling) -->
+                {% if scheduled_interviews %}
+                  {% for interview in scheduled_interviews %}
+                    {% if interview.job_position == app.job %}
+                      <div class="alert interview-info mt-3">
+                        <div class="row align-items-center">
+                          <div class="col-md-8">
+                            <h6 class="mb-2"><i class="fas fa-calendar-alt"></i> Interview Scheduled</h6>
+                            <p class="mb-1">
+                              <strong>Date:</strong> {{ interview.interview_date|date:"M d, Y" }} at {{ interview.interview_date|time:"H:i" }}
+                            </p>
+                            <p class="mb-1">
+                              <strong>Position:</strong> {{ interview.job_position.title }}
+                            </p>
+                            <p class="mb-0">
+                              <strong>Duration:</strong> 15 minutes | <strong>Questions:</strong> 8
+                            </p>
+                          </div>
+                          <div class="col-md-4 text-center">
+                            <div class="d-grid gap-2">
+                              <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
+                                <i class="fas fa-video"></i> Start Interview
+                              </a>
+                              <small class="text-muted">Click to begin your AI interview</small>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  {% endif %}
-                {% endfor %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
               </div>
             </div>
           </div>
         {% endfor %}
         
-        <!-- Show standalone interviews -->
-        {% for interview in scheduled_interviews %}
-          {% with has_application=False %}
-            {% for app in applications %}
-              {% if app.job == interview.job_position %}
-                {% with has_application=True %}
-                {% endwith %}
-              {% endif %}
-            {% endfor %}
-            {% if not has_application %}
-              <div class="col-12">
-                <div class="card shadow-sm">
-                  <div class="card-body">
-                    <h5 class="card-title">{{ interview.job_position.title }}</h5>
-                    <p class="card-text">
-                      <strong>Company:</strong> {{ interview.job_position.company }}<br>
-                      <strong>Status:</strong> Interview Scheduled
-                    </p>
-                    
-                    <div class="alert interview-info mt-3">
-                      <div class="row align-items-center">
-                        <div class="col-md-8">
-                          <h6 class="mb-2"><i class="fas fa-calendar-alt"></i> Interview Scheduled</h6>
-                          <p class="mb-1">
-                            <strong>Date:</strong> {{ interview.interview_date|date:"M d, Y" }} at {{ interview.interview_date|time:"H:i" }}
-                          </p>
-                          <p class="mb-1">
-                            <strong>Position:</strong> {{ interview.job_position.title }}
-                          </p>
-                          <p class="mb-0">
-                            <strong>Duration:</strong> 15 minutes | <strong>Questions:</strong> 8
-                          </p>
-                        </div>
-                        <div class="col-md-4 text-center">
-                          <div class="d-grid gap-2">
-                            <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
-                              <i class="fas fa-video"></i> Start Interview
-                            </a>
-                            <small class="text-muted">Click to begin your AI interview</small>
+        <!-- Show standalone interviews (with error handling) -->
+        {% if scheduled_interviews %}
+          {% for interview in scheduled_interviews %}
+            {% with has_application=False %}
+              {% for app in applications %}
+                {% if app.job == interview.job_position %}
+                  {% with has_application=True %}
+                  {% endwith %}
+                {% endif %}
+              {% endfor %}
+              {% if not has_application %}
+                <div class="col-12">
+                  <div class="card shadow-sm">
+                    <div class="card-body">
+                      <h5 class="card-title">{{ interview.job_position.title }}</h5>
+                      <p class="card-text">
+                        <strong>Company:</strong> {{ interview.job_position.company }}<br>
+                        <strong>Status:</strong> Interview Scheduled
+                      </p>
+                      
+                      <div class="alert interview-info mt-3">
+                        <div class="row align-items-center">
+                          <div class="col-md-8">
+                            <h6 class="mb-2"><i class="fas fa-calendar-alt"></i> Interview Scheduled</h6>
+                            <p class="mb-1">
+                              <strong>Date:</strong> {{ interview.interview_date|date:"M d, Y" }} at {{ interview.interview_date|time:"H:i" }}
+                            </p>
+                            <p class="mb-1">
+                              <strong>Position:</strong> {{ interview.job_position.title }}
+                            </p>
+                            <p class="mb-0">
+                              <strong>Duration:</strong> 15 minutes | <strong>Questions:</strong> 8
+                            </p>
+                          </div>
+                          <div class="col-md-4 text-center">
+                            <div class="d-grid gap-2">
+                              <a href="{% url 'interview_ready' interview.get_uuid %}" class="interview-ready-btn">
+                                <i class="fas fa-video"></i> Start Interview
+                              </a>
+                              <small class="text-muted">Click to begin your AI interview</small>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            {% endif %}
-          {% endwith %}
-        {% endfor %}
+              {% endif %}
+            {% endwith %}
+          {% endfor %}
+        {% endif %}
       </div>
     {% else %}
       <div class="alert alert-warning text-center">
-        <p>You haven't applied to any jobs yet and have no scheduled interviews.</p>
+        <p>You haven't applied to any jobs yet.</p>
+        {% if scheduled_interviews %}
+          <p>However, you have scheduled interviews. Check below for interview details.</p>
+        {% endif %}
       </div>
     {% endif %}
   </div>

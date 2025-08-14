@@ -324,17 +324,36 @@ def jobseeker_dashboard(request):
     except Exception:
         profile = None
     
-    # Get scheduled interviews for this candidate with error handling
+    # Get scheduled interviews for this candidate with comprehensive error handling
     scheduled_interviews = []
     try:
-        # Use only() to avoid selecting problematic fields
-        scheduled_interviews = Interview.objects.filter(
+        # Try to query interviews with minimal field access
+        scheduled_interviews = list(Interview.objects.filter(
             candidate=request.user
-        ).only('id', 'job_position', 'candidate_name', 'candidate_email', 'interview_date').order_by('-interview_date')
+        ).select_related('job_position').order_by('-interview_date'))
+        
     except Exception as e:
         logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
-        # Fallback: empty list if Interview model has schema issues
-        scheduled_interviews = []
+        # Try alternative approach without candidate field
+        try:
+            # If candidate field doesn't exist, try using candidate_name or candidate_email
+            user_email = request.user.email
+            user_name = request.user.get_full_name() or request.user.username
+            
+            if user_email:
+                scheduled_interviews = list(Interview.objects.filter(
+                    candidate_email=user_email
+                ).select_related('job_position').order_by('-interview_date'))
+            elif user_name:
+                scheduled_interviews = list(Interview.objects.filter(
+                    candidate_name__icontains=user_name
+                ).select_related('job_position').order_by('-interview_date'))
+            else:
+                scheduled_interviews = []
+                
+        except Exception as e2:
+            logger.warning(f"Alternative interview query also failed for user {request.user.id}: {e2}")
+            scheduled_interviews = []
     
     return render(request, 'jobapp/jobseeker_dashboard.html', {
         'applications': applications, 
@@ -348,17 +367,26 @@ def jobseeker_dashboard(request):
 def recruiter_dashboard(request):
     applications = Application.objects.filter(job__posted_by=request.user)
     
-    # Get scheduled interviews for jobs posted by this recruiter with error handling
+    # Get scheduled interviews for jobs posted by this recruiter with comprehensive error handling
     scheduled_interviews = []
     try:
-        # Use only() to avoid selecting problematic fields
-        scheduled_interviews = Interview.objects.filter(
+        # Try to query interviews with minimal field access
+        scheduled_interviews = list(Interview.objects.filter(
             job_position__posted_by=request.user
-        ).only('id', 'job_position', 'candidate_name', 'candidate_email', 'interview_date').order_by('-interview_date')
+        ).select_related('job_position').order_by('-interview_date'))
+        
     except Exception as e:
         logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
-        # Fallback: empty list if Interview model has schema issues
-        scheduled_interviews = []
+        # Try alternative approach - get all interviews and filter by job ownership
+        try:
+            user_jobs = Job.objects.filter(posted_by=request.user).values_list('id', flat=True)
+            scheduled_interviews = list(Interview.objects.filter(
+                job_position_id__in=user_jobs
+            ).select_related('job_position').order_by('-interview_date'))
+            
+        except Exception as e2:
+            logger.warning(f"Alternative interview query also failed for recruiter {request.user.id}: {e2}")
+            scheduled_interviews = []
     
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,

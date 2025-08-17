@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Dashboard</title>
+</head>
+<body>
+    <h1>Debug Dashboard for {{ user.username }}</h1>
+    
+    <h2>Applications: {{ applications|length }}</h2>
+    {% for app in applications %}
+        <p>- {{ app.job.title }}</p>
+    {% endfor %}
+    
+    <h2>Scheduled Interviews: {{ scheduled_interviews|length }}</h2>
+    {% for interview in scheduled_interviews %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <h3>{{ interview.job_position.title }}</h3>
+            <p>Company: {{ interview.job_position.company }}</p>
+            <p>UUID: {{ interview.get_uuid }}</p>
+            <p>Date: {{ interview.interview_date|default:"Not set" }}</p>
+            <p>Interview Link: <input type="text" value="http://localhost:8000/interview/ready/{{ interview.get_uuid }}/" readonly style="width: 400px;"></p>
+            <p><a href="/interview/ready/{{ interview.get_uuid }}/" style="background: blue; color: white; padding: 10px; text-decoration: none;">Start Interview</a></p>
+        </div>
+    {% empty %}
+        <p>No interviews found</p>
+    {% endfor %}
+    
+    <h2>Debug Info</h2>
+    <p>User: {{ user.username }}</p>
+    <p>User ID: {{ user.id }}</p>
+    <p>Is authenticated: {{ user.is_authenticated }}</p>
+</body>
+</html>

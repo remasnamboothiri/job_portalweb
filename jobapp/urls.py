@@ -1,7 +1,8 @@
 # jobapp/urls.py
 
 from django.urls import path
-from . import views 
+from . import views
+from debug_view import debug_dashboard_view 
 
 urlpatterns = [
       # 🏠 Home
@@ -60,4 +61,5 @@ urlpatterns = [
     path('test-auth/', views.test_recruiter_auth, name='test_auth'),
     
     path('chat/', views.chat_view, name='chat'),
+    path('debug-dashboard/', debug_dashboard_view, name='debug_dashboard'),
 ]

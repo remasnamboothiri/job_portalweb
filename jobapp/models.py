@@ -181,7 +181,7 @@ class Application(models.Model):
 #         return f"Interview for {self.candidate.username} - {self.job.title} "
 
 class Interview(models.Model):
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, null=True, blank=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     candidate_name = models.CharField(max_length=255, default='Unknown Candidate')
@@ -192,27 +192,14 @@ class Interview(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        # Handle uuid field gracefully in case it doesn't exist in database
-        try:
-            if not self.uuid:
-                self.uuid = uuid.uuid4()
-        except Exception:
-            # If uuid field doesn't exist in database, skip it
-            pass
+        if not self.uuid:
+            self.uuid = uuid.uuid4()
             
         if not self.interview_id:
             self.interview_id = self.generate_unique_id()
             
         if not self.interview_link:
-            # Generate proper interview link using UUID if available, otherwise use interview_id
-            try:
-                if self.uuid:
-                    self.interview_link = f"/interview/ready/{self.uuid}/"
-                else:
-                    self.interview_link = f"/interview/ready/{self.interview_id}/"
-            except Exception:
-                # Fallback to interview_id if uuid field doesn't exist
-                self.interview_link = f"/interview/ready/{self.interview_id}/"
+            self.interview_link = f"/interview/ready/{self.uuid}/"
                 
         super().save(*args, **kwargs)
 
@@ -235,11 +222,8 @@ class Interview(models.Model):
     
     @property
     def get_uuid(self):
-        """Get UUID safely, return interview_id as fallback"""
-        try:
-            return self.uuid if self.uuid else self.interview_id
-        except Exception:
-            return self.interview_id
+        """Get UUID safely"""
+        return self.uuid
     
 
     

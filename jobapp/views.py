@@ -324,10 +324,9 @@ def jobseeker_dashboard(request):
     except Exception:
         profile = None
     
-    # Get scheduled interviews for this candidate with comprehensive error handling
+    # Get scheduled interviews for this candidate
     scheduled_interviews = []
     try:
-        # Try to query interviews with minimal field access
         scheduled_interviews = list(Interview.objects.filter(
             candidate=request.user
         ).select_related('job_position').order_by('-created_at'))
@@ -336,29 +335,7 @@ def jobseeker_dashboard(request):
         
     except Exception as e:
         logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
-        # Try alternative approach without candidate field
-        try:
-            # If candidate field doesn't exist, try using candidate_name or candidate_email
-            user_email = request.user.email
-            user_name = request.user.get_full_name() or request.user.username
-            
-            if user_email:
-                scheduled_interviews = list(Interview.objects.filter(
-                    candidate_email=user_email
-                ).select_related('job_position').order_by('-created_at'))
-                logger.info(f"Found {len(scheduled_interviews)} interviews by email for user {request.user.username}")
-            elif user_name:
-                scheduled_interviews = list(Interview.objects.filter(
-                    candidate_name__icontains=user_name
-                ).select_related('job_position').order_by('-created_at'))
-                logger.info(f"Found {len(scheduled_interviews)} interviews by name for user {request.user.username}")
-            else:
-                scheduled_interviews = []
-                logger.info(f"No interviews found for user {request.user.username}")
-                
-        except Exception as e2:
-            logger.warning(f"Alternative interview query also failed for user {request.user.id}: {e2}")
-            scheduled_interviews = []
+        scheduled_interviews = []
     
     # Debug logging
     logger.info(f"Dashboard for {request.user.username}: {len(applications)} applications, {len(scheduled_interviews)} interviews")
@@ -375,26 +352,16 @@ def jobseeker_dashboard(request):
 def recruiter_dashboard(request):
     applications = Application.objects.filter(job__posted_by=request.user)
     
-    # Get scheduled interviews for jobs posted by this recruiter with comprehensive error handling
+    # Get scheduled interviews for jobs posted by this recruiter
     scheduled_interviews = []
     try:
-        # Try to query interviews with minimal field access
         scheduled_interviews = list(Interview.objects.filter(
             job_position__posted_by=request.user
         ).select_related('job_position').order_by('-interview_date'))
         
     except Exception as e:
         logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
-        # Try alternative approach - get all interviews and filter by job ownership
-        try:
-            user_jobs = Job.objects.filter(posted_by=request.user).values_list('id', flat=True)
-            scheduled_interviews = list(Interview.objects.filter(
-                job_position_id__in=user_jobs
-            ).select_related('job_position').order_by('-interview_date'))
-            
-        except Exception as e2:
-            logger.warning(f"Alternative interview query also failed for recruiter {request.user.id}: {e2}")
-            scheduled_interviews = []
+        scheduled_interviews = []
     
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,
@@ -529,13 +496,8 @@ def interview_ready(request, interview_uuid):
     Display the interview ready page before starting the actual AI interview
     """
     try:
-        # Get the interview record with error handling for missing uuid field
-        try:
-            interview = get_object_or_404(Interview, uuid=interview_uuid)
-        except Exception as e:
-            # If uuid field doesn't exist, try to find by interview_id as fallback
-            logger.warning(f"UUID lookup failed for {interview_uuid}, trying interview_id: {e}")
-            interview = get_object_or_404(Interview, interview_id=interview_uuid)
+        # Get the interview record
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
         
         # Check if the user is authorized (optional security check)
         if hasattr(request.user, 'profile'):
@@ -557,13 +519,8 @@ def interview_ready(request, interview_uuid):
 @csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
-        # Get the interview record with error handling for missing uuid field
-        try:
-            interview = get_object_or_404(Interview, uuid=interview_uuid)
-        except Exception as e:
-            # If uuid field doesn't exist, try to find by interview_id as fallback
-            logger.warning(f"UUID lookup failed for {interview_uuid}, trying interview_id: {e}")
-            interview = get_object_or_404(Interview, interview_id=interview_uuid)
+        # Get the interview record
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
         
         candidate_name = interview.candidate.get_full_name() or "the candidate"
         job_title = interview.job.title or "Software Developer"

@@ -327,6 +327,7 @@ def jobseeker_dashboard(request):
     # Get scheduled interviews for this candidate
     scheduled_interviews = []
     try:
+        # Try the primary query first
         scheduled_interviews = list(Interview.objects.filter(
             candidate=request.user
         ).select_related('job_position').order_by('-created_at'))
@@ -335,7 +336,15 @@ def jobseeker_dashboard(request):
         
     except Exception as e:
         logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
-        scheduled_interviews = []
+        # Try alternative query method
+        try:
+            scheduled_interviews = list(Interview.objects.filter(
+                candidate_id=request.user.id
+            ).select_related('job_position').order_by('-created_at'))
+            logger.info(f"Alternative query successful: {len(scheduled_interviews)} interviews")
+        except Exception as e2:
+            logger.warning(f"Alternative interview query also failed for user {request.user.id}: {e2}")
+            scheduled_interviews = []
     
     # Debug logging
     logger.info(f"Dashboard for {request.user.username}: {len(applications)} applications, {len(scheduled_interviews)} interviews")
@@ -361,7 +370,17 @@ def recruiter_dashboard(request):
         
     except Exception as e:
         logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
-        scheduled_interviews = []
+        # Try alternative approach
+        try:
+            from jobapp.models import Job
+            user_jobs = Job.objects.filter(posted_by=request.user)
+            scheduled_interviews = list(Interview.objects.filter(
+                job_position__in=user_jobs
+            ).select_related('job_position').order_by('-interview_date'))
+            logger.info(f"Alternative recruiter query successful: {len(scheduled_interviews)} interviews")
+        except Exception as e2:
+            logger.warning(f"Alternative recruiter interview query also failed: {e2}")
+            scheduled_interviews = []
     
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,

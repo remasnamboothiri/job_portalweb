@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-
 from pathlib import Path
 from decouple import config
 try:
@@ -19,14 +18,14 @@ except ImportError:
     dj_database_url = None
 
 
-#based on Smtp
+# SMTP Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = config('EMAIL_PORT')
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@example.com')
 
 
 
@@ -130,9 +129,10 @@ WSGI_APPLICATION = 'job_platform.wsgi.application'
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
-# Add Render domain if not in environment variable
-if 'job-portal-23qb.onrender.com' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.extend(['job-portal-23qb.onrender.com', '.onrender.com'])
+# Add production domain if not in environment variable
+PRODUCTION_DOMAIN = config('PRODUCTION_DOMAIN', default='job-portal-23qb.onrender.com')
+if PRODUCTION_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend([PRODUCTION_DOMAIN, '.onrender.com'])
 
 # Database configuration - Always use PostgreSQL
 DATABASES = {
@@ -156,7 +156,7 @@ if config('DATABASE_URL', default=None) and dj_database_url:
 
 # CSRF settings for production
 CSRF_TRUSTED_ORIGINS = [
-    'https://job-portal-23qb.onrender.com',
+    f'https://{config("PRODUCTION_DOMAIN", default="job-portal-23qb.onrender.com")}',
     'https://*.onrender.com',
 ]
 
@@ -225,30 +225,21 @@ STATIC_URL = '/static/'
 
 if DEBUG:
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static'),
+        BASE_DIR / 'static',
         ]
 
 # STATIC_ROOT = BASE_DIR / 'staticfiles'  # For collectstatic
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR , 'media')
-
-
-
-# Make sure these directories exist
-os.makedirs(MEDIA_ROOT, exist_ok=True)
-os.makedirs(os.path.join(MEDIA_ROOT, 'tts'), exist_ok=True)
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-
-# Ensure applications/resumes directory exists
-os.makedirs(os.path.join(MEDIA_ROOT, 'applications', 'resumes'), exist_ok=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -289,7 +280,15 @@ AUTHENTICATION_BACKENDS = (
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication'
-    ]
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour'
+    }
 }
 
 

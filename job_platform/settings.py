@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
 import os
 from pathlib import Path
 from decouple import config
@@ -134,25 +135,28 @@ PRODUCTION_DOMAIN = config('PRODUCTION_DOMAIN', default='job-portal-23qb.onrende
 if PRODUCTION_DOMAIN not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend([PRODUCTION_DOMAIN, '.onrender.com'])
 
-# Database configuration - Always use PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='job_portal_db'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='password'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-    }
-}
-
-# Override with DATABASE_URL if available (for production)
+# Database configuration - PostgreSQL
 if config('DATABASE_URL', default=None) and dj_database_url:
-    DATABASES['default'] = dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    # Use DATABASE_URL (production)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    # Local PostgreSQL configuration
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='job_portal_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default='password'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
 
 # CSRF settings for production
 CSRF_TRUSTED_ORIGINS = [

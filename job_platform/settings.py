@@ -135,15 +135,17 @@ if 'job-portal-23qb.onrender.com' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['job-portal-23qb.onrender.com', '.onrender.com'])
 
 # Database configuration
-if dj_database_url:
+if config('DATABASE_URL', default=None) and dj_database_url:
+    # Production: Use PostgreSQL from DATABASE_URL
     DATABASES = {
         'default': dj_database_url.config(
-            default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+            default=config('DATABASE_URL'),
             conn_max_age=600,
             conn_health_checks=True,
         )
     }
 else:
+    # Development: Use SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

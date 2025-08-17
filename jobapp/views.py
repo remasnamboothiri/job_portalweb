@@ -330,7 +330,9 @@ def jobseeker_dashboard(request):
         # Try to query interviews with minimal field access
         scheduled_interviews = list(Interview.objects.filter(
             candidate=request.user
-        ).select_related('job_position').order_by('-interview_date'))
+        ).select_related('job_position').order_by('-created_at'))
+        
+        logger.info(f"Found {len(scheduled_interviews)} interviews for user {request.user.username}")
         
     except Exception as e:
         logger.warning(f"Could not fetch interviews for user {request.user.id}: {e}")
@@ -343,17 +345,23 @@ def jobseeker_dashboard(request):
             if user_email:
                 scheduled_interviews = list(Interview.objects.filter(
                     candidate_email=user_email
-                ).select_related('job_position').order_by('-interview_date'))
+                ).select_related('job_position').order_by('-created_at'))
+                logger.info(f"Found {len(scheduled_interviews)} interviews by email for user {request.user.username}")
             elif user_name:
                 scheduled_interviews = list(Interview.objects.filter(
                     candidate_name__icontains=user_name
-                ).select_related('job_position').order_by('-interview_date'))
+                ).select_related('job_position').order_by('-created_at'))
+                logger.info(f"Found {len(scheduled_interviews)} interviews by name for user {request.user.username}")
             else:
                 scheduled_interviews = []
+                logger.info(f"No interviews found for user {request.user.username}")
                 
         except Exception as e2:
             logger.warning(f"Alternative interview query also failed for user {request.user.id}: {e2}")
             scheduled_interviews = []
+    
+    # Debug logging
+    logger.info(f"Dashboard for {request.user.username}: {len(applications)} applications, {len(scheduled_interviews)} interviews")
     
     return render(request, 'jobapp/jobseeker_dashboard.html', {
         'applications': applications, 

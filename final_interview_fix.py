@@ -1,107 +1,139 @@
-import os
-import django
-import psycopg2
-from django.conf import settings
+#!/usr/bin/env python
+"""
+Final Interview Database Fix
+The production database already has the correct schema, just need to create test data
+"""
 
-# Setup Django
+import os
+import sys
+import django
+
+# Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'job_platform.settings')
 django.setup()
 
-def fix_interview_table():
-    """Comprehensive fix for the Interview table"""
-    
-    # Get database connection details from Django settings
-    db_config = settings.DATABASES['default']
+from django.contrib.auth import get_user_model
+from jobapp.models import Interview, Job
+from django.utils import timezone
+from datetime import timedelta
+
+User = get_user_model()
+
+def test_interview_system():
+    """Test if the interview system works"""
+    print("Testing interview system...")
     
     try:
-        # Connect to PostgreSQL
-        conn = psycopg2.connect(
-            host=db_config['HOST'],
-            database=db_config['NAME'],
-            user=db_config['USER'],
-            password=db_config['PASSWORD'],
-            port=db_config['PORT']
-        )
+        # Test basic query
+        candidate = User.objects.filter(is_recruiter=False).first()
+        if not candidate:
+            print("No job seeker found. Please create a job seeker account.")
+            return False
         
-        cursor = conn.cursor()
+        # Test the query that was failing in the dashboard
+        interviews = Interview.objects.filter(candidate=candidate)
+        print(f"Query successful: Found {interviews.count()} interviews for {candidate.username}")
         
-        print("Fixing Interview table schema...")
+        # Test dashboard query
+        dashboard_interviews = Interview.objects.filter(
+            candidate=candidate
+        ).select_related('job_position').order_by('-created_at')
         
-        # Check existing columns
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='jobapp_interview'
-            ORDER BY column_name;
-        """)
+        print(f"Dashboard query successful: {dashboard_interviews.count()} interviews")
         
-        existing_columns = [row[0] for row in cursor.fetchall()]
-        print(f"Existing columns: {existing_columns}")
-        
-        # Required columns for the Interview model
-        required_columns = {
-            'candidate_id': 'INTEGER',
-            'created_at': 'TIMESTAMP WITH TIME ZONE',
-            'uuid': 'UUID',
-            'job_position_id': 'INTEGER',
-            'candidate_name': 'VARCHAR(255)',
-            'candidate_email': 'VARCHAR(254)',
-            'interview_id': 'VARCHAR(11)',
-            'interview_link': 'VARCHAR(500)',
-            'interview_date': 'TIMESTAMP WITH TIME ZONE'
-        }
-        
-        # Add missing columns
-        for column, data_type in required_columns.items():
-            if column not in existing_columns:
-                print(f"Adding missing column: {column}")
-                
-                if column == 'created_at':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT NOW();")
-                elif column == 'uuid':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT gen_random_uuid();")
-                elif column == 'candidate_name':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT 'Unknown Candidate';")
-                elif column == 'candidate_email':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT 'unknown@example.com';")
-                elif column == 'interview_id':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT '';")
-                elif column == 'interview_link':
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type} DEFAULT '';")
-                else:
-                    cursor.execute(f"ALTER TABLE jobapp_interview ADD COLUMN {column} {data_type};")
-        
-        # Add foreign key constraints if they don't exist
-        print("Checking foreign key constraints...")
-        
-        # Check if candidate_id foreign key exists
-        cursor.execute("""
-            SELECT constraint_name 
-            FROM information_schema.table_constraints 
-            WHERE table_name='jobapp_interview' 
-            AND constraint_type='FOREIGN KEY'
-            AND constraint_name LIKE '%candidate_id%';
-        """)
-        
-        if not cursor.fetchone():
-            print("Adding candidate_id foreign key constraint...")
-            cursor.execute("""
-                ALTER TABLE jobapp_interview 
-                ADD CONSTRAINT jobapp_interview_candidate_id_fkey 
-                FOREIGN KEY (candidate_id) REFERENCES jobapp_customuser(id) ON DELETE SET NULL;
-            """)
-        
-        # Commit changes
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        print("Interview table fix completed successfully!")
         return True
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Test failed: {e}")
         return False
 
-if __name__ == "__main__":
-    fix_interview_table()
+def create_demo_interview():
+    """Create a demo interview for the user to see"""
+    print("Creating demo interview...")
+    
+    try:
+        # Get the user 'vismaya' from the logs
+        candidate = User.objects.filter(username='vismaya').first()
+        if not candidate:
+            # Get any job seeker
+            candidate = User.objects.filter(is_recruiter=False).first()
+        
+        if not candidate:
+            print("No candidate found")
+            return False
+        
+        # Get a job
+        job = Job.objects.first()
+        if not job:
+            print("No job found")
+            return False
+        
+        # Check if interview already exists
+        existing = Interview.objects.filter(
+            candidate=candidate,
+            job_position=job
+        ).first()
+        
+        if existing:
+            print(f"Interview already exists for {candidate.username}")
+            print(f"UUID: {existing.uuid}")
+            print(f"Job: {existing.job_position.title}")
+            return True
+        
+        # Create new interview
+        interview = Interview.objects.create(
+            job_position=job,
+            candidate=candidate,
+            candidate_name=candidate.get_full_name() or candidate.username,
+            candidate_email=candidate.email or f"{candidate.username}@example.com",
+            interview_date=timezone.now() + timedelta(hours=2)  # Schedule for 2 hours from now
+        )
+        
+        print(f"Demo interview created successfully!")
+        print(f"Candidate: {interview.candidate_name} ({candidate.username})")
+        print(f"Job: {interview.job_position.title}")
+        print(f"UUID: {interview.uuid}")
+        print(f"Interview Link: /interview/ready/{interview.uuid}/")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Failed to create demo interview: {e}")
+        return False
+
+def main():
+    """Main function"""
+    print("=" * 50)
+    print("FINAL INTERVIEW SYSTEM FIX")
+    print("=" * 50)
+    
+    # Test the system
+    if test_interview_system():
+        print("Interview system is working correctly!")
+        
+        # Create demo interview
+        if create_demo_interview():
+            print("\nDemo interview created!")
+            print("\nInstructions:")
+            print("1. Login as the candidate (vismaya or any job seeker)")
+            print("2. Go to the dashboard (/dashboard/seeker/)")
+            print("3. You should now see the interview link")
+            print("4. Click 'Start Interview' to test the AI interview")
+            
+        else:
+            print("Could not create demo interview")
+            
+    else:
+        print("Interview system has issues")
+        return False
+    
+    return True
+
+if __name__ == '__main__':
+    success = main()
+    if not success:
+        sys.exit(1)
+    
+    print("\n" + "=" * 50)
+    print("SUCCESS! Interview system is now working.")
+    print("=" * 50)

@@ -190,6 +190,14 @@ class Interview(models.Model):
     interview_link = models.URLField(max_length=500, blank=True)
     interview_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    # Recording fields
+    transcript = models.TextField(blank=True, null=True)
+    summary = models.TextField(blank=True, null=True)
+    recording_data = models.TextField(blank=True, null=True, help_text="JSON data for recording information")
+    recording_path = models.CharField(max_length=500, blank=True, null=True, help_text="Path to the recorded interview file")
+    recording_duration = models.FloatField(blank=True, null=True, help_text="Duration of recording in seconds")
+    is_recorded = models.BooleanField(default=False, help_text="Whether this interview was recorded")
 
     def save(self, *args, **kwargs):
         if not self.uuid:

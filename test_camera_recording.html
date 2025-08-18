@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Camera and Recording</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #202124; color: white; }
+        video { width: 300px; height: 200px; border: 2px solid #ccc; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+        .recording { background: red; color: white; }
+        .camera-off { background: #ea4335; }
+        .camera-on { background: #5f6368; }
+    </style>
+</head>
+<body>
+    <h1>Camera and Recording Test</h1>
+    
+    <video id="userVideo" autoplay muted playsinline></video>
+    
+    <div>
+        <button id="cameraBtn" class="camera-on">📹 Camera</button>
+        <button id="recordBtn">🎥 Start Recording</button>
+        <button id="stopBtn">⏹️ Stop Recording</button>
+    </div>
+    
+    <div id="status">Ready</div>
+    
+    <script>
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let isCameraOn = true;
+        let userStream = null;
+        
+        // Initialize camera
+        async function initCamera() {
+            try {
+                userStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                document.getElementById('userVideo').srcObject = userStream;
+                document.getElementById('status').textContent = 'Camera ready';
+                
+                setupRecording();
+                
+            } catch (error) {
+                document.getElementById('status').textContent = 'Camera failed: ' + error.message;
+            }
+        }
+        
+        // Setup recording
+        function setupRecording() {
+            if (!userStream) return;
+            
+            try {
+                mediaRecorder = new MediaRecorder(userStream, {
+                    mimeType: 'video/webm'
+                });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-recording.webm';
+                    a.click();
+                    document.getElementById('status').textContent = 'Recording saved';
+                };
+                
+            } catch (error) {
+                document.getElementById('status').textContent = 'Recording setup failed: ' + error.message;
+            }
+        }
+        
+        // Toggle camera
+        function toggleCamera() {
+            if (!userStream) return;
+            
+            const videoTracks = userStream.getVideoTracks();
+            isCameraOn = !isCameraOn;
+            
+            videoTracks.forEach(track => {
+                track.enabled = isCameraOn;
+            });
+            
+            const btn = document.getElementById('cameraBtn');
+            btn.className = isCameraOn ? 'camera-on' : 'camera-off';
+            btn.textContent = isCameraOn ? '📹 Camera ON' : '📹 Camera OFF';
+            
+            document.getElementById('status').textContent = `Camera ${isCameraOn ? 'ON' : 'OFF'}`;
+        }
+        
+        // Start recording
+        function startRecording() {
+            if (mediaRecorder && !isRecording) {
+                recordedChunks = [];
+                mediaRecorder.start(1000);
+                isRecording = true;
+                document.getElementById('recordBtn').className = 'recording';
+                document.getElementById('status').textContent = 'Recording...';
+            }
+        }
+        
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('recordBtn').className = '';
+                document.getElementById('status').textContent = 'Processing recording...';
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('cameraBtn').addEventListener('click', toggleCamera);
+        document.getElementById('recordBtn').addEventListener('click', startRecording);
+        document.getElementById('stopBtn').addEventListener('click', stopRecording);
+        
+        // Initialize on load
+        window.addEventListener('load', initCamera);
+    </script>
+</body>
+</html>

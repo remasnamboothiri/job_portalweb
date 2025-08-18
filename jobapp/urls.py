@@ -62,4 +62,10 @@ urlpatterns = [
     
     path('chat/', views.chat_view, name='chat'),
     path('debug-dashboard/', debug_dashboard_view, name='debug_dashboard'),
+    
+    # Recording and TTS endpoints
+    path('save-interview-recording/', views.save_interview_recording, name='save_interview_recording'),
+    path('test-tts/', views.test_tts, name='test_tts'),
+    path('generate-audio/', views.generate_audio, name='generate_audio'),
+    path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
 ]

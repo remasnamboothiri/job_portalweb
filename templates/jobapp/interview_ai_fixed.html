@@ -1,0 +1,503 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview - {{ interview.job_position.title|default:"Job Position" }}</title>
+    <link rel="stylesheet" href="{% static 'assets/css/google-base.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/google-components.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/google-interview.css' %}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #202124;
+            color: white;
+            font-family: 'Google Sans', sans-serif;
+            overflow: hidden;
+        }
+        
+        .interview-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            z-index: 1000;
+        }
+        
+        .interview-progress-bar {
+            height: 100%;
+            background: #34a853;
+            transition: width 0.3s ease;
+        }
+        
+        .interview-stats {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+        
+        .stat-item {
+            background: rgba(0,0,0,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #34a853;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #9aa0a6;
+        }
+        
+        .meet-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #202124;
+        }
+        
+        .video-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 20px;
+            max-height: 70vh;
+        }
+        
+        .video-participant {
+            background: #303134;
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+        
+        .ai-avatar {
+            font-size: 80px;
+            animation: pulse 2s infinite;
+        }
+        
+        .participant-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        
+        .participant-name {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .subtitle-overlay {
+            position: fixed;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 80%;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .subtitle-overlay.show {
+            opacity: 1;
+        }
+        
+        .subtitle-text {
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        
+        .meet-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            z-index: 1000;
+        }
+        
+        .control-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            background: #5f6368;
+            color: white;
+        }
+        
+        .control-btn.mic-active {
+            background: #34a853;
+        }
+        
+        .control-btn.mic-muted {
+            background: #ea4335;
+        }
+        
+        .end-btn {
+            background: #ea4335;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .completion-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .completion-modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #303134;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        .btn-primary {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+            
+            .interview-stats {
+                top: 10px;
+                right: 10px;
+                gap: 10px;
+            }
+            
+            .stat-item {
+                padding: 6px 12px;
+            }
+            
+            .stat-value {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Interview Progress Bar -->
+    <div class="interview-progress">
+        <div class="interview-progress-bar" id="progressBar" style="width: 12.5%;"></div>
+    </div>
+
+    <!-- Interview Stats -->
+    <div class="interview-stats">
+        <div class="stat-item">
+            <div class="stat-value" id="questionCounter">1/8</div>
+            <div class="stat-label">Questions</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="timer">15:00</div>
+            <div class="stat-label">Time Left</div>
+        </div>
+    </div>
+
+    <!-- Main Interview Container -->
+    <div class="meet-container">
+        <!-- Video Grid -->
+        <div class="video-grid">
+            <!-- AI Interviewer -->
+            <div class="video-participant ai-interviewer">
+                <div class="ai-avatar" id="aiAvatar">🤖</div>
+                <div class="participant-name">Alex - AI Interviewer</div>
+            </div>
+
+            <!-- User Video -->
+            <div class="video-participant candidate">
+                <video class="participant-video" id="userVideo" autoplay muted playsinline></video>
+                <div class="participant-name">{{ candidate_name|default:"You" }}</div>
+            </div>
+        </div>
+
+        <!-- Subtitle Overlay -->
+        <div class="subtitle-overlay" id="subtitleOverlay">
+            <div class="subtitle-text" id="subtitleText">
+                {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself and why you're interested in this position?" }}
+            </div>
+        </div>
+
+        <!-- Meet Controls -->
+        <div class="meet-controls">
+            <button class="control-btn mic-active" id="muteBtn" title="Mute/Unmute">🎤</button>
+            <button class="control-btn" id="cameraBtn" title="Camera">📹</button>
+            <button class="control-btn end-btn" id="endBtn" title="End interview">📞</button>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div class="completion-modal" id="completionModal">
+        <div class="modal-content">
+            <h3>Interview Complete! 🎉</h3>
+            <p>Thank you for taking the time to interview with us. We'll review your responses and get back to you within 2-3 business days.</p>
+            <button class="btn-primary" onclick="window.location.href='{% url 'jobseeker_dashboard' %}'">Back to Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="aiAudioPlayer" style="display: none;"></audio>
+
+    <!-- CSRF Token -->
+    {% csrf_token %}
+
+    <script>
+        // Global variables
+        let isMicOn = true;
+        let currentQuestionCount = 1;
+        let interviewTimer = null;
+        let startTime = new Date();
+        let totalTimeMinutes = 15; // 15 minutes total
+        
+        // Get CSRF token
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        // Initialize camera
+        async function initializeCamera() {
+            try {
+                const videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: true
+                });
+                
+                const userVideo = document.getElementById('userVideo');
+                userVideo.srcObject = videoStream;
+                console.log('Camera initialized successfully');
+            } catch (error) {
+                console.error('Camera initialization failed:', error);
+            }
+        }
+
+        // Update timer display
+        function updateTimer() {
+            const elapsedSeconds = Math.floor((new Date() - startTime) / 1000);
+            const totalSeconds = totalTimeMinutes * 60;
+            const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+            
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            
+            document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (remainingSeconds <= 0) {
+                clearInterval(interviewTimer);
+                showCompletionModal();
+            }
+        }
+
+        // Start timer
+        function startTimer() {
+            interviewTimer = setInterval(updateTimer, 1000);
+        }
+
+        // Toggle microphone
+        function toggleMicrophone() {
+            isMicOn = !isMicOn;
+            const muteBtn = document.getElementById('muteBtn');
+            
+            if (isMicOn) {
+                muteBtn.classList.add('mic-active');
+                muteBtn.classList.remove('mic-muted');
+                muteBtn.innerHTML = '🎤';
+            } else {
+                muteBtn.classList.remove('mic-active');
+                muteBtn.classList.add('mic-muted');
+                muteBtn.innerHTML = '🔇';
+            }
+        }
+
+        // Show completion modal
+        function showCompletionModal() {
+            document.getElementById('completionModal').classList.add('show');
+        }
+
+        // Handle AI response
+        function handleAIResponse(data) {
+            // Update question counter
+            currentQuestionCount = data.question_count || currentQuestionCount + 1;
+            document.getElementById('questionCounter').textContent = `${currentQuestionCount}/8`;
+            
+            // Update progress bar
+            const progress = (currentQuestionCount / 8) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            
+            // Show AI response in subtitles
+            const subtitleText = document.getElementById('subtitleText');
+            subtitleText.textContent = data.response;
+            
+            const subtitleOverlay = document.getElementById('subtitleOverlay');
+            subtitleOverlay.classList.add('show');
+            
+            // Hide subtitles after 8 seconds
+            setTimeout(() => {
+                subtitleOverlay.classList.remove('show');
+            }, 8000);
+            
+            // Check if interview is complete
+            if (data.is_final || currentQuestionCount >= 8) {
+                setTimeout(showCompletionModal, 2000);
+            }
+        }
+
+        // Send response to backend
+        async function sendResponse(text) {
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: new URLSearchParams({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    handleAIResponse(data);
+                }
+            } catch (error) {
+                console.error('Error sending response:', error);
+            }
+        }
+
+        // Initialize speech recognition
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.continuous = false;
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    sendResponse(transcript);
+                };
+                
+                recognition.onerror = function(error) {
+                    console.error('Speech recognition error:', error);
+                };
+                
+                // Auto-start recognition when mic is on
+                setInterval(() => {
+                    if (isMicOn && !recognition.isListening) {
+                        try {
+                            recognition.start();
+                            recognition.isListening = true;
+                        } catch (e) {
+                            // Recognition already started
+                        }
+                    }
+                }, 3000);
+                
+                recognition.onend = function() {
+                    recognition.isListening = false;
+                };
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize camera
+            await initializeCamera();
+            
+            // Initialize speech recognition
+            initializeSpeechRecognition();
+            
+            // Start timer
+            startTimer();
+            
+            // Show initial subtitle
+            setTimeout(() => {
+                document.getElementById('subtitleOverlay').classList.add('show');
+            }, 1000);
+            
+            // Hide initial subtitle after 10 seconds
+            setTimeout(() => {
+                document.getElementById('subtitleOverlay').classList.remove('show');
+            }, 11000);
+        });
+
+        // Button event listeners
+        document.getElementById('muteBtn').addEventListener('click', toggleMicrophone);
+        
+        document.getElementById('endBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to end the interview?')) {
+                showCompletionModal();
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (interviewTimer) {
+                clearInterval(interviewTimer);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1471,6 +1471,96 @@ def generate_audio(request):
     
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
+# Save interview recording
+@csrf_exempt
+def save_interview_recording(request):
+    """Save interview recording file"""
+    if request.method == 'POST':
+        try:
+            # Get the recording file
+            recording_file = request.FILES.get('recording')
+            interview_uuid = request.POST.get('interview_uuid')
+            duration = request.POST.get('duration', 0)
+            
+            if not recording_file:
+                return JsonResponse({'error': 'No recording file provided'}, status=400)
+            
+            if not interview_uuid:
+                return JsonResponse({'error': 'No interview UUID provided'}, status=400)
+            
+            logger.info(f"Saving recording for interview {interview_uuid}: {recording_file.name} ({recording_file.size} bytes)")
+            
+            # Get the interview record
+            try:
+                interview = Interview.objects.get(uuid=interview_uuid)
+            except Interview.DoesNotExist:
+                return JsonResponse({'error': 'Interview not found'}, status=404)
+            
+            # Create recordings directory if it doesn't exist
+            recordings_dir = os.path.join(settings.MEDIA_ROOT, 'interview_recordings')
+            try:
+                os.makedirs(recordings_dir, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create recordings directory: {e}")
+                return JsonResponse({'error': 'Failed to create storage directory'}, status=500)
+            
+            # Generate unique filename
+            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+            file_extension = os.path.splitext(recording_file.name)[1] or '.webm'
+            filename = f"interview_{interview_uuid}_{timestamp}{file_extension}"
+            file_path = os.path.join(recordings_dir, filename)
+            
+            # Save the file
+            with open(file_path, 'wb') as f:
+                for chunk in recording_file.chunks():
+                    f.write(chunk)
+            
+            # Update interview record with recording info
+            relative_path = os.path.join('interview_recordings', filename)
+            
+            # Add recording info to interview (you might want to create a separate Recording model)
+            # For now, we'll store it in the transcript field or create a new field
+            recording_info = {
+                'recording_path': relative_path,
+                'duration': float(duration),
+                'file_size': recording_file.size,
+                'recorded_at': timezone.now().isoformat(),
+                'filename': filename
+            }
+            
+            # Store recording info in interview record
+            interview.recording_data = json.dumps(recording_info)
+            interview.recording_path = relative_path
+            interview.recording_duration = float(duration)
+            interview.is_recorded = True
+            
+            # Also update transcript with recording info
+            current_transcript = interview.transcript or ''
+            interview.transcript = current_transcript + f"\n\nRecording saved: {json.dumps(recording_info)}"
+            
+            interview.save()
+            
+            logger.info(f"Recording saved successfully: {file_path}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Recording saved successfully',
+                'filename': filename,
+                'file_size': recording_file.size,
+                'duration': duration,
+                'path': relative_path
+            })
+            
+        except Exception as e:
+            logger.error(f"Error saving interview recording: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to save recording'
+            }, status=500)
+    
+    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
 # Test authentication view
 @login_required
 def test_recruiter_auth(request):

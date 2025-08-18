@@ -53,15 +53,18 @@
             top: 20px;
             right: 20px;
             display: flex;
-            gap: 20px;
+            gap: 15px;
             z-index: 1000;
         }
         
         .stat-item {
-            background: rgba(0,0,0,0.8);
-            padding: 8px 16px;
-            border-radius: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 20px;
+            border-radius: 25px;
             text-align: center;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
         
         .stat-value {
@@ -92,18 +95,34 @@
         }
         
         .video-participant {
-            background: #303134;
-            border-radius: 12px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            border-radius: 20px;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 300px;
+            border: 3px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .ai-interviewer {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .candidate {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
         }
         
         .ai-avatar {
             font-size: 80px;
             animation: pulse 2s infinite;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
         }
         
         .participant-video {
@@ -117,10 +136,14 @@
             position: absolute;
             bottom: 16px;
             left: 16px;
-            background: rgba(0,0,0,0.8);
-            padding: 8px 16px;
-            border-radius: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 25px;
             font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         
         .subtitle-overlay {
@@ -157,9 +180,9 @@
         }
         
         .control-btn {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
             border: none;
             cursor: pointer;
             display: flex;
@@ -167,24 +190,27 @@
             justify-content: center;
             font-size: 24px;
             transition: all 0.3s ease;
-            background: #5f6368;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
         }
         
         .control-btn.mic-active {
-            background: #34a853;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
         }
         
         .control-btn.mic-muted {
-            background: #ea4335;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
         }
         
         .end-btn {
-            background: #ea4335;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
         }
         
         .control-btn:hover {
-            transform: scale(1.1);
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
         }
         
         .completion-modal {
@@ -496,10 +522,10 @@
             if (!cameraBtn) return;
             
             if (isCameraOn) {
-                cameraBtn.style.background = '#5f6368';
+                cameraBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
                 cameraBtn.title = 'Turn off camera';
             } else {
-                cameraBtn.style.background = '#ea4335';
+                cameraBtn.style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
                 cameraBtn.title = 'Turn on camera';
             }
         }

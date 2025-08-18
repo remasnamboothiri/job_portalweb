@@ -541,11 +541,11 @@ def start_interview_by_uuid(request, interview_uuid):
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
         candidate_name = interview.candidate.get_full_name() or "the candidate"
-        job_title = interview.job.title or "Software Developer"
+        job_title = interview.job_position.title or "Software Developer"
         
         # Handle company name safely
         try:
-            company_name = interview.job.company
+            company_name = interview.job_position.company
         except AttributeError:
             company_name = "Our Company"
         
@@ -568,8 +568,8 @@ def start_interview_by_uuid(request, interview_uuid):
             'job_title': job_title,
             'company_name': company_name,
             'resume_text': resume_text,
-            'job_description': interview.job.description,
-            'job_location': interview.job.location,
+            'job_description': interview.job_position.description,
+            'job_location': interview.job_position.location,
             'question_count': 0
         }
         

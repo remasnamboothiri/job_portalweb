@@ -158,7 +158,10 @@
 <div class="container py-5">
   <div class="mb-4 text-center">
     <h2>👤 Welcome, {{ user.username }}</h2>
-    <a href="{% url 'post_job' %}" class="btn btn-success mt-3">+ Post a New Job</a>
+    <div class="mt-3">
+      <a href="{% url 'post_job' %}" class="btn btn-success me-3">+ Post a New Job</a>
+      <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</a>
+    </div>
   </div>
 
 
@@ -279,6 +282,67 @@
   {% empty %}
     <div class="alert alert-info text-center">No applications found for your posted jobs.</div>
   {% endfor %}
+</div>
+
+<!-- Add Candidate Modal -->
+<div class="modal fade" id="addCandidateModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Candidate</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'add_candidate_dashboard' %}" enctype="multipart/form-data">
+        <div class="modal-body">
+          {% csrf_token %}
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Job Position</label>
+                <select class="form-select" name="job_id" required>
+                  <option value="">Select Job Position</option>
+                  {% for job in user.job_set.all %}
+                    <option value="{{ job.id }}">{{ job.title }} - {{ job.company }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Candidate Name</label>
+                <input type="text" class="form-control" name="candidate_name" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="candidate_email" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-control" name="candidate_phone" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Resume (PDF)</label>
+            <input type="file" class="form-control" name="candidate_resume" accept=".pdf">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Candidate</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 

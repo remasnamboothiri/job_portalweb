@@ -1580,6 +1580,41 @@ def test_recruiter_auth(request):
     <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
     """)
 
+# Add candidate from dashboard
+@login_required
+def add_candidate_dashboard(request):
+    """Add candidate directly from recruiter dashboard"""
+    if not request.user.is_recruiter:
+        messages.error(request, 'Only recruiters can add candidates.')
+        return redirect('login')
+    
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id')
+        candidate_name = request.POST.get('candidate_name')
+        candidate_email = request.POST.get('candidate_email')
+        candidate_phone = request.POST.get('candidate_phone')
+        candidate_resume = request.FILES.get('candidate_resume')
+        
+        try:
+            job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+            
+            # Create candidate
+            candidate = Candidate.objects.create(
+                job=job,
+                name=candidate_name,
+                email=candidate_email,
+                phone=candidate_phone,
+                resume=candidate_resume,
+                added_by=request.user
+            )
+            
+            messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
+            
+        except Exception as e:
+            messages.error(request, f'Error adding candidate: {str(e)}')
+    
+    return redirect('recruiter_dashboard')
+
 # Test application form view
 @login_required
 def test_apply_form(request, job_id):

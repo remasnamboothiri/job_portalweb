@@ -68,4 +68,7 @@ urlpatterns = [
     path('test-tts/', views.test_tts, name='test_tts'),
     path('generate-audio/', views.generate_audio, name='generate_audio'),
     path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
+    
+    # Add candidate from dashboard
+    path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
 ]

@@ -187,11 +187,11 @@
     
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; color: #666; margin: 0;">Interviews Scheduled</h3>
+            <h3 style="font-size: 14px; color: #666; margin: 0;">Added Candidates</h3>
             <span style="font-size: 12px; color: var(--color-info); font-weight: 500;">+8%</span>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">24</div>
-        <div style="font-size: 12px; color: #666;">this week</div>
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ all_candidates.count }}</div>
+        <div style="font-size: 12px; color: #666;">total added</div>
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
@@ -264,6 +264,34 @@
   {% empty %}
     <div class="alert alert-warning text-center">No interviews scheduled yet.</div>
   {% endfor %}
+
+  <!-- ✅ All Added Candidates Section -->
+  <h3 class="mt-5 mb-3">👥 All Added Candidates</h3>
+  {% if all_candidates %}
+    <div class="row">
+      {% for candidate in all_candidates %}
+        <div class="col-md-6 mb-3">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h6 class="card-title">{{ candidate.name }}</h6>
+              <p class="mb-1"><strong>Job:</strong> {{ candidate.job.title }}</p>
+              <p class="mb-1">📧 {{ candidate.email }}</p>
+              <p class="mb-1">📞 {{ candidate.phone }}</p>
+              <div class="mt-2">
+                {% if candidate.resume %}
+                  <a href="{{ candidate.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">📄 View Resume</a>
+                {% endif %}
+                <a href="{% url 'schedule_interview' candidate.job.id candidate.id %}" class="btn btn-sm btn-success">📅 Schedule Interview</a>
+              </div>
+              <small class="text-muted">Added {{ candidate.added_at|date:"M d, Y" }}</small>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center">No candidates added yet. Use the "Add Candidate" button above to add candidates.</div>
+  {% endif %}
 
   <!-- ✅ Applications with Scheduling -->
   <h3 class="mt-5 mb-3">Applications & Interviews</h3>

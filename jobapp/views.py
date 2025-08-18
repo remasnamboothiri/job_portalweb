@@ -382,9 +382,13 @@ def recruiter_dashboard(request):
             logger.warning(f"Alternative recruiter interview query also failed: {e2}")
             scheduled_interviews = []
     
+    # Get all candidates added by this recruiter
+    all_candidates = Candidate.objects.filter(added_by=request.user).select_related('job').order_by('-added_at')
+    
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,
-        'scheduled_interviews': scheduled_interviews
+        'scheduled_interviews': scheduled_interviews,
+        'all_candidates': all_candidates
     })
 
 

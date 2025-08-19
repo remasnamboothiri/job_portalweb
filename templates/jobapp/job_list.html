@@ -168,10 +168,16 @@
     <h2>📋 Available Jobs</h2>
   </div>
 
-  <!-- 🔍 Search -->
-  <div class="d-flex justify-content-center mb-4">
-    <input type="text" id="searchInput" placeholder="Search job title or company..."
-           class="form-control form-control-lg w-50 shadow-sm border-primary" />
+  <!-- 🔍 Search Section -->
+  <div class="mb-4" style="max-width: 600px;">
+    <form method="GET" class="d-flex gap-2">
+      <input type="text" name="search" placeholder="Search jobs, companies, or skills..." 
+             value="{{ search_query }}" class="form-control form-control-lg shadow-sm border-primary" style="flex: 1;">
+      <button type="submit" class="btn btn-primary btn-lg px-4">Search</button>
+      <!-- Preserve filter parameters -->
+      {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+      {% if request.GET.job_type %}<input type="hidden" name="job_type" value="{{ request.GET.job_type }}">{% endif %}
+    </form>
   </div>
 
   <div class="row">
@@ -239,9 +245,14 @@
               </small>
             </div>
 
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{% url 'job_list' %}'">
-              Clear Filters
-            </button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{% url 'job_list' %}'">
+                Clear All
+              </button>
+              <button type="submit" class="btn btn-primary btn-sm">
+                Apply Filters
+              </button>
+            </div>
           </form>
         </div>
       </div>

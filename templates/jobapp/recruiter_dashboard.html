@@ -249,22 +249,23 @@
           <div class="card mb-4 shadow-sm">
             <div class="card-body">
               <h4 class="card-title">{{ job.title }}</h4>
-              <p class="card-text"><strong>Company:</strong> {{ job.company }}</p>
-              <p class="card-text"><strong>Location:</strong> {{ job.location }}</p>
-              <h6 class="mt-3">Applicants:</h6>
-              <ul class="list-group list-group-flush">
-                {% for app in job.application_set.all %}
-                  <li class="list-group-item">
-                    👤 {{ app.applicant.username }} – <strong>{{ app.status }}</strong>
-                    | <a href="{{ app.resume.url }}" target="_blank">View Resume</a>
-                  </li>
-                {% empty %}
-                  <li class="list-group-item text-muted">No applicants yet.</li>
-                {% endfor %}
-              </ul>
+                <p><strong>Company:</strong> {{ job.company }}</p>
+                <p><strong>Location:</strong> {{ job.location }}</p>
+                <!-- Add the status dropdown here -->
+                <form method="post" action="{% url 'update_job_status' job.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <label for="status-{{ job.id }}">Status:</label>
+                  <select name="status" id="status-{{ job.id }}" onchange="this.form.submit()">
+                    {% for value, label in job.STATUS_CHOICES %}
+                      <option value="{{ value }}" {% if job.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+                <!-- ...rest of your job card code... -->
             </div>
           </div>
         {% endfor %}
+        
       </div>
 
       <!-- Add Candidate Section -->
@@ -438,7 +439,7 @@ showSection('applications_section');
     <div class="alert alert-info text-center">No candidates added yet. Use the "Add Candidate" button above to add candidates.</div>
   {% endif %} {% endcomment %}
 
-  <!-- ✅ Applications with Scheduling -->
+  {% comment %} <!-- ✅ Applications with Scheduling -->
   <h3 class="mt-5 mb-3">Applications & Interviews</h3>
   {% for app in applications %}
     <div class="card mb-4 shadow-sm">
@@ -455,7 +456,7 @@ showSection('applications_section');
   {% empty %}
     <div class="alert alert-info text-center">No applications found for your posted jobs.</div>
   {% endfor %}
-</div>
+</div> {% endcomment %}
 
 <!-- Add Candidate Modal -->
 <div class="modal fade" id="addCandidateModal" tabindex="-1">
@@ -599,20 +600,3 @@ function copyLink(uuid) {
     <script src="{% static 'js/custom.js' %}"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

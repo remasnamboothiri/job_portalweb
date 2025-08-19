@@ -29,6 +29,9 @@ from django.conf import settings
 import logging
 
 
+from django.views.decorators.http import require_POST
+
+
 from django.core.mail import send_mail
 
 # Configure logger
@@ -415,6 +418,22 @@ def recruiter_dashboard(request):
         'scheduled_interviews': scheduled_interviews,
         'all_candidates': all_candidates
     })
+    
+    
+    
+@require_POST
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def update_job_status(request, job_id):
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    status = request.POST.get('status')
+    if status in dict(Job.STATUS_CHOICES):
+        job.status = status
+        job.save()
+        messages.success(request, f"Job status updated to {job.get_status_display()}.")
+    else:
+        messages.error(request, "Invalid status selected.")
+    return redirect('recruiter_dashboard')    
 
 
 # schedule interview view for recruiter only

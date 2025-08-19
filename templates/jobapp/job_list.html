@@ -189,27 +189,23 @@
   <div class="row">
     <!-- Job List - Left Side -->
     <div class="col-md-8">
-      <div id="jobList" class="row g-4">
+      <div id="jobList" class="d-flex flex-column gap-3">
         {% for job in jobs %}
-          <div class="col-md-6 col-lg-6">
-            <div class="card job-card h-100 shadow-sm" data-title="{{ job.title }}" data-company="{{ job.company }}">
-              <div class="card-body">
-                <h5 class="card-title">
-                  <a href="{% url 'job_detail' job.id %}" class="text-decoration-none">{{ job.title }}</a>
-                </h5>
-                <p class="card-subtitle mb-1 text-muted"><strong>🏢 Company:</strong> {{ job.company }}</p>
-                <p class="card-text"><strong>📍 Location:</strong> {{ job.location }}</p>
-                <p class="card-text"><strong>🗓 Posted:</strong> {{ job.date_posted|date:"M d, Y" }}</p>
-              </div>
+          <div class="card job-card shadow-sm" data-title="{{ job.title }}" data-company="{{ job.company }}">
+            <div class="card-body">
+              <h5 class="card-title">
+                <a href="{% url 'job_detail' job.id %}" class="text-decoration-none">{{ job.title }}</a>
+              </h5>
+              <p class="card-subtitle mb-1 text-muted"><strong>🏢 Company:</strong> {{ job.company }}</p>
+              <p class="card-text"><strong>📍 Location:</strong> {{ job.location }}</p>
+              <p class="card-text"><strong>🗓 Posted:</strong> {{ job.date_posted|date:"M d, Y" }}</p>
             </div>
           </div>
         {% empty %}
-          <div class="col-12">
-            <div class="alert alert-warning text-center">
-             {% if no_results %}
-             <p class="text-danger text-center">No jobs found for "{{ search_query }}"</p>
-             {% endif %}
-            </div>
+          <div class="alert alert-warning text-center">
+           {% if no_results %}
+           <p class="text-danger text-center">No jobs found for "{{ search_query }}"</p>
+           {% endif %}
           </div>
         {% endfor %}
       </div>

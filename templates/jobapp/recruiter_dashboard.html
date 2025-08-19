@@ -206,8 +206,153 @@
     
 
             
+<!-- ...existing code above... -->
 
-  <!-- ✅ Posted Jobs Section -->
+<div class="container py-5">
+  <div class="row">
+    <!-- Sidebar Filter -->
+    <div class="col-md-3 mb-4">
+      <div class="list-group">
+        <button class="list-group-item list-group-item-action" onclick="showSection('applications_section')">Applications & Interviews</button>
+        <button class="list-group-item list-group-item-action" onclick="showSection('post_job_section')">Post a New Job</button>
+        <button class="list-group-item list-group-item-action" onclick="showSection('add_candidate_section')">Add Candidate</button>
+        <button class="list-group-item list-group-item-action" onclick="showSection('scheduled_interviews_section')">Scheduled Interviews</button>
+        <button class="list-group-item list-group-item-action" onclick="showSection('all_candidates_section')">All Added Candidates</button>
+      </div>
+    </div>
+
+    <!-- Main Content Sections -->
+    <div class="col-md-9">
+      <!-- Applications & Interviews Section (default visible) -->
+      <div id="applications_section" class="dashboard-section">
+        <h3 class="mb-3">Applications & Interviews</h3>
+        {% for app in applications %}
+          <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">{{ app.job.title }}</h5>
+              <p><strong>Applicant:</strong> {{ app.applicant.username }}</p>
+              <p><strong>Status:</strong> {{ app.status }}</p>
+              <a href="{% url 'schedule_interview' app.job.id app.applicant.id %}" class="btn btn-primary">
+                Schedule Interview
+              </a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="alert alert-info text-center">No applications found for your posted jobs.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Post a New Job Section -->
+      <div id="post_job_section" class="dashboard-section" style="display:none;">
+        <h3 class="mb-3">Your Posted Jobs</h3>
+        {% for job in jobs %}
+          <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+              <h4 class="card-title">{{ job.title }}</h4>
+              <p class="card-text"><strong>Company:</strong> {{ job.company }}</p>
+              <p class="card-text"><strong>Location:</strong> {{ job.location }}</p>
+              <h6 class="mt-3">Applicants:</h6>
+              <ul class="list-group list-group-flush">
+                {% for app in job.application_set.all %}
+                  <li class="list-group-item">
+                    👤 {{ app.applicant.username }} – <strong>{{ app.status }}</strong>
+                    | <a href="{{ app.resume.url }}" target="_blank">View Resume</a>
+                  </li>
+                {% empty %}
+                  <li class="list-group-item text-muted">No applicants yet.</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Add Candidate Section -->
+      <div id="add_candidate_section" class="dashboard-section" style="display:none;">
+        <h3 class="mb-3">Add Candidate</h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
+      </div>
+
+      <!-- Scheduled Interviews Section -->
+      <div id="scheduled_interviews_section" class="dashboard-section" style="display:none;">
+        <h3 class="mb-3">📅 Scheduled Interviews</h3>
+        {% for interview in scheduled_interviews %}
+          <div class="card mb-4 shadow-sm border-success">
+            <div class="card-body">
+              <h5 class="card-title">{{ interview.job_position.title }}</h5>
+              <p><strong>Candidate:</strong> {{ interview.candidate_name }}</p>
+              <p><strong>Email:</strong> {{ interview.candidate_email }}</p>
+              <p><strong>Date:</strong> {{ interview.interview_date|date:"M d, Y - g:i A" }}</p>
+              <div class="mt-3">
+                <strong>Interview Link:</strong>
+                <div class="input-group mt-2">
+                  <input type="text" class="form-control" value="https://job-portal-23qb.onrender.com{{ interview.interview_link }}" readonly id="link-{{ interview.uuid }}">
+                  <button class="btn btn-outline-secondary" type="button" onclick="copyLink('{{ interview.uuid }}')">
+                    📋 Copy Link
+                  </button>
+                </div>
+              </div>
+              <div class="mt-3">
+                <a href="{{ interview.interview_link }}" class="btn btn-success" target="_blank">
+                  🎥 Open Interview
+                </a>
+                <a href="mailto:{{ interview.candidate_email }}?subject=Interview Link&body=Your interview link: https://job-portal-23qb.onrender.com{{ interview.interview_link }}" class="btn btn-info">
+                  📧 Email Link
+                </a>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="alert alert-warning text-center">No interviews scheduled yet.</div>
+        {% endfor %}
+      </div>
+
+      <!-- All Added Candidates Section -->
+      <div id="all_candidates_section" class="dashboard-section" style="display:none;">
+        <h3 class="mb-3">👥 All Added Candidates</h3>
+        {% if all_candidates %}
+          <div class="row">
+            {% for candidate in all_candidates %}
+              <div class="col-md-6 mb-3">
+                <div class="card shadow-sm">
+                  <div class="card-body">
+                    <h6 class="card-title">{{ candidate.name }}</h6>
+                    <p class="mb-1"><strong>Job:</strong> {{ candidate.job.title }}</p>
+                    <p class="mb-1">📧 {{ candidate.email }}</p>
+                    <p class="mb-1">📞 {{ candidate.phone }}</p>
+                    <div class="mt-2">
+                      {% if candidate.resume %}
+                        <a href="{{ candidate.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">📄 View Resume</a>
+                      {% endif %}
+                      <a href="{% url 'schedule_interview' candidate.job.id candidate.id %}" class="btn btn-sm btn-success">📅 Schedule Interview</a>
+                    </div>
+                    <small class="text-muted">Added {{ candidate.added_at|date:"M d, Y" }}</small>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info text-center">No candidates added yet. Use the "Add Candidate" button above to add candidates.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showSection(sectionId) {
+  document.querySelectorAll('.dashboard-section').forEach(function(el) {
+    el.style.display = 'none';
+  });
+  document.getElementById(sectionId).style.display = 'block';
+}
+// Show only Applications & Interviews by default
+showSection('applications_section');
+</script>
+
+<!-- ...existing code below... -->
+  {% comment %} <!-- ✅ Posted Jobs Section -->
   <h3 class="mb-3">Your Posted Jobs</h3>
   {% for job in jobs %}
     <div class="card mb-4 shadow-sm">
@@ -291,7 +436,7 @@
     </div>
   {% else %}
     <div class="alert alert-info text-center">No candidates added yet. Use the "Add Candidate" button above to add candidates.</div>
-  {% endif %}
+  {% endif %} {% endcomment %}
 
   <!-- ✅ Applications with Scheduling -->
   <h3 class="mt-5 mb-3">Applications & Interviews</h3>

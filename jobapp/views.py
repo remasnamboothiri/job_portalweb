@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.middleware.csrf import CsrfViewMiddleware
 from django.db.models import Q
 from django.db import models
+from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from datetime import datetime
@@ -178,12 +179,14 @@ def post_job(request):
 
 # Job List view
 def job_list(request):
+    from django.core.paginator import Paginator
+    
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     job_type_filter = request.GET.get('job_type', '')
     
     # Start with all jobs
-    jobs = Job.objects.all()
+    jobs = Job.objects.all().order_by('-date_posted')
     
     # Apply search filter
     if search_query:
@@ -200,10 +203,16 @@ def job_list(request):
     if job_type_filter:
         jobs = jobs.filter(employment_type=job_type_filter)
     
+    # Pagination - 5 jobs per page
+    paginator = Paginator(jobs, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     no_results = not jobs.exists()
 
     return render(request, 'jobapp/job_list.html', {
-        'jobs': jobs,
+        'jobs': page_obj,
+        'page_obj': page_obj,
         'search_query': search_query,
         'no_results': no_results
     })

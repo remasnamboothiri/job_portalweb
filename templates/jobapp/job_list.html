@@ -10,8 +10,6 @@
     <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
     <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-select.min.css' %}">
-    <link rel="stylesheet" href="fonts/icomoon/style.css">
-    <link rel="stylesheet" href="fonts/line-icons/style.css"> 
     <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
@@ -176,30 +174,78 @@
            class="form-control form-control-lg w-50 shadow-sm border-primary" />
   </div>
 
-  <!-- 🧾 Job List -->
-  <div id="jobList" class="row g-4">
-    {% for job in jobs %}
-      <div class="col-md-6 col-lg-4">
-        <div class="card job-card h-100 shadow-sm" data-title="{{ job.title }}" data-company="{{ job.company }}">
-          <div class="card-body">
-            <h5 class="card-title">
-              <a href="{% url 'job_detail' job.id %}" class="text-decoration-none">{{ job.title }}</a>
-            </h5>
-            <p class="card-subtitle mb-1 text-muted"><strong>🏢 Company:</strong> {{ job.company }}</p>
-            <p class="card-text"><strong>📍 Location:</strong> {{ job.location }}</p>
-            <p class="card-text"><strong>🗓 Posted:</strong> {{ job.date_posted|date:"M d, Y" }}</p>
+  <div class="row">
+    <!-- Job List - Left Side -->
+    <div class="col-md-8">
+      <div id="jobList" class="row g-4">
+        {% for job in jobs %}
+          <div class="col-md-6 col-lg-6">
+            <div class="card job-card h-100 shadow-sm" data-title="{{ job.title }}" data-company="{{ job.company }}">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <a href="{% url 'job_detail' job.id %}" class="text-decoration-none">{{ job.title }}</a>
+                </h5>
+                <p class="card-subtitle mb-1 text-muted"><strong>🏢 Company:</strong> {{ job.company }}</p>
+                <p class="card-text"><strong>📍 Location:</strong> {{ job.location }}</p>
+                <p class="card-text"><strong>🗓 Posted:</strong> {{ job.date_posted|date:"M d, Y" }}</p>
+              </div>
+            </div>
           </div>
+        {% empty %}
+          <div class="col-12">
+            <div class="alert alert-warning text-center">
+             {% if no_results %}
+             <p class="text-danger text-center">No jobs found for "{{ search_query }}"</p>
+             {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Filter Section - Right Side -->
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">🔍 Filter Jobs</h5>
+        </div>
+        <div class="card-body">
+          <form method="GET" id="filterForm">
+            <!-- Job Status Filter -->
+            <div class="mb-3">
+              <label class="form-label"><strong>Job Status:</strong></label>
+              <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">All Jobs</option>
+                <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open Jobs</option>
+                <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed Jobs</option>
+              </select>
+              <small class="text-muted">
+                • <strong>Open:</strong> Currently accepting applications<br>
+                • <strong>Closed:</strong> No longer accepting applications
+              </small>
+            </div>
+
+            <!-- Job Type Filter -->
+            <div class="mb-3">
+              <label class="form-label"><strong>Job Type:</strong></label>
+              <select name="job_type" class="form-control" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                <option value="full_time" {% if request.GET.job_type == 'full_time' %}selected{% endif %}>Full-Time</option>
+                <option value="part_time" {% if request.GET.job_type == 'part_time' %}selected{% endif %}>Part-Time</option>
+              </select>
+              <small class="text-muted">
+                • <strong>Full-Time:</strong> 40+ hours/week, benefits included<br>
+                • <strong>Part-Time:</strong> Less than 40 hours/week, flexible schedule
+              </small>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{% url 'job_list' %}'">
+              Clear Filters
+            </button>
+          </form>
         </div>
       </div>
-    {% empty %}
-      <div class="col-12">
-        <div class="alert alert-warning text-center">
-         {% if no_results %}
-         <p class="text-danger text-center">No jobs found for "{{ search_query }}"</p>
-         {% endif %}
-        </div>
-      </div>
-    {% endfor %}
+    </div>
   </div>
 
   <!-- ➕ Post Job Button -->
@@ -208,7 +254,7 @@
       + Post a New Job
     </a>
   </div>
-</div>   
+</div>
 
     
     

@@ -179,12 +179,28 @@ def post_job(request):
 # Job List view
 def job_list(request):
     search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    job_type_filter = request.GET.get('job_type', '')
+    
+    # Start with all jobs
+    jobs = Job.objects.all()
+    
+    # Apply search filter
     if search_query:
-        jobs = Job.objects.filter(title__icontains=search_query)
-        no_results = not jobs.exists()
-    else:
-        jobs = Job.objects.all()
-        no_results = False
+        jobs = jobs.filter(title__icontains=search_query)
+    
+    # Apply status filter
+    if status_filter:
+        if status_filter == 'open':
+            jobs = jobs.filter(status='active')  # 'active' status means open jobs
+        elif status_filter == 'closed':
+            jobs = jobs.filter(status='closed')
+    
+    # Apply job type filter
+    if job_type_filter:
+        jobs = jobs.filter(employment_type=job_type_filter)
+    
+    no_results = not jobs.exists()
 
     return render(request, 'jobapp/job_list.html', {
         'jobs': jobs,

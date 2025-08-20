@@ -525,7 +525,7 @@
 
                   <!-- Featured Image Upload -->
                   <div class="form-group">
-                    <label class="form-label">
+                    <label  class="form-label">
                       <i class="fas fa-image me-2"></i>Upload Featured Image
                     </label>
                     <div class="file-upload-area" onclick="document.getElementById('id_featured_image').click()">
@@ -553,6 +553,17 @@
                     {{ form.title }}
                     {% if form.title.errors %}
                       <div class="text-danger">{{ form.title.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Company Name -->
+                  <div class="form-group">
+                    <label for="{{ form.company.id_for_label }}" class="form-label">
+                      <i class="fas fa-building me-2"></i>Company Name *
+                    </label>
+                    {{ form.company }}
+                    {% if form.company.errors %}
+                      <div class="text-danger">{{ form.company.errors.0 }}</div>
                     {% endif %}
                   </div>
 

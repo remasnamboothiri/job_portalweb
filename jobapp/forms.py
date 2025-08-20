@@ -37,7 +37,7 @@ class JobForm(forms.ModelForm):
     class Meta:
         model = Job
         fields = [
-            'featured_image', 'title', 'department', 'location', 
+            'featured_image', 'title', 'company' , 'department', 'location', 
             'employment_type', 'experience_level', 'salary_min', 
             'salary_max', 'description', 'required_skills', 'status',
             'enable_ai_interview', 'interview_duration', 'interview_question_count'

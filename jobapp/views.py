@@ -32,6 +32,7 @@ import logging
 from django.views.decorators.http import require_POST
 
 
+
 from django.core.mail import send_mail
 
 # Configure logger
@@ -401,7 +402,7 @@ def recruiter_dashboard(request):
         logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
         # Try alternative approach
         try:
-            from jobapp.models import Job
+            
             user_jobs = Job.objects.filter(posted_by=request.user)
             scheduled_interviews = list(Interview.objects.filter(
                 job_position__in=user_jobs

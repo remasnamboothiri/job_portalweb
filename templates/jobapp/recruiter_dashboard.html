@@ -255,7 +255,7 @@
                 <form method="post" action="{% url 'update_job_status' job.id %}" class="d-inline">
                   {% csrf_token %}
                   <label for="status-{{ job.id }}">Status:</label>
-                  <select name="status" id="status-{{ job.id }}" onchange="this.form.submit()">
+                  <select name="status" id="status-{{ job.id }}" class="form-select form-select-sm" onchange="this.form.submit()">
                     {% for value, label in job.STATUS_CHOICES %}
                       <option value="{{ value }}" {% if job.status == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}

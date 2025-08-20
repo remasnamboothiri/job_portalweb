@@ -388,6 +388,7 @@ def jobseeker_dashboard(request):
 @user_passes_test(lambda u: u.is_recruiter)
 def recruiter_dashboard(request):
     applications = Application.objects.filter(job__posted_by=request.user)
+    jobs = Job.objects.filter(posted_by=request.user).order_by('-date_posted')  # <-- Add this line
     
     # Get scheduled interviews for jobs posted by this recruiter
     scheduled_interviews = []
@@ -416,7 +417,8 @@ def recruiter_dashboard(request):
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,
         'scheduled_interviews': scheduled_interviews,
-        'all_candidates': all_candidates
+        'all_candidates': all_candidates,
+        'jobs': jobs,  # <-- Add this line
     })
     
     

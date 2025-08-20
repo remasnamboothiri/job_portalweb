@@ -515,6 +515,11 @@
 
               <!-- Form Content -->
               <div class="form-content">
+                {% if messages %}
+                  {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                  {% endfor %}
+                {% endif %}
                 <form method="post" enctype="multipart/form-data" id="jobForm">
                   {% csrf_token %}
                   

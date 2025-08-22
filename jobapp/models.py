@@ -20,16 +20,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
-# class Profile(models.Model):
-#     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     full_name = models.CharField(max_length=100)
-#     contact = models.CharField(max_length=20)
-#     resume = models.FileField(upload_to='resumes/')
-#     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    
-    
-#     def __str__(self):
-#         return f"{self.user.username}'s Profile"
 
 
 
@@ -140,6 +130,10 @@ class Job(models.Model):
     posted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date_posted = models.DateTimeField(auto_now_add=True)
     tags = TaggableManager()
+    
+    # Add created_at and updated_at fields here
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
@@ -167,18 +161,7 @@ class Application(models.Model):
 
   
     
-# class Interview(models.Model):
-#     id = models.AutoField(primary_key=True)
-#     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-#     job = models.ForeignKey(Job, on_delete=models.CASCADE)
-#     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     link = models.URLField(blank=True, null=True)
-#     scheduled_at = models.DateTimeField()
-#     transcript = models.TextField(blank=True, null=True)
-#     summary = models.TextField(blank=True, null=True)
-    
-#     def __str__(self):
-#         return f"Interview for {self.candidate.username} - {self.job.title} "
+
 
 class Interview(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -232,7 +215,7 @@ class Interview(models.Model):
     def get_uuid(self):
         """Get UUID safely"""
         return self.uuid
-    
+
 
     
 
@@ -250,4 +233,30 @@ class Candidate(models.Model):
         return f"{self.name} - {self.job.title}"        
  
         
+    
+    
+# class Profile(models.Model):
+#     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     full_name = models.CharField(max_length=100)
+#     contact = models.CharField(max_length=20)
+#     resume = models.FileField(upload_to='resumes/')
+#     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    
+    
+#     def __str__(self):
+#         return f"{self.user.username}'s Profile"
+
+
+# class Interview(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+#     job = models.ForeignKey(Job, on_delete=models.CASCADE)
+#     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     link = models.URLField(blank=True, null=True)
+#     scheduled_at = models.DateTimeField()
+#     transcript = models.TextField(blank=True, null=True)
+#     summary = models.TextField(blank=True, null=True)
+    
+#     def __str__(self):
+#         return f"Interview for {self.candidate.username} - {self.job.title} "
     

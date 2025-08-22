@@ -392,77 +392,152 @@ def jobseeker_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def recruiter_dashboard(request):
-    try:
-        applications = Application.objects.filter(job__posted_by=request.user)
-    except Exception as e:
-        logger.warning(f"Application query failed: {e}")
-        applications = []
-    
-    # Try to get jobs with only basic fields first
-    try:
-        jobs = Job.objects.filter(posted_by=request.user).only(
-            'id', 'title', 'company_name', 'location', 'job_type', 'date_posted'
-        ).order_by('-date_posted')
-    except Exception as e:
-        logger.warning(f"Job query failed: {e}")
-        
-        
-    # If that fails, try with raw SQL
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT id, title, company_name, location, job_type, date_posted 
-                FROM jobapp_job 
-                WHERE posted_by_id = %s 
-                ORDER BY date_posted DESC
-            """, [request.user.id])
-            job_rows = cursor.fetchall()
-            jobs = []
-            for row in job_rows:
-                jobs.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'company_name': row[2],
-                    'location': row[3],
-                    'job_type': row[4],
-                    'date_posted': row[5],
-                })
-    except Exception as e2:
-        logger.error(f"Raw job query also failed: {e2}")
-        jobs = []   
-    
-      # Initialize empty collections
+    # Initialize all variables as empty
+    applications = []
+    jobs = []
     scheduled_interviews = []
     all_candidates = []
-    # Get scheduled interviews for jobs posted by this recruiter
     
-    # Try to get interviews - handle missing table/column
     try:
-        # First check what columns exist in interview table
+        # First, get the actual column names for jobapp_job table
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT column_name 
                 FROM information_schema.columns 
+                WHERE table_name = 'jobapp_job'
+                ORDER BY ordinal_position
+            """)
+            job_columns = [row[0] for row in cursor.fetchall()]
+            logger.info(f"Available job columns: {job_columns}")
+            
+            # Build a safe SELECT query with only existing columns
+            safe_columns = []
+            column_mapping = {
+                'id': 'id',
+                'title': 'title', 
+                'company': 'company_name',  # Your DB might use 'company' instead
+                'company_name': 'company_name',
+                'location': 'location',
+                'job_type': 'job_type',
+                'date_posted': 'date_posted',
+                'created_at': 'created_at',
+                'posted_by_id': 'posted_by_id'
+            }
+            
+            for db_col, display_name in column_mapping.items():
+                if db_col in job_columns:
+                    safe_columns.append(db_col)
+            
+            if safe_columns and 'posted_by_id' in job_columns:
+                # Build safe SQL query
+                columns_str = ', '.join(safe_columns)
+                cursor.execute(f"""
+                    SELECT {columns_str}
+                    FROM jobapp_job 
+                    WHERE posted_by_id = %s 
+                    ORDER BY {"date_posted" if "date_posted" in safe_columns else "id"} DESC
+                    LIMIT 50
+                """, [request.user.id])
+                
+                job_rows = cursor.fetchall()
+                jobs = []
+                for row in job_rows:
+                    job_dict = {}
+                    for i, col in enumerate(safe_columns):
+                        job_dict[col] = row[i]
+                    jobs.append(job_dict)
+                    
+                logger.info(f"Successfully loaded {len(jobs)} jobs")
+            
+    except Exception as e:
+        logger.error(f"Job query failed completely: {e}")
+        jobs = []
+    
+    # Try to get applications safely
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'jobapp_application'
+            """)
+            app_columns = [row[0] for row in cursor.fetchall()]
+            
+            if app_columns:
+                # Try to get applications via JOIN
+                cursor.execute("""
+                    SELECT a.id, a.applied_date, a.status
+                    FROM jobapp_application a
+                    INNER JOIN jobapp_job j ON a.job_id = j.id  
+                    WHERE j.posted_by_id = %s
+                    ORDER BY a.applied_date DESC
+                    LIMIT 100
+                """, [request.user.id])
+                
+                app_rows = cursor.fetchall()
+                applications = []
+                for row in app_rows:
+                    applications.append({
+                        'id': row[0],
+                        'applied_date': row[1], 
+                        'status': row[2]
+                    })
+                logger.info(f"Successfully loaded {len(applications)} applications")
+                
+    except Exception as e:
+        logger.warning(f"Application query failed: {e}")
+        applications = []
+    
+    # Try to get interviews safely
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
                 WHERE table_name = 'jobapp_interview'
             """)
-            interview_columns = [row[0] for row in cursor.fetchall()]
-            
-            if 'job_id' in interview_columns:
-                user_jobs = Job.objects.filter(posted_by=request.user)
-                scheduled_interviews = list(Interview.objects.filter(
-                    job__in=user_jobs
-                ).select_related('job').order_by('-interview_date'))
-            elif 'job_position_id' in interview_columns:
-                user_jobs = Job.objects.filter(posted_by=request.user)
-                scheduled_interviews = list(Interview.objects.filter(
-                    job_position__in=user_jobs
-                ).select_related('job_position').order_by('-interview_date'))
+            if cursor.fetchone():
+                cursor.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'jobapp_interview'
+                """)
+                interview_columns = [row[0] for row in cursor.fetchall()]
+                logger.info(f"Interview columns: {interview_columns}")
+                
+                # Try different possible column names for job relationship
+                job_fk_column = None
+                if 'job_position_id' in interview_columns:
+                    job_fk_column = 'job_position_id'
+                elif 'job_id' in interview_columns:
+                    job_fk_column = 'job_id'
+                
+                if job_fk_column:
+                    cursor.execute(f"""
+                        SELECT i.id, i.interview_date, i.candidate_name
+                        FROM jobapp_interview i
+                        INNER JOIN jobapp_job j ON i.{job_fk_column} = j.id
+                        WHERE j.posted_by_id = %s
+                        ORDER BY i.interview_date DESC
+                        LIMIT 50
+                    """, [request.user.id])
+                    
+                    interview_rows = cursor.fetchall()
+                    scheduled_interviews = []
+                    for row in interview_rows:
+                        scheduled_interviews.append({
+                            'id': row[0],
+                            'interview_date': row[1],
+                            'candidate_name': row[2]
+                        })
+                    logger.info(f"Successfully loaded {len(scheduled_interviews)} interviews")
+                
     except Exception as e:
         logger.warning(f"Interview query failed: {e}")
+        scheduled_interviews = []
     
-    # Try to get candidates - handle missing table
+    # Try to get candidates safely 
     try:
-        # Check if candidate table exists
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT table_name 
@@ -470,20 +545,49 @@ def recruiter_dashboard(request):
                 WHERE table_name = 'jobapp_candidate'
             """)
             if cursor.fetchone():
-                all_candidates = list(Candidate.objects.filter(
-                    added_by=request.user
-                ).select_related('job').order_by('-added_at'))
+                cursor.execute("""
+                    SELECT c.id, c.first_name, c.last_name, c.email, c.added_at
+                    FROM jobapp_candidate c
+                    WHERE c.added_by_id = %s
+                    ORDER BY c.added_at DESC
+                    LIMIT 100
+                """, [request.user.id])
+                
+                candidate_rows = cursor.fetchall()
+                all_candidates = []
+                for row in candidate_rows:
+                    all_candidates.append({
+                        'id': row[0],
+                        'first_name': row[1],
+                        'last_name': row[2], 
+                        'email': row[3],
+                        'added_at': row[4]
+                    })
+                logger.info(f"Successfully loaded {len(all_candidates)} candidates")
+                
     except Exception as e:
         logger.warning(f"Candidate query failed: {e}")
+        all_candidates = []
     
+    # Prepare context with safe data
     context = {
         'applications': applications,
         'scheduled_interviews': scheduled_interviews,
         'all_candidates': all_candidates,
         'jobs': jobs,
+        'user': request.user,
+        'debug_info': {
+            'jobs_count': len(jobs),
+            'applications_count': len(applications),
+            'interviews_count': len(scheduled_interviews),
+            'candidates_count': len(all_candidates)
+        }
     }
     
+    logger.info(f"Recruiter dashboard loaded for {request.user.username}: {len(jobs)} jobs, {len(applications)} applications")
+    
     return render(request, 'jobapp/recruiter_dashboard.html', context)
+
     
     
     
@@ -1546,26 +1650,24 @@ def test_apply_form(request, job_id):
 
 
 
-def debug_database_tables(request):
-    """Debug view to check database tables and columns"""
+def debug_database_structure(request):
+    """Debug view to see exact database structure"""
     try:
         with connection.cursor() as cursor:
-            # Check all jobapp tables
+            # Get all jobapp tables
             cursor.execute("""
                 SELECT table_name 
                 FROM information_schema.tables 
-                WHERE table_schema = 'public'
-                AND table_name LIKE 'jobapp_%'
+                WHERE table_schema = 'public' AND table_name LIKE 'jobapp_%'
                 ORDER BY table_name
             """)
             tables = [row[0] for row in cursor.fetchall()]
             
-            table_info = {}
+            table_details = {}
             
-            # For each table, get column info
             for table in tables:
                 cursor.execute("""
-                    SELECT column_name, data_type, is_nullable
+                    SELECT column_name, data_type, is_nullable, column_default
                     FROM information_schema.columns 
                     WHERE table_name = %s
                     ORDER BY ordinal_position
@@ -1575,20 +1677,21 @@ def debug_database_tables(request):
                 for col in cursor.fetchall():
                     columns.append({
                         'name': col[0],
-                        'type': col[1], 
-                        'nullable': col[2]
+                        'type': col[1],
+                        'nullable': col[2],
+                        'default': col[3]
                     })
                 
-                table_info[table] = columns
-        
-        return JsonResponse({
-            'status': 'success',
-            'tables': tables,
-            'table_details': table_info
-        }, indent=2)
-        
+                table_details[table] = columns
+            
+            return JsonResponse({
+                'status': 'success',
+                'tables': tables,
+                'details': table_details
+            }, indent=2)
+            
     except Exception as e:
         return JsonResponse({
             'status': 'error',
-            'error': str(e)
+            'message': str(e)
         })

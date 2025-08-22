@@ -75,5 +75,5 @@ urlpatterns = [
     
     
     
-    path('debug-db/', views.debug_database_tables, name='debug_database'),
+    path('debug-db/', views.debug_database_structure, name='debug_db'),
 ]

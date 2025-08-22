@@ -31,6 +31,8 @@ import logging
 
 from django.views.decorators.http import require_POST
 
+from django.http import JsonResponse
+from django.db import connection
 
 
 from django.core.mail import send_mail
@@ -389,31 +391,33 @@ def jobseeker_dashboard(request):
 @user_passes_test(lambda u: u.is_recruiter)
 def recruiter_dashboard(request):
     applications = Application.objects.filter(job__posted_by=request.user)
+    
     jobs = Job.objects.filter(posted_by=request.user).order_by('-date_posted')  # <-- Add this line
     
-    # Get scheduled interviews for jobs posted by this recruiter
+      # Initialize empty collections
     scheduled_interviews = []
+    all_candidates = []
+    # Get scheduled interviews for jobs posted by this recruiter
+    
     try:
+        user_jobs = Job.objects.filter(posted_by=request.user)
         scheduled_interviews = list(Interview.objects.filter(
-            job_position__posted_by=request.user
+            job_position__in=user_jobs
         ).select_related('job_position').order_by('-interview_date'))
         
     except Exception as e:
-        logger.warning(f"Could not fetch interviews for recruiter {request.user.id}: {e}")
+        logger.warning(f"Interview query failed: {e}")
         # Try alternative approach
-        try:
-            
-            user_jobs = Job.objects.filter(posted_by=request.user)
-            scheduled_interviews = list(Interview.objects.filter(
-                job_position__in=user_jobs
-            ).select_related('job_position').order_by('-interview_date'))
-            logger.info(f"Alternative recruiter query successful: {len(scheduled_interviews)} interviews")
-        except Exception as e2:
-            logger.warning(f"Alternative recruiter interview query also failed: {e2}")
-            scheduled_interviews = []
+        # Try to get candidates - handle missing table
+    try:
+        all_candidates = list(Candidate.objects.filter(
+            added_by=request.user
+        ).select_related('job').order_by('-added_at'))
+    except Exception as e:
+        logger.warning(f"Candidate query failed: {e}")
     
     # Get all candidates added by this recruiter
-    all_candidates = Candidate.objects.filter(added_by=request.user).select_related('job').order_by('-added_at')
+    
     
     return render(request, 'jobapp/recruiter_dashboard.html', {
         'applications': applications,
@@ -439,32 +443,6 @@ def update_job_status(request, job_id):
     return redirect('recruiter_dashboard')    
 
 
-# schedule interview view for recruiter only
-# @login_required
-# @user_passes_test(lambda u: u.is_recruiter)
-# def schedule_interview(request, job_id, applicant_id):
-#     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
-#     candidate = get_object_or_404(User, id=applicant_id)
-
-#     if request.method == 'POST':
-#         link = request.POST.get('link')
-#         date = request.POST.get('date')
-#         time = request.POST.get('time')
-#         dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
-        
-#         # Create Interview
-#         Interview.objects.create(
-#             job=job,
-#             candidate=candidate,
-#             # link=link,
-#             scheduled_at=dt,
-#         )
-        
-        
-        
-#         return redirect('recruiter_dashboard')
-
-#     return render(request, 'jobapp/schedule_interview.html', {'job': job, 'candidate': candidate})
 
 
 @login_required
@@ -1098,192 +1076,7 @@ def log_interview_error(interview_uuid, error, context=None):
     return error_info
     
      
-# def start_interview_by_uuid(request, interview_uuid):
-#     try:
-#         # Get the interview record
-#         interview = get_object_or_404(Interview, uuid=interview_uuid)
-        
-#         candidate_name = interview.candidate.get_full_name() or "the candidate"
-#         job_title = interview.job.title or "Software Developer"
-        
-#         # Handle company name safely
-#         try:
-#             company_name = interview.job.company
-#         except AttributeError:
-#             company_name = "Our Company"
-        
-#         # Get resume file from candidate's profile with error handling
-#         profile = getattr(interview.candidate, 'profile', None)
-#         resume_file = profile.resume if profile and profile.resume else None
 
-#         if not resume_file:
-#             return HttpResponse("Resume file not found. Please upload your resume in your profile.", status=400)
-
-#         try:
-#             resume_text = extract_resume_text(resume_file)
-#         except Exception as e:
-#             resume_text = "Resume could not be processed."
-#             pass  # Resume extraction error
-        
-#         # Store interview context in session for consistency
-#         request.session['interview_context'] = {
-#             'candidate_name': candidate_name,
-#             'job_title': job_title,
-#             'company_name': company_name,
-#             'resume_text': resume_text,
-#             'job_description': interview.job.description,
-#             'job_location': interview.job.location,
-#             'question_count': 0
-#         }
-        
-#         if request.method == "POST":
-#             user_text = request.POST.get("text", "")
-            
-#             if not user_text.strip():
-#                 return JsonResponse({
-#                     'error': 'Please provide a response.',
-#                     'response': 'I didn\'t receive your answer. Could you please respond?'
-#                 })
-            
-#             # Get context from session
-#             context = request.session.get('interview_context', {})
-#             question_count = context.get('question_count', 0) + 1
-            
-#             # Update question count
-#             context['question_count'] = question_count
-#             request.session['interview_context'] = context
-            
-#             # Create contextual prompt based on question number
-#             if question_count <= 8:
-#                 prompt = f"""
-# You are Alex, a friendly HR interviewer. Keep your responses natural and conversational.
-
-# CONTEXT:
-# - Candidate: {context.get('candidate_name', 'the candidate')}
-# - Position: {context.get('job_title')} at {context.get('company_name')}
-# - Job Description: {context.get('job_description', '')}
-# - Resume Summary: {context.get('resume_text', '')[:500]}...
-
-# The candidate just said: "{user_text}"
-
-# INSTRUCTIONS:
-# - Give a brief, natural acknowledgment of their answer (1 sentence max)
-# - Ask ONE follow-up question related to their response OR move to the next interview topic
-# - Keep it conversational - use "That's interesting," "I see," etc.
-# - Maximum 2-3 sentences total
-# - Don't give lengthy explanations or multiple questions
-
-# Current question #{question_count} of 8.
-# """
-#             else:
-#                 prompt = f"""
-# You are Alex, a friendly HR interviewer wrapping up the interview.
-
-# The candidate just said: "{user_text}"
-
-# INSTRUCTIONS:
-# - Briefly acknowledge their final answer
-# - Thank them for their time
-# - Let them know next steps will be communicated soon
-# - Keep it warm but concise (2-3 sentences max)
-# - End the interview naturally
-
-# This was the final question.
-# """
-            
-#             try:
-#                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
-#             except Exception as e:
-#                 pass  # AI API Error
-#                 ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
-            
-#             # Generate audio (keeping your existing TTS logic)
-#             audio_data = None
-#             if ai_response and ai_response.strip():
-#                 try:
-#                     with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-#                         temp_path = temp_file.name
-                    
-#                     tts = gTTS(text=ai_response.strip(), lang='en', slow=False)
-#                     tts.save(temp_path)
-                    
-#                     if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
-#                         with open(temp_path, 'rb') as audio_file:
-#                             audio_content = audio_file.read()
-#                             audio_base64 = base64.b64encode(audio_content).decode('utf-8')
-#                             audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                    
-#                     try:
-#                         os.unlink(temp_path)
-#                     except:
-#                         pass
-                        
-#                 except Exception as e:
-#                     pass  # TTS Error
-
-#             return JsonResponse({
-#                 'response': ai_response,
-#                 'audio': audio_data
-#             })
-
-#         # GET: Show interview UI with first question
-#         first_prompt = f"""
-        
-
-# You are Alex interviewing {candidate_name} for {job_title} at {company_name}.
-
-# Resume highlights: {resume_text[:300]}
-
-# RULES:
-# - Only output what you say - no quotes, labels, or descriptions
-# - Maximum 2 sentences per response
-# - Sound natural and conversational
-# - Show interest in their answers
-
-# START: Say hello, ask "can you hear me clearly?" then ask why they want this role.
-# """        
-
-
-        
-#         try:
-#             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
-#         except Exception as e:
-#             pass  # AI API Error on initial question
-#             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
-        
-#         # Generate initial audio
-#         audio_data = None
-#         if ai_question and ai_question.strip():
-#             try:
-#                 with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-#                     temp_path = temp_file.name
-                
-#                 tts = gTTS(text=ai_question.strip(), lang='en', slow=False)
-#                 tts.save(temp_path)
-                
-#                 if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
-#                     with open(temp_path, 'rb') as audio_file:
-#                         audio_content = audio_file.read()
-#                         audio_base64 = base64.b64encode(audio_content).decode('utf-8')
-#                         audio_data = f"data:audio/mpeg;base64,{audio_base64}"
-                
-#                 try:
-#                     os.unlink(temp_path)
-#                 except:
-#                     pass
-                    
-#             except Exception as e:
-#                 pass  # Initial TTS Error
-
-#         return render(request, 'jobapp/interview_ai.html', {
-#             'interview': interview,
-#             'ai_question': ai_question,
-#             'audio_url': audio_data
-#         })
-        
-#     except Exception as e:
-#         pass  # Interview Error
-#         return HttpResponse(f'Interview could not be started. Error: {str(e)}', status=500)
 
 
 
@@ -1691,3 +1484,52 @@ def test_apply_form(request, job_id):
         form = ApplicationForm()
     
     return render(request, 'jobapp/test_apply.html', {'form': form, 'job': job})
+
+
+
+def debug_database_tables(request):
+    """Debug view to check database tables and columns"""
+    try:
+        with connection.cursor() as cursor:
+            # Check all jobapp tables
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                AND table_name LIKE 'jobapp_%'
+                ORDER BY table_name
+            """)
+            tables = [row[0] for row in cursor.fetchall()]
+            
+            table_info = {}
+            
+            # For each table, get column info
+            for table in tables:
+                cursor.execute("""
+                    SELECT column_name, data_type, is_nullable
+                    FROM information_schema.columns 
+                    WHERE table_name = %s
+                    ORDER BY ordinal_position
+                """, [table])
+                
+                columns = []
+                for col in cursor.fetchall():
+                    columns.append({
+                        'name': col[0],
+                        'type': col[1], 
+                        'nullable': col[2]
+                    })
+                
+                table_info[table] = columns
+        
+        return JsonResponse({
+            'status': 'success',
+            'tables': tables,
+            'table_details': table_info
+        }, indent=2)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        })

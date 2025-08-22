@@ -72,4 +72,8 @@ urlpatterns = [
     
     # Add candidate from dashboard
     path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
+    
+    
+    
+    path('debug-db/', views.debug_database_tables, name='debug_database'),
 ]

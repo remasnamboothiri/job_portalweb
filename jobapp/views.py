@@ -34,6 +34,8 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.db import connection
 
+from django.core.exceptions import FieldError
+
 
 from django.core.mail import send_mail
 
@@ -390,41 +392,98 @@ def jobseeker_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def recruiter_dashboard(request):
-    applications = Application.objects.filter(job__posted_by=request.user)
+    try:
+        applications = Application.objects.filter(job__posted_by=request.user)
+    except Exception as e:
+        logger.warning(f"Application query failed: {e}")
+        applications = []
     
-    jobs = Job.objects.filter(posted_by=request.user).order_by('-date_posted')  # <-- Add this line
+    # Try to get jobs with only basic fields first
+    try:
+        jobs = Job.objects.filter(posted_by=request.user).only(
+            'id', 'title', 'company_name', 'location', 'job_type', 'date_posted'
+        ).order_by('-date_posted')
+    except Exception as e:
+        logger.warning(f"Job query failed: {e}")
+        
+        
+    # If that fails, try with raw SQL
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, title, company_name, location, job_type, date_posted 
+                FROM jobapp_job 
+                WHERE posted_by_id = %s 
+                ORDER BY date_posted DESC
+            """, [request.user.id])
+            job_rows = cursor.fetchall()
+            jobs = []
+            for row in job_rows:
+                jobs.append({
+                    'id': row[0],
+                    'title': row[1],
+                    'company_name': row[2],
+                    'location': row[3],
+                    'job_type': row[4],
+                    'date_posted': row[5],
+                })
+    except Exception as e2:
+        logger.error(f"Raw job query also failed: {e2}")
+        jobs = []   
     
       # Initialize empty collections
     scheduled_interviews = []
     all_candidates = []
     # Get scheduled interviews for jobs posted by this recruiter
     
+    # Try to get interviews - handle missing table/column
     try:
-        user_jobs = Job.objects.filter(posted_by=request.user)
-        scheduled_interviews = list(Interview.objects.filter(
-            job_position__in=user_jobs
-        ).select_related('job_position').order_by('-interview_date'))
-        
+        # First check what columns exist in interview table
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'jobapp_interview'
+            """)
+            interview_columns = [row[0] for row in cursor.fetchall()]
+            
+            if 'job_id' in interview_columns:
+                user_jobs = Job.objects.filter(posted_by=request.user)
+                scheduled_interviews = list(Interview.objects.filter(
+                    job__in=user_jobs
+                ).select_related('job').order_by('-interview_date'))
+            elif 'job_position_id' in interview_columns:
+                user_jobs = Job.objects.filter(posted_by=request.user)
+                scheduled_interviews = list(Interview.objects.filter(
+                    job_position__in=user_jobs
+                ).select_related('job_position').order_by('-interview_date'))
     except Exception as e:
         logger.warning(f"Interview query failed: {e}")
-        # Try alternative approach
-        # Try to get candidates - handle missing table
+    
+    # Try to get candidates - handle missing table
     try:
-        all_candidates = list(Candidate.objects.filter(
-            added_by=request.user
-        ).select_related('job').order_by('-added_at'))
+        # Check if candidate table exists
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name = 'jobapp_candidate'
+            """)
+            if cursor.fetchone():
+                all_candidates = list(Candidate.objects.filter(
+                    added_by=request.user
+                ).select_related('job').order_by('-added_at'))
     except Exception as e:
         logger.warning(f"Candidate query failed: {e}")
     
-    # Get all candidates added by this recruiter
-    
-    
-    return render(request, 'jobapp/recruiter_dashboard.html', {
+    context = {
         'applications': applications,
         'scheduled_interviews': scheduled_interviews,
         'all_candidates': all_candidates,
-        'jobs': jobs,  # <-- Add this line
-    })
+        'jobs': jobs,
+    }
+    
+    return render(request, 'jobapp/recruiter_dashboard.html', context)
     
     
     

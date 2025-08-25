@@ -363,7 +363,7 @@ def jobseeker_dashboard(request):
         # Try the primary query first
         scheduled_interviews = list(Interview.objects.filter(
             candidate=request.user
-        ).select_related('job_position').order_by('-created_at'))
+        ).select_related('job').order_by('-created_at'))
         
         logger.info(f"Found {len(scheduled_interviews)} interviews for user {request.user.username}")
         
@@ -470,7 +470,7 @@ def recruiter_dashboard(request):
                     FROM jobapp_application a
                     INNER JOIN jobapp_job j ON a.job_id = j.id  
                     WHERE j.posted_by_id = %s
-                    ORDER BY a.applied_date DESC
+                    ORDER BY a.applied_at DESC
                     LIMIT 100
                 """, [request.user.id])
                 
@@ -479,7 +479,7 @@ def recruiter_dashboard(request):
                 for row in app_rows:
                     applications.append({
                         'id': row[0],
-                        'applied_date': row[1], 
+                        'applied_at': row[1],
                         'status': row[2]
                     })
                 logger.info(f"Successfully loaded {len(applications)} applications")
@@ -507,18 +507,18 @@ def recruiter_dashboard(request):
                 
                 # Try different possible column names for job relationship
                 job_fk_column = None
-                if 'job_position_id' in interview_columns:
-                    job_fk_column = 'job_position_id'
-                elif 'job_id' in interview_columns:
+                if 'job_id' in interview_columns:
                     job_fk_column = 'job_id'
+                elif 'job_position_id' in interview_columns:
+                    job_fk_column = 'job_position_id'
                 
                 if job_fk_column:
                     cursor.execute(f"""
-                        SELECT i.id, i.interview_date, i.candidate_name
+                        SELECT i.id, i.scheduled_at, i.candidate_name
                         FROM jobapp_interview i
                         INNER JOIN jobapp_job j ON i.{job_fk_column} = j.id
                         WHERE j.posted_by_id = %s
-                        ORDER BY i.interview_date DESC
+                        ORDER BY i.scheduled_at DESC
                         LIMIT 50
                     """, [request.user.id])
                     
@@ -527,7 +527,7 @@ def recruiter_dashboard(request):
                     for row in interview_rows:
                         scheduled_interviews.append({
                             'id': row[0],
-                            'interview_date': row[1],
+                            'scheduled_at': row[1],
                             'candidate_name': row[2]
                         })
                     logger.info(f"Successfully loaded {len(scheduled_interviews)} interviews")
@@ -546,9 +546,10 @@ def recruiter_dashboard(request):
             """)
             if cursor.fetchone():
                 cursor.execute("""
-                    SELECT c.id, c.first_name, c.last_name, c.email, c.added_at
+                    SELECT c.id, c.name, c.email, c.added_at
                     FROM jobapp_candidate c
-                    WHERE c.added_by_id = %s
+                    INNER JOIN jobapp_job j ON c.job_id = j.id
+                    WHERE j.posted_by_id = %s
                     ORDER BY c.added_at DESC
                     LIMIT 100
                 """, [request.user.id])
@@ -558,8 +559,7 @@ def recruiter_dashboard(request):
                 for row in candidate_rows:
                     all_candidates.append({
                         'id': row[0],
-                        'first_name': row[1],
-                        'last_name': row[2], 
+                        'name': row[1],   
                         'email': row[3],
                         'added_at': row[4]
                     })
@@ -631,14 +631,14 @@ def schedule_interview(request, job_id, applicant_id):
         form = ScheduleInterviewForm(request.POST, user=request.user)
         if form.is_valid():
             interview = form.save(commit=False)
-            interview.job_position = job
+            interview.job = job
             interview.candidate = applicant  # Link the actual user
             interview.candidate_id = applicant.id  # Ensure candidate_id is set
             interview.save()
             
             # Send email to candidate with interview link
             try:
-                email_subject = f'Interview Scheduled - {interview.job_position.title}'
+                email_subject = f'Interview Scheduled - {interview.job.title}'
                 # Generate full interview URL
                 from django.urls import reverse
                 
@@ -652,12 +652,12 @@ def schedule_interview(request, job_id, applicant_id):
                 
                 email_body = f"""Hello {interview.candidate_name},
 
-Your interview for the position of {interview.job_position.title} has been scheduled.
+Your interview for the position of {interview.job.title} has been scheduled.
 
 Interview Details:
 - Date & Time: {interview.interview_date.strftime('%B %d, %Y at %I:%M %p')}
-- Position: {interview.job_position.title}
-- Company: {interview.job_position.company}
+- Position: {interview.job.title}
+- Company: {interview.job.company}
 - Interview Link: {interview_url}
 
 Please click the link above to start your interview at the scheduled time.
@@ -665,7 +665,7 @@ You can also find this link on your dashboard.
 
 Best regards,
 HR Team
-{interview.job_position.company}"""
+{interview.job.company}"""
                 
                 send_mail(
                     email_subject,
@@ -685,7 +685,7 @@ HR Team
     else:
         # Pre-populate form with job and applicant data
         initial_data = {
-            'job_position': job,
+            'job': job,
             'candidate_name': applicant.get_full_name() or applicant.username,
             'candidate_email': applicant.email,
         }
@@ -733,11 +733,11 @@ def start_interview_by_uuid(request, interview_uuid):
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
         candidate_name = interview.candidate.get_full_name() or "the candidate"
-        job_title = interview.job_position.title or "Software Developer"
+        job_title = interview.job.title or "Software Developer"
         
         # Handle company name safely
         try:
-            company_name = interview.job_position.company
+            company_name = interview.job.company
         except AttributeError:
             company_name = "Our Company"
         
@@ -760,8 +760,8 @@ def start_interview_by_uuid(request, interview_uuid):
             'job_title': job_title,
             'company_name': company_name,
             'resume_text': resume_text,
-            'job_description': interview.job_position.description,
-            'job_location': interview.job_position.location,
+            'job_description': interview.job.description,
+            'job_location': interview.job.location,
             'question_count': 0
         }
         

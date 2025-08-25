@@ -16,10 +16,7 @@ class LoginForm(forms.Form):
     password=forms.CharField(widget=forms.PasswordInput)        
     
     
-# class ProfileForm(forms.ModelForm):
-#     class Meta:
-#         model = Profile
-#         fields = ['full_name', 'contact', 'resume', 'profile_picture']  
+
         
 class ProfileForm(forms.ModelForm):
     class Meta:
@@ -149,19 +146,19 @@ class ScheduleInterviewForm(forms.ModelForm):
     
     class Meta:
         model = Interview
-        fields = ['job_position', 'candidate_name', 'candidate_email', 'interview_date', 'interview_link']
+        fields = [ 'job', 'candidate_name', 'candidate_email', 'scheduled_at', 'link']
         widgets = {
-            'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'job_position': forms.Select(attrs={'class': 'form-control'}),
+            'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'job': forms.Select(attrs={'class': 'form-control'}),
             'candidate_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter candidate full name'}),
             'candidate_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'candidate@example.com'}),
         }
         labels = {
-            'job_position': 'Job Position',
+            'job': 'Job Position',
             'candidate_name': 'Candidate Name',
             'candidate_email': 'Candidate Email',
-            'interview_date': 'Interview Date & Time',
-            'interview_link': 'Interview Link',
+            'scheduled_at': 'Interview Date & Time',
+            'link': 'Interview Link',
         }
     
     def __init__(self, *args, **kwargs):
@@ -170,18 +167,18 @@ class ScheduleInterviewForm(forms.ModelForm):
         
         # If user is provided, filter job_position to only show jobs posted by this user
         if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
-            self.fields['job_position'].queryset = Job.objects.filter(posted_by=user)
+            self.fields['job'].queryset = Job.objects.filter(posted_by=user)
         
         # Make job_position field read-only if it's already set in initial data
-        if self.initial.get('job_position'):
-            self.fields['job_position'].widget.attrs['readonly'] = True
+        if self.initial.get('job'):
+            self.fields['job'].widget.attrs['readonly'] = True
     
     def save(self, commit=True):
         interview = super().save(commit=False)
         
         # If no custom link provided, generate a default one
-        if not interview.interview_link:
-            interview.interview_link = f"https://meet.google.com/{interview.interview_id or 'generated-link'}"
+        if not interview.link:
+            interview.link = f"https://meet.google.com/{interview.interview_id or 'generated-link'}"
         
         if commit:
             interview.save()

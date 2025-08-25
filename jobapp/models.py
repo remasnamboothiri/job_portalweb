@@ -165,13 +165,16 @@ class Application(models.Model):
 
 class Interview(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
+    # job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
+    job = models.ForeignKey('Job', on_delete=models.CASCADE)
     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     candidate_name = models.CharField(max_length=255, default='Unknown Candidate')
     candidate_email = models.EmailField(default='unknown@example.com')
     interview_id = models.CharField(max_length=11, unique=True, blank=True)
-    interview_link = models.URLField(max_length=500, blank=True)
-    interview_date = models.DateTimeField(null=True, blank=True)
+    # interview_link = models.URLField(max_length=500, blank=True)
+    link = models.URLField(max_length=500, blank=True)
+    # interview_date = models.DateTimeField(null=True, blank=True)
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     
     # Recording fields
@@ -195,7 +198,8 @@ class Interview(models.Model):
         super().save(*args, **kwargs)
 
     def generate_unique_id(self):
-        job_name = self.job_position.title.strip().lower()
+        # job_name = self.job_position.title.strip().lower()
+        job_name = self.job.title.strip().lower()
         candidate = self.candidate_name.strip().lower()
         timestamp = str(int(time.time() * 1000000))  # microseconds
         raw_string = f"{job_name}{candidate}{timestamp}"
@@ -215,6 +219,10 @@ class Interview(models.Model):
     def get_uuid(self):
         """Get UUID safely"""
         return self.uuid
+    
+    
+    def __str__(self):
+        return f"Interview for {self.job.title} - {self.candidate_name}"
 
 
     

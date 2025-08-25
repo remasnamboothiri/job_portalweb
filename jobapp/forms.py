@@ -43,63 +43,63 @@ class JobForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={
                 'placeholder': 'e.g. Senior Frontend Developer',
-                'class': 'form-control'
-                'required': True
+                'class': 'form-control',
+                'required': True,
             }),
             'company': forms.TextInput(attrs={
                 'placeholder': 'e.g. Tech Company Inc.',
                 'class': 'form-control',
-                'required': True
+                'required': True,
             }),
             'location': forms.TextInput(attrs={
                 'placeholder': 'e.g. San Francisco, CA',
-                'class': 'form-control'
-                'required': True
+                'class': 'form-control',
+                'required': True,
             }),
             'description': forms.Textarea(attrs={
                 'rows': 10,
                 'placeholder': 'Describe the role, responsibilities, and what you\'re looking for...',
-                'class': 'form-control'
-                'required': True
+                'class': 'form-control',
+                'required': True,
             }),
             'required_skills': forms.TextInput(attrs={
                 'placeholder': 'React, JavaScript, TypeScript (comma separated)',
-                'class': 'form-control'
+                'class': 'form-control',
             }),
             'salary_min': forms.NumberInput(attrs={
                 'placeholder': '80000',
-                'class': 'form-control'
-                'min': '0'
+                'class': 'form-control',
+                'min': '0',
             }),
             'salary_max': forms.NumberInput(attrs={
                 'placeholder': '120000',
-                'class': 'form-control'
-                'min': '0'
+                'class': 'form-control',
+                'min': '0',
             }),
             'department': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
             'employment_type': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
             'experience_level': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
             'status': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
              'featured_image': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': 'image/*',
             }),
             'enable_ai_interview': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'form-check-input',
             }),
             'interview_duration': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
             'interview_question_count': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
             }),
         }
         labels = {

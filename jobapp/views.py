@@ -466,7 +466,7 @@ def recruiter_dashboard(request):
             if app_columns:
                 # Try to get applications via JOIN
                 cursor.execute("""
-                    SELECT a.id, a.applied_date, a.status
+                    SELECT a.id, a.applied_at, a.status
                     FROM jobapp_application a
                     INNER JOIN jobapp_job j ON a.job_id = j.id  
                     WHERE j.posted_by_id = %s
@@ -514,7 +514,7 @@ def recruiter_dashboard(request):
                 
                 if job_fk_column:
                     cursor.execute(f"""
-                        SELECT i.id, i.scheduled_at, i.candidate_name
+                        SELECT i.id, i.scheduled_at,  COALESCE(i.candidate_name, 'Unknown') 
                         FROM jobapp_interview i
                         INNER JOIN jobapp_job j ON i.{job_fk_column} = j.id
                         WHERE j.posted_by_id = %s

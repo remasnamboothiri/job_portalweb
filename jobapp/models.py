@@ -192,8 +192,8 @@ class Interview(models.Model):
         if not self.interview_id:
             self.interview_id = self.generate_unique_id()
             
-        if not self.interview_link:
-            self.interview_link = f"/interview/ready/{self.uuid}/"
+        if not self.link:
+            self.link = f"/interview/ready/{self.uuid}/"
                 
         super().save(*args, **kwargs)
 

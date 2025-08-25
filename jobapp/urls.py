@@ -76,4 +76,10 @@ urlpatterns = [
     
     
     path('debug-db/', views.debug_database_structure, name='debug_db'),
+    
+    
+    #visible of jobs 
+    path('debug/job-posting/', views.debug_job_posting, name='debug_job_posting'),
+    path('debug/test-job-save/', views.test_job_save, name='test_job_save'),
+    path('debug/fix-database/', views.fix_database_issues, name='fix_database_issues'),
 ]

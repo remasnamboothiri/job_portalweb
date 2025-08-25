@@ -34,24 +34,33 @@ class JobForm(forms.ModelForm):
     class Meta:
         model = Job
         fields = [
-            'featured_image', 'title', 'company' , 'department', 'location', 
-            'employment_type', 'experience_level', 'salary_min', 
-            'salary_max', 'description', 'required_skills', 'status',
+            'title', 'company', 'location', 'department', 'employment_type', 
+            'experience_level', 'description', 'required_skills', 
+            'salary_min', 'salary_max', 'status', 'featured_image',
             'enable_ai_interview', 'interview_duration', 'interview_question_count'
+            
         ]
         widgets = {
             'title': forms.TextInput(attrs={
                 'placeholder': 'e.g. Senior Frontend Developer',
                 'class': 'form-control'
+                'required': True
+            }),
+            'company': forms.TextInput(attrs={
+                'placeholder': 'e.g. Tech Company Inc.',
+                'class': 'form-control',
+                'required': True
             }),
             'location': forms.TextInput(attrs={
                 'placeholder': 'e.g. San Francisco, CA',
                 'class': 'form-control'
+                'required': True
             }),
             'description': forms.Textarea(attrs={
-                'rows': 6,
+                'rows': 10,
                 'placeholder': 'Describe the role, responsibilities, and what you\'re looking for...',
                 'class': 'form-control'
+                'required': True
             }),
             'required_skills': forms.TextInput(attrs={
                 'placeholder': 'React, JavaScript, TypeScript (comma separated)',
@@ -60,10 +69,12 @@ class JobForm(forms.ModelForm):
             'salary_min': forms.NumberInput(attrs={
                 'placeholder': '80000',
                 'class': 'form-control'
+                'min': '0'
             }),
             'salary_max': forms.NumberInput(attrs={
                 'placeholder': '120000',
                 'class': 'form-control'
+                'min': '0'
             }),
             'department': forms.Select(attrs={
                 'class': 'form-control'
@@ -73,6 +84,13 @@ class JobForm(forms.ModelForm):
             }),
             'experience_level': forms.Select(attrs={
                 'class': 'form-control'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+             'featured_image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
             }),
             'enable_ai_interview': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -85,14 +103,15 @@ class JobForm(forms.ModelForm):
             }),
         }
         labels = {
-            'title': 'Job Title',
+            'title': 'Job Title *',
+            'company': 'Company Name *',
             'department': 'Department',
-            'location': 'Location',
+            'location': 'Location *',
             'employment_type': 'Employment Type',
             'experience_level': 'Experience Level',
             'salary_min': 'Salary Min ($)',
             'salary_max': 'Salary Max ($)',
-            'description': 'Job Description',
+            'description': 'Job Description *',
             'required_skills': 'Required Skills',
             'status': 'Job Status',
             'enable_ai_interview': 'Enable AI Interview for this position',
@@ -100,6 +119,54 @@ class JobForm(forms.ModelForm):
             'interview_question_count': 'Question Count',
             'featured_image': 'Upload Featured Image',
         }
+        
+        help_texts = {
+            'title': 'Enter a clear, descriptive job title',
+            'company': 'Enter the company or organization name',
+            'location': 'Enter the job location (city, state/country)',
+            'description': 'Provide detailed job description, responsibilities, and requirements',
+            'required_skills': 'List key skills separated by commas',
+            'salary_min': 'Minimum salary offered',
+            'salary_max': 'Maximum salary offered',
+            'featured_image': 'Upload an image to represent this job posting (optional)',
+        }
+        
+    def clean_title(self):
+        title = self.cleaned_data.get('title')
+        if not title or not title.strip():
+            raise forms.ValidationError('Job title is required.')
+        return title.strip()
+
+    def clean_company(self):
+        company = self.cleaned_data.get('company')
+        if not company or not company.strip():
+            raise forms.ValidationError('Company name is required.')
+        return company.strip()
+
+    def clean_location(self):
+        location = self.cleaned_data.get('location')
+        if not location or not location.strip():
+            raise forms.ValidationError('Location is required.')
+        return location.strip()
+
+    def clean_description(self):
+        description = self.cleaned_data.get('description')
+        if not description or not description.strip():
+            raise forms.ValidationError('Job description is required.')
+        if len(description.strip()) < 50:
+            raise forms.ValidationError('Job description must be at least 50 characters long.')
+        return description.strip()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        salary_min = cleaned_data.get('salary_min')
+        salary_max = cleaned_data.get('salary_max')
+
+        if salary_min is not None and salary_max is not None:
+            if salary_min > salary_max:
+                raise forms.ValidationError('Minimum salary cannot be greater than maximum salary.')
+        
+        return cleaned_data   
         
 class ApplicationForm(forms.ModelForm):
     class Meta:

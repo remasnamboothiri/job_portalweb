@@ -39,6 +39,10 @@ from django.core.exceptions import FieldError
 
 from django.core.mail import send_mail
 
+
+from django.db import connection, transaction
+from django.core.management import call_command
+
 # Configure logger
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -165,25 +169,236 @@ def update_profile(request):
 # post job view for recruiter only 
 @login_required
 def post_job(request):
+    
+    # Enhanced logging to track the job posting process
+    logger.info(f"Post job accessed by user {request.user.id} (is_recruiter: {request.user.is_recruiter})")
+    
     if not request.user.is_recruiter:
         messages.error(request, 'Only recruiters can post jobs.')
         return redirect('login')
         
     if request.method == 'POST':
+        
+        logger.info(f"POST request received for job posting by user {request.user.id}")
+        logger.info(f"POST data keys: {list(request.POST.keys())}")
+        logger.info(f"FILES data keys: {list(request.FILES.keys())}")
+        
         form = JobForm(request.POST, request.FILES)
+        
+        # Log form data for debugging
+        logger.info(f"Form data - title: {request.POST.get('title', 'Not provided')}")
+        logger.info(f"Form data - company: {request.POST.get('company', 'Not provided')}")
+        logger.info(f"Form data - location: {request.POST.get('location', 'Not provided')}")
+        
         if form.is_valid():
-            job = form.save(commit=False)
-            job.posted_by = request.user
-            job.save()
-            messages.success(request, 'Job posted successfully!')
-            return redirect('job_list')
+            logger.info("Form is valid, attempting to save job...")
+            try:
+                job = form.save(commit=False)
+                job.posted_by = request.user
+            
+            
+            
+                # Log job details before saving
+                logger.info(f"Job details before save - Title: {job.title}, Company: {job.company}, Location: {job.location}")
+                
+                job.save()
+            
+                 # Verify the job was actually saved
+                saved_job = Job.objects.filter(id=job.id).first()
+                if saved_job:
+                    logger.info(f"SUCCESS: Job saved successfully with ID {job.id}")
+                    messages.success(request, f'Job "{job.title}" posted successfully!')
+                    return redirect('job_list')
+                else:
+                    logger.error("ERROR: Job was not found in database after save attempt")
+                    messages.error(request, 'Job was not saved properly. Please try again.')
+            except Exception as e:
+                logger.error(f"ERROR saving job: {str(e)}")
+                logger.error(f"Exception type: {type(e).__name__}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
+                messages.error(request, f'Error saving job: {str(e)}')       
         else:
+            logger.error(f"Form validation failed: {form.errors}")
+            # Display specific form errors to user
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        field_name = form.fields[field].label if field in form.fields else field.title()
+                        messages.error(request, f'{field_name}: {error}')    
+            
             # If form is not valid, show errors
             messages.error(request, 'Please correct the errors below.')
     else:
+        logger.info("GET request - showing empty job form") 
         form = JobForm()
         
     return render(request, 'jobapp/post_job.html', {'form': form})
+
+
+
+
+
+
+def debug_job_posting(request):
+    """Debug view to check job posting issues"""
+    debug_info = {}
+    
+    try:
+        # 1. Check if Job model can be imported
+        from .models import Job
+        debug_info['model_import'] = 'SUCCESS'
+        
+        # 2. Check database connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            debug_info['db_connection'] = 'SUCCESS'
+        
+        # 3. Check if jobapp_job table exists
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name = 'jobapp_job'
+            """)
+            result = cursor.fetchone()
+            debug_info['table_exists'] = 'YES' if result else 'NO'
+            
+        # 4. Check table structure
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT column_name, data_type, is_nullable
+                FROM information_schema.columns 
+                WHERE table_name = 'jobapp_job'
+                ORDER BY ordinal_position
+            """)
+            columns = cursor.fetchall()
+            debug_info['table_columns'] = [f"{col[0]} ({col[1]})" for col in columns]
+            
+        # 5. Check current job count
+        job_count = Job.objects.count()
+        debug_info['current_job_count'] = job_count
+        
+        # 6. Check if user can create jobs
+        if request.user.is_authenticated:
+            debug_info['user_authenticated'] = True
+            debug_info['user_is_recruiter'] = getattr(request.user, 'is_recruiter', False)
+            debug_info['user_id'] = request.user.id
+        else:
+            debug_info['user_authenticated'] = False
+            
+        # 7. Try to create a test job (without saving)
+        test_job = Job(
+            title="Test Job",
+            company="Test Company", 
+            location="Test Location",
+            description="Test Description for debugging purposes",
+            posted_by=request.user if request.user.is_authenticated else None
+        )
+        debug_info['test_job_creation'] = 'SUCCESS'
+        
+    except Exception as e:
+        debug_info['error'] = str(e)
+        debug_info['error_type'] = type(e).__name__
+        
+    return JsonResponse(debug_info, indent=2)
+
+@require_POST
+def test_job_save(request):
+    """Test saving a job to database"""
+    if not request.user.is_authenticated or not request.user.is_recruiter:
+        return JsonResponse({'error': 'Must be logged in as recruiter'}, status=403)
+        
+    try:
+        with transaction.atomic():
+            # Create test job
+            test_job = Job.objects.create(
+                title="DEBUG TEST JOB - DELETE ME",
+                company="Test Company Debug",
+                location="Test Location",
+                description="This is a test job created for debugging. Please delete this job after testing.",
+                posted_by=request.user
+            )
+            
+            # Verify it was saved
+            saved_job = Job.objects.filter(id=test_job.id).first()
+            
+            if saved_job:
+                return JsonResponse({
+                    'success': True,
+                    'job_id': saved_job.id,
+                    'job_title': saved_job.title,
+                    'message': 'Test job created successfully!'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Job was created but not found in database'
+                })
+                
+    except Exception as e:
+        logger.error(f"Test job save failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__
+        })
+
+def fix_database_issues(request):
+    """Attempt to fix common database issues"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Only superusers can run database fixes'}, status=403)
+    
+    fixes_applied = []
+    errors = []
+    
+    try:
+        # 1. Run migrations
+        try:
+            call_command('makemigrations', 'jobapp')
+            call_command('migrate', 'jobapp')
+            fixes_applied.append('Migrations updated and applied')
+        except Exception as e:
+            errors.append(f'Migration error: {str(e)}')
+        
+        # 2. Check for missing columns and add them
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'jobapp_job'
+            """)
+            existing_columns = [row[0] for row in cursor.fetchall()]
+            
+            required_columns = [
+                'title', 'company', 'location', 'description', 
+                'posted_by_id', 'date_posted', 'status'
+            ]
+            
+            missing_columns = []
+            for col in required_columns:
+                if col not in existing_columns:
+                    missing_columns.append(col)
+            
+            if missing_columns:
+                errors.append(f'Missing columns: {missing_columns}')
+            else:
+                fixes_applied.append('All required columns exist')
+        
+        return JsonResponse({
+            'fixes_applied': fixes_applied,
+            'errors': errors,
+            'status': 'completed'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'fixes_applied': fixes_applied,
+            'errors': errors
+        })
 
 # Job List view
 def job_list(request):

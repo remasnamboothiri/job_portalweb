@@ -27,7 +27,7 @@ urlpatterns = [
     path('',include('jobapp.urls')),
     path('accounts/', include('allauth.urls')),
     path('api/', include('jobapp.api.urls')),
-    # path('media/<path:path>', serve_media, name='serve_media'),
+    path('media/<path:path>', serve_media, name='serve_media'),
     path('get-csrf-token/', get_csrf_token, name='get_csrf_token'),
     path('test-tts/', test_tts, name='test_tts'),
     path('generate-audio/', generate_audio, name='generate_audio'),

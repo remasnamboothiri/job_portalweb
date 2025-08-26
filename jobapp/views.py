@@ -35,7 +35,7 @@ from django.http import JsonResponse
 from django.db import connection
 
 from django.core.exceptions import FieldError
-
+from django.views.static import serve
 
 from django.core.mail import send_mail
 
@@ -1572,16 +1572,28 @@ def chat_view(request):
     return render(request, "jobapp/chat.html")
 
 # Media file serving view for production
-def serve_media(request, path):
-    """Serve media files in production"""
-    import mimetypes
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
+# def serve_media(request, path):
+#     """Serve media files in production"""
+#     import mimetypes
+#     file_path = os.path.join(settings.MEDIA_ROOT, path)
     
-    if os.path.exists(file_path):
-        content_type, _ = mimetypes.guess_type(file_path)
-        return FileResponse(open(file_path, 'rb'), content_type=content_type)
-    else:
-        raise Http404("Media file not found")
+#     if os.path.exists(file_path):
+#         content_type, _ = mimetypes.guess_type(file_path)
+#         return FileResponse(open(file_path, 'rb'), content_type=content_type)
+#     else:
+#         raise Http404("Media file not found")
+def serve_media(request, path):
+    """
+    Serve media files in production
+    """
+    try:
+        # Try to serve the file
+        media_root = settings.MEDIA_ROOT
+        if not os.path.exists(os.path.join(media_root, path)):
+            raise Http404("Media file not found.")
+        return serve(request, path, document_root=media_root)
+    except Exception:
+        raise Http404("Media file not found.")
 
 # CSRF token endpoint
 def get_csrf_token(request):

@@ -29,6 +29,9 @@ from django.conf import settings
 import logging
 
 
+
+
+
 from django.views.decorators.http import require_POST
 
 from django.http import JsonResponse
@@ -1922,3 +1925,109 @@ def debug_database_structure(request):
             'status': 'error',
             'message': str(e)
         })
+        
+        
+        
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def edit_job(request, job_id):
+    """Edit job view - shows form in modal or separate page"""
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    
+    if request.method == 'POST':
+        form = JobForm(request.POST, request.FILES, instance=job)
+        if form.is_valid():
+            updated_job = form.save(commit=False)
+            updated_job.posted_by = request.user  # Ensure ownership stays same
+            updated_job.save()
+            form.save_m2m()  # For tags
+            
+            messages.success(request, f'Job "{updated_job.title}" updated successfully!')
+            
+            # Return JSON for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Job updated successfully!',
+                    'job_title': updated_job.title
+                })
+            
+            return redirect('recruiter_dashboard')
+        else:
+            # Return form errors for AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                })
+    else:
+        form = JobForm(instance=job)
+    
+    context = {
+        'form': form,
+        'job': job,
+        'is_editing': True
+    }
+    
+    # For AJAX requests, return only the form HTML
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'jobapp/edit_job_modal_content.html', context)
+    
+    return render(request, 'jobapp/edit_job.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+@require_POST
+def delete_job(request, job_id):
+    """Delete a job posting"""
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    job_title = job.title
+    
+    try:
+        job.delete()
+        messages.success(request, f'Job "{job_title}" deleted successfully!')
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': f'Job "{job_title}" deleted successfully!'})
+            
+    except Exception as e:
+        messages.error(request, f'Error deleting job: {str(e)}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': f'Error deleting job: {str(e)}'})
+    
+    return redirect('recruiter_dashboard')
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def duplicate_job(request, job_id):
+    """Duplicate a job posting"""
+    original_job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    
+    try:
+        # Create a copy
+        new_job = Job.objects.get(pk=original_job.pk)
+        new_job.pk = None  # This will create a new instance
+        new_job.id = None
+        new_job.title = f"{original_job.title} (Copy)"
+        new_job.status = 'draft'  # Set as draft
+        new_job.save()
+        
+        # Copy tags
+        for tag in original_job.tags.all():
+            new_job.tags.add(tag)
+        
+        messages.success(request, f'Job duplicated successfully as "{new_job.title}"')
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True, 
+                'message': f'Job duplicated successfully!',
+                'new_job_id': new_job.id
+            })
+            
+    except Exception as e:
+        messages.error(request, f'Error duplicating job: {str(e)}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': f'Error duplicating job: {str(e)}'})
+    
+    return redirect('recruiter_dashboard')        

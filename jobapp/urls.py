@@ -83,4 +83,12 @@ urlpatterns = [
     path('debug/job-posting/', views.debug_job_posting, name='debug_job_posting'),
     path('debug/test-job-save/', views.test_job_save, name='test_job_save'),
     path('debug/fix-database/', views.fix_database_issues, name='fix_database_issues'),
+    
+    
+    
+    #edit job , Job Management URLs
+    path('jobs/<int:job_id>/edit/', views.edit_job, name='edit_job'),
+    path('jobs/<int:job_id>/delete/', views.delete_job, name='delete_job'),
+    path('jobs/<int:job_id>/duplicate/', views.duplicate_job, name='duplicate_job'),
+    
 ]

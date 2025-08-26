@@ -4,6 +4,7 @@ from django.urls import path
 from . import views
 from debug_view import debug_dashboard_view 
 
+
 urlpatterns = [
       # 🏠 Home
     path('', views.home_view, name='home'),

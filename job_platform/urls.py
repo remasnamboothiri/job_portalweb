@@ -27,7 +27,7 @@ urlpatterns = [
     path('',include('jobapp.urls')),
     path('accounts/', include('allauth.urls')),
     path('api/', include('jobapp.api.urls')),
-    path('media/<path:path>', serve_media, name='serve_media'),
+    # path('media/<path:path>', serve_media, name='serve_media'),
     path('get-csrf-token/', get_csrf_token, name='get_csrf_token'),
     path('test-tts/', test_tts, name='test_tts'),
     path('generate-audio/', generate_audio, name='generate_audio'),
@@ -36,10 +36,11 @@ urlpatterns = [
 ]
 
 # Serve media files
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Serve static files in development
 if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Ensure media files are served in production too
@@ -48,7 +49,5 @@ if not settings.DEBUG:
     
     
     
-# Add this for serving media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)    
+   
     

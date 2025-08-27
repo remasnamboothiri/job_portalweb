@@ -60,7 +60,7 @@
     .footer {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
       color: white;
-      padding: 60px 0 30px;
+      padding: 40px 0 20px;
       margin-top: 80px;
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
     }
@@ -68,57 +68,48 @@
     .footer h5, .footer h6 {
       color: white;
       font-weight: 600;
-      margin-bottom: 1.5rem;
-      position: relative;
-    }
-
-    .footer h5::after, .footer h6::after {
-      content: '';
-      position: absolute;
-      bottom: -8px;
-      left: 0;
-      width: 40px;
-      height: 2px;
-      background: #7BB701;
+      margin-bottom: 1.2rem;
+      font-size: 1.1rem;
     }
 
     .footer p {
       color: #bdc3c7;
       line-height: 1.6;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
     }
 
     .footer .list-unstyled {
       padding-left: 0;
+      list-style: none;
     }
 
     .footer .list-unstyled li {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
 
     .footer a {
       color: #bdc3c7;
       text-decoration: none;
-      transition: all 0.3s ease;
-      position: relative;
-      display: inline-block;
+      transition: color 0.3s ease;
+      font-size: 0.9rem;
     }
 
     .footer a:hover {
       color: #7BB701;
       text-decoration: none;
-      transform: translateX(5px);
     }
 
     .footer .border-top {
       border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-      margin-top: 2rem;
-      padding-top: 2rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
     }
 
     .footer .text-center p {
       color: #95a5a6;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 0;
     }
 
     /* Custom styles for edit job modal */
@@ -447,9 +438,9 @@
     <!-- Enhanced Sidebar Filter -->
     <div class="col-md-3 mb-4">
       <div class="sidebar-container">
-        <div class="sidebar-header">
+        {% comment %} <div class="sidebar-header">
           Navigation Menu
-        </div>
+        </div> {% endcomment %}
         <div class="enhanced-list-group list-group">
           <button class="list-group-item list-group-item-action active" onclick="showSection('applications_section')" id="filter-applications">Applications & Interviews</button>
           <button class="list-group-item list-group-item-action" onclick="showSection('post_job_section')" id="filter-post-job">Your Posted Jobs</button>
@@ -721,35 +712,37 @@
 </div>
 
 
-<!-- ✅ Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-4">
-          <h5>JobPortal</h5>
-          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
-        </div>
-        <div class="col-md-4">
-          <h6>Quick Links</h6>
-          <ul class="list-unstyled">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'job_list' %}">Jobs</a></li>
-            <li><a href="{% url 'register' %}">Register</a></li>
-            <li><a href="{% url 'login' %}">Login</a></li>
-          </ul>
-        </div>
-        <div class="col-md-4">
-          <h6>Contact</h6>
-          <p>Email: support@jobportal.com</p>
-          <p>Phone: +91-9876543210</p>
-          <p>Kochi, Kerala</p>
-        </div>
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4">
+        <h5>JobPortal</h5>
+        <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
       </div>
-      <div class="text-center pt-3 border-top">
+      <div class="col-md-4">
+        <h6>Quick Links</h6>
+        <ul class="list-unstyled">
+          <li><a href="{% url 'home' %}">Home</a></li>
+          <li><a href="{% url 'job_list' %}">Jobs</a></li>
+          <li><a href="{% url 'register' %}">Register</a></li>
+          <li><a href="{% url 'login' %}">Login</a></li>
+        </ul>
+      </div>
+      <div class="col-md-4">
+        <h6>Contact</h6>
+        <p>Email: support@jobportal.com</p>
+        <p>Phone: +91-9876543210</p>
+        <p>Kochi, Kerala</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-12 text-center pt-3 border-top">
         <p>&copy; 2025 JobPortal. All rights reserved.</p>
       </div>
     </div>
-  </footer>
+  </div>
+</footer>
 
 <!-- ✅ Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

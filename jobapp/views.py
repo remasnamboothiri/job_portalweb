@@ -812,11 +812,16 @@ def recruiter_dashboard(request):
             'interviews_count': len(scheduled_interviews),
             'candidates_count': len(all_candidates)
         }
+        
     }
     
     
     # Retrieve added candidates
     added_candidates = Candidate.objects.filter(added_by=request.user)
+    
+    
+    # Add the new key-value pair to the context dictionary
+    context['add_candidate_modal'] = 'jobapp/add_candidate_modal.html'
 
     # Add added_candidates to the context
     context['added_candidates'] = added_candidates

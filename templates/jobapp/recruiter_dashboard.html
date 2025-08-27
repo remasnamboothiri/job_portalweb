@@ -583,9 +583,12 @@
 
       <!-- Add Candidate Button -->
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
+      <!-- Add this block to render the add candidate modal -->
+      <div id="add-candidate-modal" class="modal fade" tabindex="-1" role="dialog">
+        {% include 'jobapp/add_candidate_modal.html' %}
+      </div>
 
-      <!-- Include the modal window template -->
-      {% include 'add_candidate_modal.html' %}
+      
 
       <!-- Scheduled Interviews Section -->
       <div id="scheduled_interviews_section" class="dashboard-section" style="display:none;">

@@ -508,15 +508,92 @@ def job_detail(request, job_id):
 
 
 #new add candidate form 
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
 def add_candidate(request):
+    """Handle adding candidates from the modal"""
     if request.method == 'POST':
-        form = AddCandidateForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
+        try:
+            # Get form data
+            job_id = request.POST.get('job')
+            name = request.POST.get('name')
+            email = request.POST.get('email')
+            phone = request.POST.get('phone', '')
+            notes = request.POST.get('notes', '')
+            resume = request.FILES.get('resume')
+            
+            # Validate required fields
+            if not job_id or not name or not email:
+                messages.error(request, 'Job, Name, and Email are required fields.')
+                return redirect('recruiter_dashboard')
+            
+            # Get the job and ensure the recruiter owns it
+            try:
+                job = Job.objects.get(id=job_id, posted_by=request.user)
+            except Job.DoesNotExist:
+                messages.error(request, 'Invalid job selection or you do not have permission to add candidates to this job.')
+                return redirect('recruiter_dashboard')
+            
+            # Check if candidate with this email already exists for this job
+            existing_candidate = Candidate.objects.filter(job=job, email=email).first()
+            if existing_candidate:
+                messages.warning(request, f'A candidate with email {email} already exists for this job.')
+                return redirect('recruiter_dashboard')
+            
+            # Create the candidate
+            candidate = Candidate.objects.create(
+                job=job,
+                name=name,
+                email=email,
+                phone=phone,
+                notes=notes,
+                resume=resume,
+                added_by=request.user
+            )
+            
+            logger.info(f"Candidate {name} added successfully to job {job.title} by {request.user.username}")
+            messages.success(request, f'Candidate "{name}" has been added successfully to "{job.title}"!')
+            
+            # Send notification email to candidate (optional)
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                
+                subject = f'You have been added as a candidate for {job.title}'
+                message = f"""Hello {name},
+
+You have been added as a candidate for the position of {job.title} at {job.company}.
+
+We will contact you soon regarding the next steps in the hiring process.
+
+Best regards,
+{job.company} HR Team"""
+                
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=True  # Don't break if email fails
+                )
+                logger.info(f"Notification email sent to candidate {email}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to send notification email to {email}: {e}")
+                # Don't show error to user for email failure
+            
             return redirect('recruiter_dashboard')
-    else:
-        form = AddCandidateForm()
-    return render(request, '_add_candidate_modal.html', {'form': form})
+            
+        except Exception as e:
+            logger.error(f"Error adding candidate: {e}")
+            messages.error(request, f'Error adding candidate: {str(e)}')
+            return redirect('recruiter_dashboard')
+    
+    # GET request - show the form (though this is typically handled by the modal)
+    user_jobs = Job.objects.filter(posted_by=request.user, status='active')
+    return render(request, 'jobapp/add_candidate_modal.html', {
+        'user_jobs': user_jobs
+    })
 
 
 @login_required
@@ -798,6 +875,16 @@ def recruiter_dashboard(request):
     except Exception as e:
         logger.warning(f"Candidate query failed: {e}")
         all_candidates = []
+        
+        
+     # Get user's jobs for the modal dropdown
+    try:
+        user_jobs = Job.objects.filter(posted_by=request.user).values('id', 'title', 'company', 'status')
+        user_jobs_list = list(user_jobs)
+        logger.info(f"Successfully loaded {len(user_jobs_list)} jobs for modal dropdown")
+    except Exception as e:
+        logger.warning(f"Could not fetch user jobs for modal: {e}")
+        user_jobs_list = []   
     
     # Prepare context with safe data
     context = {
@@ -825,6 +912,8 @@ def recruiter_dashboard(request):
 
     # Add added_candidates to the context
     context['added_candidates'] = added_candidates
+    
+    context['user_jobs'] = user_jobs_list
     
     logger.info(f"Recruiter dashboard loaded for {request.user.username}: {len(jobs)} jobs, {len(applications)} applications")
     

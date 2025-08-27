@@ -19,7 +19,7 @@ urlpatterns = [
     path('jobs/',views.job_list, name='job_list'),
     path('job/<int:job_id>/update-status/', views.update_job_status, name='update_job_status'),
     path('jobs/<int:job_id>/', views.job_detail, name='job_detail'),
-    path('job/<int:job_id>/add-candidates/', views.add_candidates, name='add_candidates'),
+    # path('job/<int:job_id>/add-candidates/', views.add_candidates, name='add_candidates'),
     
      # 📄 Apply to job
     path('apply/<int:job_id>/',views.apply_to_job, name='apply_to_job'),
@@ -72,7 +72,10 @@ urlpatterns = [
     path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
     
     # Add candidate from dashboard
-    path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
+    # path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
+    
+    
+    path('add_candidate/', views.add_candidate, name='add_candidate'),
     
     
     

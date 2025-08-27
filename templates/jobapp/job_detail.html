@@ -221,7 +221,15 @@
   
   {% if is_job_owner %}
     <!-- Show Add Candidates button if recruiter owns this job -->
-    <a href="{% url 'add_candidates' job.id %}" class="btn btn-primary px-4">Add Candidates</a>
+    {% comment %} <a href="{% url 'add_candidates' job.id %}" class="btn btn-primary px-4">Add Candidates</a> {% endcomment %}
+
+    <!-- Add Candidate Button -->
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
+
+    <!-- Include the modal window template -->
+    {% include 'add_candidate_modal.html' %}
+    
+
   {% elif user.is_authenticated %}
     <!-- Show Apply Now button for other logged-in users -->
     <a href="{% url 'apply_to_job' job.id %}" class="btn btn-success px-4">Apply Now</a>

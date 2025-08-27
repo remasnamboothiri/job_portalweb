@@ -573,11 +573,19 @@
         {% endfor %}
       </div>
 
-      <!-- Add Candidate Section -->
+      {% comment %} <!-- Add Candidate Section -->
       <div id="add_candidate_section" class="dashboard-section" style="display:none;">
         <h3 class="mb-3">Add Candidate</h3>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
-      </div>
+        
+      </div> {% endcomment %}
+
+
+      <!-- Add Candidate Button -->
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
+
+      <!-- Include the modal window template -->
+      {% include 'add_candidate_modal.html' %}
 
       <!-- Scheduled Interviews Section -->
       <div id="scheduled_interviews_section" class="dashboard-section" style="display:none;">
@@ -613,7 +621,34 @@
         {% endfor %}
       </div>
 
-      <!-- All Added Candidates Section -->
+
+      <!-- All added candidate section -->
+       <!-- All Added Candidates Section -->
+<div class="dashboard-section">
+  <h3 class="mb-3">All Added Candidates</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Job Position</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for candidate in added_candidates %}
+        <tr>
+          <td>{{ candidate.name }}</td>
+          <td>{{ candidate.email }}</td>
+          <td>{{ candidate.phone }}</td>
+          <td>{{ candidate.job.title }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+      {% comment %} <!-- All Added Candidates Section -->
       <div id="all_candidates_section" class="dashboard-section" style="display:none;">
         <h3 class="mb-3">👥 All Added Candidates</h3>
         {% if all_candidates %}
@@ -644,9 +679,9 @@
       </div>
     </div>
   </div>
-</div>
+</div> {% endcomment %}
 
-<!-- Add Candidate Modal -->
+{% comment %} <!-- Add Candidate Modal -->
 <div class="modal fade" id="addCandidateModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -705,7 +740,7 @@
       </form>
     </div>
   </div>
-</div>
+</div> {% endcomment %}
 
 <!-- NEW: Edit Job Modal -->
 <div class="modal fade" id="editJobModal" tabindex="-1">

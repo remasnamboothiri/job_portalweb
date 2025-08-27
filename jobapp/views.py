@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404 , HttpResponse
 from django.contrib.auth import login, authenticate, logout
-from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm, ScheduleInterviewForm
+from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm, ScheduleInterviewForm , AddCandidateForm
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
@@ -89,7 +89,7 @@ def home_view(request):
     return render(request, 'jobapp/home.html')
 
 
-
+#registaer view
 def register_view(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
@@ -108,7 +108,7 @@ def register_view(request):
     
     
     
-
+#login view
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -129,13 +129,13 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})
-
+# logout view 
 def logout_view(request):
     logout(request)
     return redirect('login')  #or any page you want to go after logout     
 
 
-
+# profile update view
 @login_required
 def update_profile(request):
     try:
@@ -168,6 +168,7 @@ def update_profile(request):
 
 
   
+
 
 # post job view for recruiter only 
 @login_required
@@ -464,47 +465,58 @@ def job_detail(request, job_id):
 
 
 
+
+
+
 #is loged in as a recruiter only 
-
-
-
-def add_candidates(request, job_id):
-    # Ensure only recruiters can access this page
-    if not request.user.is_authenticated or not request.user.is_recruiter:
-        messages.error(request, 'Only recruiters can access this page.')
-        return redirect('login')
+# def add_candidates(request, job_id):
+#     # Ensure only recruiters can access this page
+#     if not request.user.is_authenticated or not request.user.is_recruiter:
+#         messages.error(request, 'Only recruiters can access this page.')
+#         return redirect('login')
     
-    # Get the job and ensure the recruiter owns it
-    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+#     # Get the job and ensure the recruiter owns it
+#     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     
+#     if request.method == 'POST':
+#         # Handle candidate addition form submission
+#         candidate_name = request.POST.get('candidate_name')
+#         candidate_email = request.POST.get('candidate_email')
+#         candidate_phone = request.POST.get('candidate_phone')
+#         candidate_resume = request.FILES.get('candidate_resume')
+        
+#         # Create and save the candidate
+#         candidate = Candidate.objects.create(
+#             job=job,
+#             name=candidate_name,
+#             email=candidate_email,
+#             phone=candidate_phone,
+#             resume=candidate_resume,
+#             added_by=request.user
+#         )
+        
+#         messages.success(request, f'Candidate {candidate_name} added successfully!')
+#         return redirect('add_candidates', job_id=job_id)
+    
+#     # Get all candidates for this job to display
+#     candidates = Candidate.objects.filter(job=job)
+    
+#     return render(request, 'jobapp/add_candidates.html', {
+#         'job': job,
+#         'candidates': candidates
+#     })
+
+
+#new add candidate form 
+def add_candidate(request):
     if request.method == 'POST':
-        # Handle candidate addition form submission
-        candidate_name = request.POST.get('candidate_name')
-        candidate_email = request.POST.get('candidate_email')
-        candidate_phone = request.POST.get('candidate_phone')
-        candidate_resume = request.FILES.get('candidate_resume')
-        
-        # Create and save the candidate
-        candidate = Candidate.objects.create(
-            job=job,
-            name=candidate_name,
-            email=candidate_email,
-            phone=candidate_phone,
-            resume=candidate_resume,
-            added_by=request.user
-        )
-        
-        messages.success(request, f'Candidate {candidate_name} added successfully!')
-        return redirect('add_candidates', job_id=job_id)
-    
-    # Get all candidates for this job to display
-    candidates = Candidate.objects.filter(job=job)
-    
-    return render(request, 'jobapp/add_candidates.html', {
-        'job': job,
-        'candidates': candidates
-    })
-
+        form = AddCandidateForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('recruiter_dashboard')
+    else:
+        form = AddCandidateForm()
+    return render(request, '_add_candidate_modal.html', {'form': form})
 
 
 @login_required
@@ -801,6 +813,13 @@ def recruiter_dashboard(request):
             'candidates_count': len(all_candidates)
         }
     }
+    
+    
+    # Retrieve added candidates
+    added_candidates = Candidate.objects.filter(added_by=request.user)
+
+    # Add added_candidates to the context
+    context['added_candidates'] = added_candidates
     
     logger.info(f"Recruiter dashboard loaded for {request.user.username}: {len(jobs)} jobs, {len(applications)} applications")
     
@@ -1817,40 +1836,40 @@ def test_recruiter_auth(request):
     <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
     """)
 
-# Add candidate from dashboard
-@login_required
-def add_candidate_dashboard(request):
-    """Add candidate directly from recruiter dashboard"""
-    if not request.user.is_recruiter:
-        messages.error(request, 'Only recruiters can add candidates.')
-        return redirect('login')
+# # Add candidate from dashboard
+# @login_required
+# def add_candidate_dashboard(request):
+#     """Add candidate directly from recruiter dashboard"""
+#     if not request.user.is_recruiter:
+#         messages.error(request, 'Only recruiters can add candidates.')
+#         return redirect('login')
     
-    if request.method == 'POST':
-        job_id = request.POST.get('job_id')
-        candidate_name = request.POST.get('candidate_name')
-        candidate_email = request.POST.get('candidate_email')
-        candidate_phone = request.POST.get('candidate_phone')
-        candidate_resume = request.FILES.get('candidate_resume')
+#     if request.method == 'POST':
+#         job_id = request.POST.get('job_id')
+#         candidate_name = request.POST.get('candidate_name')
+#         candidate_email = request.POST.get('candidate_email')
+#         candidate_phone = request.POST.get('candidate_phone')
+#         candidate_resume = request.FILES.get('candidate_resume')
         
-        try:
-            job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+#         try:
+#             job = get_object_or_404(Job, id=job_id, posted_by=request.user)
             
-            # Create candidate
-            candidate = Candidate.objects.create(
-                job=job,
-                name=candidate_name,
-                email=candidate_email,
-                phone=candidate_phone,
-                resume=candidate_resume,
-                added_by=request.user
-            )
+#             # Create candidate
+#             candidate = Candidate.objects.create(
+#                 job=job,
+#                 name=candidate_name,
+#                 email=candidate_email,
+#                 phone=candidate_phone,
+#                 resume=candidate_resume,
+#                 added_by=request.user
+#             )
             
-            messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
+#             messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
             
-        except Exception as e:
-            messages.error(request, f'Error adding candidate: {str(e)}')
+#         except Exception as e:
+#             messages.error(request, f'Error adding candidate: {str(e)}')
     
-    return redirect('recruiter_dashboard')
+#     return redirect('recruiter_dashboard')
 
 # Test application form view
 @login_required

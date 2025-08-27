@@ -251,3 +251,10 @@ class ScheduleInterviewForm(forms.ModelForm):
             interview.save()
         return interview
         
+        
+        
+        
+class AddCandidateForm(forms.ModelForm):
+    class Meta:
+        model = Candidate
+        fields = ('name', 'email', 'phone', 'resume')        

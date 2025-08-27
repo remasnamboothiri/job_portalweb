@@ -1,58 +1,4 @@
-<!-- Add this section to your job_detail.html template -->
-<!-- This should replace the problematic include statement -->
-
-{% extends 'jobapp/base.html' %}
-
-{% block content %}
-<div class="container mt-4">
-    <!-- Job Details Content -->
-    <div class="row">
-        <div class="col-md-8">
-            <h1>{{ job.title }}</h1>
-            <p class="text-muted">{{ job.company }} • {{ job.location }}</p>
-            <div class="job-description">
-                {{ job.description|linebreaks }}
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <!-- Job Actions -->
-            {% if is_recruiter and is_job_owner %}
-                <div class="card">
-                    <div class="card-body">
-                        <h5>Job Management</h5>
-                        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addCandidateModal">
-                            <i class="fas fa-user-plus"></i> Add Candidate
-                        </button>
-                        <a href="{% url 'edit_job' job.id %}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-edit"></i> Edit Job
-                        </a>
-                    </div>
-                </div>
-            {% elif not is_recruiter %}
-                <div class="card">
-                    <div class="card-body">
-                        <a href="{% url 'apply_to_job' job.id %}" class="btn btn-primary btn-block">
-                            <i class="fas fa-paper-plane"></i> Apply Now
-                        </a>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<!-- Only include the modal if user is a recruiter and job owner -->
-{% if is_recruiter and is_job_owner %}
-    <!-- Include the add candidate modal -->
-    {% include 'jobapp/add_candidate_modal.html' %}
-{% endif %}
-{% endblock %}
-
-
-
-
-{% comment %} {% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -312,4 +258,4 @@
 
 
 
- {% endcomment %}
+ 

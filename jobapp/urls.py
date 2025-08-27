@@ -72,7 +72,7 @@ urlpatterns = [
     path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
     
     # Add candidate from dashboard
-    # path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
+    path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
     
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),

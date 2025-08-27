@@ -57,7 +57,24 @@
       {% comment %} backdrop-filter: blur(5px); {% endcomment %}
     }
 
+
     .footer {
+      background: #343a40;
+      color: white;
+      padding: 40px 0 20px;
+    }
+
+    .footer a {
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    {% comment %} .footer {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
       color: white;
       padding: 40px 0 20px;
@@ -110,7 +127,7 @@
       color: #95a5a6;
       font-size: 0.85rem;
       margin-bottom: 0;
-    }
+    } {% endcomment %}
 
     /* Custom styles for edit job modal */
     #editJobForm .form-control, 
@@ -483,7 +500,7 @@
                 <p><strong>Company:</strong> {{ job.company }}</p>
                 <p><strong>Location:</strong> {{ job.location }}</p>
                 <!-- Add the status dropdown here -->
-                <form method="post" action="{% url 'update_job_status' job.id %}" class="d-inline">
+                {% comment %} <form method="post" action="{% url 'update_job_status' job.id %}" class="d-inline">
                   {% csrf_token %}
                   <label for="status-{{ job.id }}">Status:</label>
                   <select name="status" id="status-{{ job.id }}" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -491,7 +508,7 @@
                       <option value="{{ value }}" {% if job.status == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
-                </form>
+                </form> {% endcomment %}
                 <!-- ...rest of your job card code... -->
             </div>
           </div>
@@ -712,37 +729,35 @@
 </div>
 
 
-<!-- Footer -->
-<footer class="footer">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4">
-        <h5>JobPortal</h5>
-        <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+<!-- ✅ Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4">
+          <h5>JobPortal</h5>
+          <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+        </div>
+        <div class="col-md-4">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'job_list' %}">Jobs</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h6>Contact</h6>
+          <p>Email: support@jobportal.com</p>
+          <p>Phone: +91-9876543210</p>
+          <p>Kochi, Kerala</p>
+        </div>
       </div>
-      <div class="col-md-4">
-        <h6>Quick Links</h6>
-        <ul class="list-unstyled">
-          <li><a href="{% url 'home' %}">Home</a></li>
-          <li><a href="{% url 'job_list' %}">Jobs</a></li>
-          <li><a href="{% url 'register' %}">Register</a></li>
-          <li><a href="{% url 'login' %}">Login</a></li>
-        </ul>
-      </div>
-      <div class="col-md-4">
-        <h6>Contact</h6>
-        <p>Email: support@jobportal.com</p>
-        <p>Phone: +91-9876543210</p>
-        <p>Kochi, Kerala</p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-12 text-center pt-3 border-top">
+      <div class="text-center pt-3 border-top">
         <p>&copy; 2025 JobPortal. All rights reserved.</p>
       </div>
     </div>
-  </div>
-</footer>
+  </footer>
 
 <!-- ✅ Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

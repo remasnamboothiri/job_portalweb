@@ -3,6 +3,483 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Candidates - {{ job.title }}</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
+  <link rel="stylesheet" href="{% static 'css/jquery.fancybox.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animate.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quill.snow.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  <style>
+    body {
+      background-size: cover;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    .card, .alert {
+      background-color: rgba(255, 255, 255, 0.96);
+      border-radius: 10px;
+      backdrop-filter: blur(5px);
+    }
+
+    h2, h3, h4 {
+      color: #222;
+    }
+
+    .candidate-card {
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .candidate-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .resume-badge {
+      background: linear-gradient(45deg, #007bff, #0056b3);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      text-decoration: none;
+    }
+
+    .resume-badge:hover {
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .stats-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+    }
+  </style>
+</head>
+
+<body id="top">
+
+<div class="site-wrap">
+
+    <!-- Mobile Menu -->
+    <div class="site-mobile-menu site-navbar-target">
+      <div class="site-mobile-menu-header">
+        <div class="site-mobile-menu-close mt-3">
+          <span class="icon-close2 js-menu-toggle"></span>
+        </div>
+      </div>
+      <div class="site-mobile-menu-body"></div>
+    </div>
+
+    <!-- NAVBAR -->
+    <header class="site-navbar mt-3">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="site-logo col-6"><a href="{% url 'home' %}">JobBoard</a></div>
+
+          <nav class="mx-auto site-navigation">
+            <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
+              <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+              <li><a href="{% url 'about' %}">About</a></li>
+              <li class="has-children">
+                <a href="#">Job Listings</a>
+                <ul class="dropdown">
+                  <li><a class="dropdown-item" href="{% url 'job_list' %}">Job Listings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li>
+                </ul>
+              </li>
+              <li class="has-children">
+                <a href="services.html">Pages</a>
+                <ul class="dropdown">
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                </ul>
+              </li>
+              <li><a href="{% url 'contact' %}">Contact</a></li>
+            </ul>
+          </nav>
+          
+          <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
+            <div class="ml-auto">
+              <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block">
+                <span class="mr-2 icon-dashboard"></span>Dashboard
+              </a>
+              <a href="{% url 'logout' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block">
+                <span class="mr-2 icon-lock_outline"></span>Logout
+              </a>
+            </div>
+            <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3">
+              <span class="icon-menu h3 m-0 p-0 mt-2"></span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- HOME SECTION -->
+    <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-7">
+            <h1 class="text-white font-weight-bold">Add Candidates</h1>
+            <div class="custom-breadcrumbs">
+              <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
+              <a href="{% url 'recruiter_dashboard' %}">Dashboard</a> <span class="mx-2 slash">/</span>
+              <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a> <span class="mx-2 slash">/</span>
+              <span class="text-white"><strong>Add Candidates</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <section class="site-section">
+      <div class="container">
+        
+        <!-- Job Info Header -->
+        <div class="row mb-5">
+          <div class="col-md-12">
+            <div class="card stats-card">
+              <div class="card-body text-center">
+                <h3 class="mb-2">{{ job.title }}</h3>
+                <p class="mb-2"><strong>Company:</strong> {{ job.company }}</p>
+                <p class="mb-0"><strong>Location:</strong> {{ job.location }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display Messages -->
+        {% if messages %}
+          <div class="row mb-4">
+            <div class="col-md-12">
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  <strong>
+                    {% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% elif message.tags == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                  </strong>
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        
+        <div class="row">
+          <!-- Add Candidate Form -->
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Add New Candidate</h4>
+              </div>
+              <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="addCandidateForm">
+                  {% csrf_token %}
+                  
+                  <div class="mb-3">
+                    <label for="candidate_name" class="form-label">
+                      <strong>Candidate Name</strong> <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="candidate_name" 
+                           name="candidate_name" 
+                           required 
+                           placeholder="Enter candidate's full name">
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label for="candidate_email" class="form-label">
+                      <strong>Email Address</strong> <span class="text-danger">*</span>
+                    </label>
+                    <input type="email" 
+                           class="form-control" 
+                           id="candidate_email" 
+                           name="candidate_email" 
+                           required 
+                           placeholder="candidate@example.com">
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label for="candidate_phone" class="form-label">
+                      <strong>Phone Number</strong> <span class="text-danger">*</span>
+                    </label>
+                    <input type="tel" 
+                           class="form-control" 
+                           id="candidate_phone" 
+                           name="candidate_phone" 
+                           required 
+                           placeholder="+91 9876543210">
+                  </div>
+                  
+                  <div class="mb-4">
+                    <label for="candidate_resume" class="form-label">
+                      <strong>Resume (PDF)</strong>
+                    </label>
+                    <input type="file" 
+                           class="form-control" 
+                           id="candidate_resume" 
+                           name="candidate_resume" 
+                           accept=".pdf">
+                    <div class="form-text">Upload candidate's resume in PDF format (optional)</div>
+                  </div>
+                  
+                  <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                      <span class="icon-add mr-2"></span>Add Candidate
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Display Existing Candidates -->
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Added Candidates</h4>
+                <span class="badge bg-light text-dark">{{ candidates.count }}</span>
+              </div>
+              <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                {% if candidates %}
+                  <div class="row">
+                    {% for candidate in candidates %}
+                      <div class="col-12 mb-3">
+                        <div class="card candidate-card shadow-sm">
+                          <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                              <div class="flex-grow-1">
+                                <h6 class="card-title mb-2 text-primary">{{ candidate.name }}</h6>
+                                <p class="mb-1">
+                                  <small><strong>📧 Email:</strong> {{ candidate.email }}</small>
+                                </p>
+                                <p class="mb-1">
+                                  <small><strong>📞 Phone:</strong> {{ candidate.phone }}</small>
+                                </p>
+                                <p class="mb-1">
+                                  <small class="text-muted">Added on {{ candidate.added_at|date:"M d, Y at g:i A" }}</small>
+                                </p>
+                              </div>
+                              <div class="ms-2">
+                                {% if candidate.resume %}
+                                  <a href="{{ candidate.resume.url }}" 
+                                     target="_blank" 
+                                     class="resume-badge">
+                                    📄 Resume
+                                  </a>
+                                {% else %}
+                                  <span class="badge bg-secondary">No Resume</span>
+                                {% endif %}
+                              </div>
+                            </div>
+                            <div class="mt-2 d-flex gap-1">
+                              <a href="{% url 'schedule_interview' candidate.job.id candidate.id %}" 
+                                 class="btn btn-sm btn-outline-primary">
+                                📅 Schedule Interview
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-center py-5">
+                    <div class="mb-3">
+                      <svg width="64" height="64" fill="currentColor" class="text-muted" viewBox="0 0 16 16">
+                        <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                      </svg>
+                    </div>
+                    <p class="text-muted">No candidates added yet.</p>
+                    <p class="text-muted">Use the form on the left to add your first candidate.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div class="row mt-5">
+          <div class="col-md-12 text-center">
+            <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-secondary me-3">
+              <span class="icon-arrow-left mr-2"></span>Back to Job Details
+            </a>
+            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-primary">
+              <span class="icon-dashboard mr-2"></span>Go to Dashboard
+            </a>
+          </div>
+        </div>
+        
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-4">
+            <h5>JobBoard</h5>
+            <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
+          </div>
+          <div class="col-md-4">
+            <h6>Quick Links</h6>
+            <ul class="list-unstyled">
+              <li><a href="{% url 'home' %}">Home</a></li>
+              <li><a href="{% url 'job_list' %}">Jobs</a></li>
+              <li><a href="{% url 'register' %}">Register</a></li>
+              <li><a href="{% url 'login' %}">Login</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <h6>Contact</h6>
+            <p>Email: support@jobboard.com</p>
+            <p>Phone: +91-9876543210</p>
+            <p>Kochi, Kerala</p>
+          </div>
+        </div>
+        <div class="text-center pt-3 border-top">
+          <p>&copy; 2025 JobBoard. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+</div>
+
+<!-- SCRIPTS -->
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/isotope.pkgd.min.js' %}"></script>
+<script src="{% static 'js/stickyfill.min.js' %}"></script>
+<script src="{% static 'js/jquery.fancybox.min.js' %}"></script>
+<script src="{% static 'js/jquery.easing.1.3.js' %}"></script>
+<script src="{% static 'js/jquery.waypoints.min.js' %}"></script>
+<script src="{% static 'js/jquery.animateNumber.min.js' %}"></script>
+<script src="{% static 'js/owl.carousel.min.js' %}"></script>
+<script src="{% static 'js/quill.min.js' %}"></script>
+<script src="{% static 'js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'js/custom.js' %}"></script>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Form validation and enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('addCandidateForm');
+    const nameInput = document.getElementById('candidate_name');
+    const emailInput = document.getElementById('candidate_email');
+    const phoneInput = document.getElementById('candidate_phone');
+    
+    // Add real-time validation
+    emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        if (email && !isValidEmail(email)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    phoneInput.addEventListener('blur', function() {
+        const phone = this.value.trim();
+        if (phone && !isValidPhone(phone)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validate name
+        if (!nameInput.value.trim()) {
+            nameInput.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            nameInput.classList.remove('is-invalid');
+        }
+        
+        // Validate email
+        if (!emailInput.value.trim() || !isValidEmail(emailInput.value.trim())) {
+            emailInput.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            emailInput.classList.remove('is-invalid');
+        }
+        
+        // Validate phone
+        if (!phoneInput.value.trim() || !isValidPhone(phoneInput.value.trim())) {
+            phoneInput.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            phoneInput.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields correctly.');
+        }
+    });
+});
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function isValidPhone(phone) {
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+}
+
+// Auto-hide alerts after 5 seconds
+setTimeout(function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        if (alert.classList.contains('alert-success')) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        }
+    });
+}, 5000);
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
   <title>Add Candidates - {{ job.title }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -84,4 +561,4 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>  {% endcomment %}

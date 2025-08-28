@@ -469,42 +469,42 @@ def job_detail(request, job_id):
 
 
 #is loged in as a recruiter only 
-def add_candidates(request, job_id):
-    # Ensure only recruiters can access this page
-    if not request.user.is_authenticated or not request.user.is_recruiter:
-        messages.error(request, 'Only recruiters can access this page.')
-        return redirect('login')
+# def add_candidates(request, job_id):
+#     # Ensure only recruiters can access this page
+#     if not request.user.is_authenticated or not request.user.is_recruiter:
+#         messages.error(request, 'Only recruiters can access this page.')
+#         return redirect('login')
     
-    # Get the job and ensure the recruiter owns it
-    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+#     # Get the job and ensure the recruiter owns it
+#     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     
-    if request.method == 'POST':
-        # Handle candidate addition form submission
-        candidate_name = request.POST.get('candidate_name')
-        candidate_email = request.POST.get('candidate_email')
-        candidate_phone = request.POST.get('candidate_phone')
-        candidate_resume = request.FILES.get('candidate_resume')
+#     if request.method == 'POST':
+#         # Handle candidate addition form submission
+#         candidate_name = request.POST.get('candidate_name')
+#         candidate_email = request.POST.get('candidate_email')
+#         candidate_phone = request.POST.get('candidate_phone')
+#         candidate_resume = request.FILES.get('candidate_resume')
         
-        # Create and save the candidate
-        candidate = Candidate.objects.create(
-            job=job,
-            name=candidate_name,
-            email=candidate_email,
-            phone=candidate_phone,
-            resume=candidate_resume,
-            added_by=request.user
-        )
+#         # Create and save the candidate
+#         candidate = Candidate.objects.create(
+#             job=job,
+#             name=candidate_name,
+#             email=candidate_email,
+#             phone=candidate_phone,
+#             resume=candidate_resume,
+#             added_by=request.user
+#         )
         
-        messages.success(request, f'Candidate {candidate_name} added successfully!')
-        return redirect('add_candidates', job_id=job_id)
+#         messages.success(request, f'Candidate {candidate_name} added successfully!')
+#         return redirect('add_candidates', job_id=job_id)
     
-    # Get all candidates for this job to display
-    candidates = Candidate.objects.filter(job=job)
+#     # Get all candidates for this job to display
+#     candidates = Candidate.objects.filter(job=job)
     
-    return render(request, 'jobapp/add_candidates.html', {
-        'job': job,
-        'candidates': candidates
-    })
+#     return render(request, 'jobapp/add_candidates.html', {
+#         'job': job,
+#         'candidates': candidates
+#     })
 
 
 
@@ -1600,17 +1600,7 @@ def chat_view(request):
     
     return render(request, "jobapp/chat.html")
 
-# Media file serving view for production
-# def serve_media(request, path):
-#     """Serve media files in production"""
-#     import mimetypes
-#     file_path = os.path.join(settings.MEDIA_ROOT, path)
-    
-#     if os.path.exists(file_path):
-#         content_type, _ = mimetypes.guess_type(file_path)
-#         return FileResponse(open(file_path, 'rb'), content_type=content_type)
-#     else:
-#         raise Http404("Media file not found")
+
 def serve_media(request, path):
     """
     Serve media files in production
@@ -1844,22 +1834,137 @@ def test_recruiter_auth(request):
     """)
 
 # # Add candidate from dashboard
+# @login_required
+# def add_candidate_dashboard(request):
+#     """Add candidate directly from recruiter dashboard"""
+#     if not request.user.is_recruiter:
+#         messages.error(request, 'Only recruiters can add candidates.')
+#         return redirect('login')
+    
+#     if request.method == 'POST':
+#         job_id = request.POST.get('job_id')
+#         candidate_name = request.POST.get('candidate_name')
+#         candidate_email = request.POST.get('candidate_email')
+#         candidate_phone = request.POST.get('candidate_phone')
+#         candidate_resume = request.FILES.get('candidate_resume')
+        
+#         try:
+#             job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+            
+#             # Create candidate
+#             candidate = Candidate.objects.create(
+#                 job=job,
+#                 name=candidate_name,
+#                 email=candidate_email,
+#                 phone=candidate_phone,
+#                 resume=candidate_resume,
+#                 added_by=request.user
+#             )
+            
+#             messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
+            
+#         except Exception as e:
+#             messages.error(request, f'Error adding candidate: {str(e)}')
+    
+#     return redirect('recruiter_dashboard')
+
+
+# Add these updated/new view functions to your views.py
+
 @login_required
-def add_candidate_dashboard(request):
-    """Add candidate directly from recruiter dashboard"""
-    if not request.user.is_recruiter:
-        messages.error(request, 'Only recruiters can add candidates.')
-        return redirect('login')
+@user_passes_test(lambda u: u.is_recruiter)
+def add_candidates(request, job_id):
+    """Add candidates to a specific job - updated version"""
+    # Get the job and ensure the recruiter owns it
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     
     if request.method == 'POST':
-        job_id = request.POST.get('job_id')
-        candidate_name = request.POST.get('candidate_name')
-        candidate_email = request.POST.get('candidate_email')
-        candidate_phone = request.POST.get('candidate_phone')
+        # Handle candidate addition form submission
+        candidate_name = request.POST.get('candidate_name', '').strip()
+        candidate_email = request.POST.get('candidate_email', '').strip()
+        candidate_phone = request.POST.get('candidate_phone', '').strip()
         candidate_resume = request.FILES.get('candidate_resume')
+        
+        # Validation
+        if not candidate_name:
+            messages.error(request, 'Candidate name is required.')
+            return redirect('add_candidates', job_id=job_id)
+        
+        if not candidate_email:
+            messages.error(request, 'Candidate email is required.')
+            return redirect('add_candidates', job_id=job_id)
+        
+        if not candidate_phone:
+            messages.error(request, 'Candidate phone is required.')
+            return redirect('add_candidates', job_id=job_id)
+        
+        # Check if candidate already exists for this job
+        existing_candidate = Candidate.objects.filter(
+            job=job, 
+            email=candidate_email
+        ).first()
+        
+        if existing_candidate:
+            messages.warning(request, f'Candidate with email {candidate_email} already exists for this job.')
+            return redirect('add_candidates', job_id=job_id)
+        
+        try:
+            # Create and save the candidate
+            candidate = Candidate.objects.create(
+                job=job,
+                name=candidate_name,
+                email=candidate_email,
+                phone=candidate_phone,
+                resume=candidate_resume,
+                added_by=request.user
+            )
+            
+            messages.success(request, f'Candidate {candidate_name} added successfully!')
+            logger.info(f'Candidate {candidate_name} added to job {job.title} by user {request.user.username}')
+            
+        except Exception as e:
+            logger.error(f'Error adding candidate: {e}')
+            messages.error(request, f'Error adding candidate: {str(e)}')
+        
+        return redirect('add_candidates', job_id=job_id)
+    
+    # Get all candidates for this job to display
+    candidates = Candidate.objects.filter(job=job).order_by('-added_at')
+    
+    return render(request, 'jobapp/add_candidates.html', {
+        'job': job,
+        'candidates': candidates
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def add_candidate_dashboard(request):
+    """Add candidate directly from recruiter dashboard - updated version"""
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id', '').strip()
+        candidate_name = request.POST.get('candidate_name', '').strip()
+        candidate_email = request.POST.get('candidate_email', '').strip()
+        candidate_phone = request.POST.get('candidate_phone', '').strip()
+        candidate_resume = request.FILES.get('candidate_resume')
+        
+        # Validation
+        if not all([job_id, candidate_name, candidate_email, candidate_phone]):
+            messages.error(request, 'All fields are required.')
+            return redirect('recruiter_dashboard')
         
         try:
             job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+            
+            # Check if candidate already exists for this job
+            existing_candidate = Candidate.objects.filter(
+                job=job, 
+                email=candidate_email
+            ).first()
+            
+            if existing_candidate:
+                messages.warning(request, f'Candidate with email {candidate_email} already exists for job "{job.title}".')
+                return redirect('recruiter_dashboard')
             
             # Create candidate
             candidate = Candidate.objects.create(
@@ -1871,12 +1976,94 @@ def add_candidate_dashboard(request):
                 added_by=request.user
             )
             
-            messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
+            messages.success(request, f'Candidate {candidate_name} added successfully to "{job.title}"!')
+            logger.info(f'Candidate {candidate_name} added to job {job.title} by user {request.user.username} via dashboard')
             
+        except Job.DoesNotExist:
+            messages.error(request, 'Job not found or you do not have permission to add candidates to this job.')
         except Exception as e:
+            logger.error(f'Error adding candidate via dashboard: {e}')
             messages.error(request, f'Error adding candidate: {str(e)}')
     
     return redirect('recruiter_dashboard')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def recruiter_dashboard(request):
+    """Updated recruiter dashboard with proper candidate handling"""
+    # Initialize all variables as empty
+    applications = []
+    jobs = []
+    scheduled_interviews = []
+    all_candidates = []
+    
+    try:
+        # Get jobs posted by this recruiter
+        jobs = Job.objects.filter(posted_by=request.user).order_by('-date_posted')
+        logger.info(f"Successfully loaded {len(jobs)} jobs for recruiter {request.user.username}")
+    except Exception as e:
+        logger.error(f"Job query failed for recruiter {request.user.username}: {e}")
+        jobs = []
+    
+    # Try to get applications for recruiter's jobs
+    try:
+        applications = Application.objects.filter(
+            job__posted_by=request.user
+        ).select_related('job', 'applicant').order_by('-applied_at')
+        logger.info(f"Successfully loaded {len(applications)} applications for recruiter {request.user.username}")
+    except Exception as e:
+        logger.warning(f"Application query failed for recruiter {request.user.username}: {e}")
+        applications = []
+    
+    # Try to get interviews for recruiter's jobs
+    try:
+        scheduled_interviews = Interview.objects.filter(
+            job__posted_by=request.user
+        ).select_related('job', 'candidate').order_by('-scheduled_at')
+        logger.info(f"Successfully loaded {len(scheduled_interviews)} interviews for recruiter {request.user.username}")
+    except Exception as e:
+        logger.warning(f"Interview query failed for recruiter {request.user.username}: {e}")
+        scheduled_interviews = []
+    
+    # Get all candidates added by this recruiter
+    try:
+        all_candidates = Candidate.objects.filter(
+            added_by=request.user
+        ).select_related('job').order_by('-added_at')
+        logger.info(f"Successfully loaded {len(all_candidates)} candidates for recruiter {request.user.username}")
+    except Exception as e:
+        logger.warning(f"Candidate query failed for recruiter {request.user.username}: {e}")
+        all_candidates = []
+    
+    # Get user's jobs for the modal dropdown
+    try:
+        user_jobs = Job.objects.filter(posted_by=request.user).values('id', 'title', 'company', 'status')
+        user_jobs_list = list(user_jobs)
+        logger.info(f"Successfully loaded {len(user_jobs_list)} jobs for modal dropdown")
+    except Exception as e:
+        logger.warning(f"Could not fetch user jobs for modal: {e}")
+        user_jobs_list = []
+    
+    # Prepare context
+    context = {
+        'applications': applications,
+        'scheduled_interviews': scheduled_interviews,
+        'all_candidates': all_candidates,
+        'jobs': jobs,
+        'user_jobs': user_jobs_list,
+        'user': request.user,
+        'debug_info': {
+            'jobs_count': len(jobs),
+            'applications_count': len(applications),
+            'interviews_count': len(scheduled_interviews),
+            'candidates_count': len(all_candidates)
+        }
+    }
+    
+    logger.info(f"Recruiter dashboard loaded for {request.user.username}: {len(jobs)} jobs, {len(applications)} applications, {len(all_candidates)} candidates")
+    
+    return render(request, 'jobapp/recruiter_dashboard.html', context)
 
 # Test application form view
 @login_required
@@ -1952,8 +2139,8 @@ def debug_database_structure(request):
             'message': str(e)
         })
         
-        
-        
+
+# specific crud operation for  updating job structure           
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def edit_job(request, job_id):

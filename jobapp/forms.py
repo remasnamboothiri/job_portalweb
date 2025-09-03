@@ -267,7 +267,7 @@ class ScheduleInterviewForm(forms.ModelForm):
     
     class Meta:
         model = Interview
-        fields = ['job', 'candidate', 'scheduled_at']
+        fields = ['job', 'scheduled_at']  # Exclude candidate field
         widgets = {
             'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'job': forms.Select(attrs={'class': 'form-control'}),
@@ -318,6 +318,7 @@ class ScheduleInterviewForm(forms.ModelForm):
             interview.candidate_name = candidate.name
             interview.candidate_email = candidate.email
             interview.candidate_phone = getattr(candidate, 'phone', '')
+            # Don't set interview.candidate as it expects CustomUser, not Candidate
         
         # Generate unique interview link
         if not interview.link:

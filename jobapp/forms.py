@@ -360,11 +360,26 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
         self.candidate = candidate
     
     def save(self, user):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
         job = self.cleaned_data['job']
         scheduled_at = self.cleaned_data['scheduled_at']
         
+        # Create or get a dummy user for unregistered candidates
+        dummy_user, created = User.objects.get_or_create(
+            username=f"candidate_{self.candidate.email}",
+            defaults={
+                'email': self.candidate.email,
+                'first_name': self.candidate.name,
+                'is_active': False,  # Mark as inactive
+                'is_recruiter': False
+            }
+        )
+        
         interview = Interview(
             job=job,
+            candidate=dummy_user,  # Use dummy user to satisfy constraint
             candidate_name=self.candidate.name,
             candidate_email=self.candidate.email,
             candidate_phone=self.candidate.phone,

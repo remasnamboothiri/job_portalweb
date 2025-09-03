@@ -593,7 +593,7 @@ def jobseeker_dashboard(request):
         try:
             scheduled_interviews = list(Interview.objects.filter(
                 candidate_id=request.user.id
-            ).select_related('job_position').order_by('-created_at'))
+            ).select_related('job').order_by('-created_at'))
             logger.info(f"Alternative query successful: {len(scheduled_interviews)} interviews")
         except Exception as e2:
             logger.warning(f"Alternative interview query also failed for user {request.user.id}: {e2}")
@@ -1198,7 +1198,7 @@ def start_interview_by_uuid(request, interview_uuid):
         else:
             # For unregistered candidates, use the stored candidate information
             candidate_name = interview.candidate_name or "the candidate"
-            job_title = interview.job_position.title if interview.job_position else "Software Developer"
+            job_title = interview.job.title if interview.job else "Software Developer"
             
             # Handle resume file for unregistered candidates
             if interview.candidate_resume:
@@ -1218,10 +1218,7 @@ def start_interview_by_uuid(request, interview_uuid):
         
         # Handle company name safely (works for both registered and unregistered)
         try:
-            if interview.is_registered_candidate:
-                company_name = interview.job.company
-            else:
-                company_name = interview.job_position.company if interview.job_position else "Our Company"
+            company_name = interview.job.company if interview.job else "Our Company"
         except AttributeError:
             company_name = "Our Company"
 
@@ -1238,12 +1235,8 @@ def start_interview_by_uuid(request, interview_uuid):
             'job_title': job_title,
             'company_name': company_name,
             'resume_text': resume_text,
-            'job_description': (interview.job.description if interview.is_registered_candidate 
-                              else interview.job_position.description if interview.job_position 
-                              else ""),
-            'job_location': (interview.job.location if interview.is_registered_candidate 
-                           else interview.job_position.location if interview.job_position 
-                           else ""),
+            'job_description': interview.job.description if interview.job else "",
+            'job_location': interview.job.location if interview.job else "",
             'question_count': 0,
             'is_registered_candidate': interview.is_registered_candidate
         }

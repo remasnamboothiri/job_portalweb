@@ -261,7 +261,8 @@ class ScheduleInterviewForm(forms.ModelForm):
         queryset=None,  # Will be set in __init__
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Select Candidate',
-        help_text='Choose from candidates you have added'
+        help_text='Choose from candidates you have added',
+        empty_label='Select a candidate...'
     )
     
     class Meta:
@@ -283,8 +284,30 @@ class ScheduleInterviewForm(forms.ModelForm):
         if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
             # Filter jobs for this recruiter
             self.fields['job'].queryset = Job.objects.filter(posted_by=user)
+            self.fields['job'].empty_label = 'Select a job...'
             # Filter candidates added by this recruiter
             self.fields['candidate'].queryset = Candidate.objects.filter(added_by=user)
+        else:
+            # If no user provided, set empty querysets
+            self.fields['job'].queryset = Job.objects.none()
+            self.fields['candidate'].queryset = Candidate.objects.none()
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        job = cleaned_data.get('job')
+        candidate = cleaned_data.get('candidate')
+        scheduled_at = cleaned_data.get('scheduled_at')
+        
+        if not job:
+            raise forms.ValidationError('Please select a job position.')
+        
+        if not candidate:
+            raise forms.ValidationError('Please select a candidate.')
+            
+        if not scheduled_at:
+            raise forms.ValidationError('Please select interview date and time.')
+        
+        return cleaned_data
     
     def save(self, commit=True):
         interview = super().save(commit=False)
@@ -294,7 +317,7 @@ class ScheduleInterviewForm(forms.ModelForm):
         if candidate:
             interview.candidate_name = candidate.name
             interview.candidate_email = candidate.email
-            interview.candidate_phone = candidate.phone
+            interview.candidate_phone = getattr(candidate, 'phone', '')
         
         # Generate unique interview link
         if not interview.link:

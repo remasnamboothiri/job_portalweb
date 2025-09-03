@@ -322,9 +322,9 @@
 
                 <!-- Job actions with Schedule Interview button -->
                 <div class="job-actions">
-                  <a href="{% url 'schedule_interview_simple' %}" class="btn btn-success btn-sm">
+                  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#scheduleInterviewModal">
                     <i class="fas fa-calendar-plus"></i> Schedule Interview
-                  </a>
+                  </button>
                   <a href="{% url 'add_candidates' job.id %}" class="btn btn-info btn-sm">
                     <i class="fas fa-user-plus"></i> Add Candidates
                   </a>
@@ -595,6 +595,59 @@
   </div>
 </div>
 
+<!-- Schedule Interview Modal -->
+<div class="modal fade" id="scheduleInterviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📅 Schedule Interview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'schedule_interview_simple' %}" id="scheduleInterviewForm">
+        <div class="modal-body">
+          {% csrf_token %}
+          
+          <div class="mb-3">
+            <label class="form-label">Which job is it? <span class="text-danger">*</span></label>
+            <select class="form-control" name="job" required>
+              <option value="">Select a job...</option>
+              {% for job in user_jobs %}
+                <option value="{{ job.id }}">{{ job.title }} - {{ job.company }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Select Candidate <span class="text-danger">*</span></label>
+            <select class="form-control" name="candidate" required id="candidateSelect">
+              <option value="">Select a candidate...</option>
+              {% for candidate in all_candidates %}
+                <option value="{{ candidate.id }}" data-email="{{ candidate.email }}">{{ candidate.name }} ({{ candidate.email }})</option>
+              {% endfor %}
+            </select>
+            <small class="form-text text-muted">Choose from candidates you have added</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Interview Date & Time <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" name="scheduled_at" required>
+          </div>
+          
+          <div class="alert alert-info">
+            <small>
+              <strong>Note:</strong> An email with the interview link will be sent to the candidate automatically.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Schedule Interview</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- ✅ Footer -->
   <footer class="footer">
     <div class="container">
@@ -676,9 +729,97 @@ function copyLink(uuid) {
     });
 }
 
-// Show only Applications & Interviews by default
+// Function to select candidate for interview scheduling
+function selectCandidate(candidateId, candidateName, candidateEmail) {
+    const candidateSelect = document.getElementById('candidateSelect');
+    if (candidateSelect) {
+        candidateSelect.value = candidateId;
+    }
+}
+
+// Handle schedule interview form submission
 document.addEventListener('DOMContentLoaded', function() {
-  showSection('applications_section');
+    const scheduleForm = document.getElementById('scheduleInterviewForm');
+    if (scheduleForm) {
+        scheduleForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(scheduleForm);
+            const submitBtn = scheduleForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Scheduling...';
+            submitBtn.disabled = true;
+            
+            // Clear previous errors
+            document.querySelectorAll('.text-danger').forEach(el => el.remove());
+            document.querySelectorAll('.alert-danger').forEach(el => el.remove());
+            
+            fetch(scheduleForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success';
+                    alertDiv.innerHTML = `<strong>Success!</strong> ${data.message}`;
+                    scheduleForm.querySelector('.modal-body').insertBefore(alertDiv, scheduleForm.querySelector('.modal-body').firstChild);
+                    
+                    // Reset form and close modal after 2 seconds
+                    setTimeout(() => {
+                        scheduleForm.reset();
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleInterviewModal'));
+                        modal.hide();
+                        
+                        // Refresh the page to show updated interviews
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Show error message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.innerHTML = `<strong>Error!</strong> ${data.message || 'Please check the form and try again.'}`;
+                    scheduleForm.querySelector('.modal-body').insertBefore(alertDiv, scheduleForm.querySelector('.modal-body').firstChild);
+                    
+                    // Show field-specific errors
+                    if (data.errors) {
+                        Object.keys(data.errors).forEach(field => {
+                            const fieldElement = scheduleForm.querySelector(`[name="${field}"]`);
+                            if (fieldElement) {
+                                const errorDiv = document.createElement('div');
+                                errorDiv.className = 'text-danger mt-1';
+                                errorDiv.textContent = data.errors[field][0];
+                                fieldElement.parentNode.appendChild(errorDiv);
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.innerHTML = '<strong>Error!</strong> Something went wrong. Please try again.';
+                scheduleForm.querySelector('.modal-body').insertBefore(alertDiv, scheduleForm.querySelector('.modal-body').firstChild);
+            })
+            .finally(() => {
+                // Restore button state
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
+    
+    // Show only Applications & Interviews by default
+    showSection('applications_section');
 });
 </script>
 
@@ -686,6 +827,78 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- SCRIPTS -->
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    
+    <!-- Additional JavaScript for job management -->
+    <script>
+    // Edit job modal functions
+    function openEditJobModal(jobId) {
+        fetch(`/jobs/${jobId}/edit/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('editJobModalContent').innerHTML = html;
+            const modal = new bootstrap.Modal(document.getElementById('editJobModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error loading edit form:', error);
+            alert('Error loading edit form');
+        });
+    }
+    
+    function duplicateJob(jobId) {
+        if (confirm('Are you sure you want to duplicate this job?')) {
+            fetch(`/jobs/${jobId}/duplicate/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error duplicating job');
+            });
+        }
+    }
+    
+    function deleteJob(jobId, jobTitle) {
+        if (confirm(`Are you sure you want to delete "${jobTitle}"? This action cannot be undone.`)) {
+            fetch(`/jobs/${jobId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting job');
+            });
+        }
+    }
+    </script>
     <script src="{% static 'js/isotope.pkgd.min.js' %}"></script>
     <script src="{% static 'js/stickyfill.min.js' %}"></script>
     <script src="{% static 'js/jquery.fancybox.min.js' %}"></script>

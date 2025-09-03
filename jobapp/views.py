@@ -953,19 +953,25 @@ def schedule_interview_simple(request):
     from django.urls import reverse
     
     if request.method == 'POST':
+        logger.info(f"Schedule interview form submitted by {request.user.username}")
+        logger.info(f"POST data: {request.POST}")
+        
         form = ScheduleInterviewForm(request.POST, user=request.user)
+        
         if form.is_valid():
-            interview = form.save()
-            
-            # Send email to candidate
             try:
-                # Generate full interview URL
-                domain = settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'localhost:8000'
-                protocol = 'https' if not settings.DEBUG else 'http'
-                interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
+                interview = form.save()
+                logger.info(f"Interview created successfully: {interview.id}")
                 
-                email_subject = f'Interview Scheduled - {interview.job.title}'
-                email_body = f"""Hello {interview.candidate_name},
+                # Send email to candidate
+                try:
+                    # Generate full interview URL
+                    domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                    protocol = 'https' if not settings.DEBUG else 'http'
+                    interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
+                    
+                    email_subject = f'Interview Scheduled - {interview.job.title}'
+                    email_body = f"""Hello {interview.candidate_name},
 
 Your interview for the position of {interview.job.title} has been scheduled.
 
@@ -980,46 +986,72 @@ Please click the link above to join your interview at the scheduled time.
 Best regards,
 {request.user.get_full_name() or request.user.username}
 {interview.job.company}"""
+                    
+                    send_mail(
+                        email_subject,
+                        email_body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [interview.candidate_email],
+                        fail_silently=False
+                    )
+                    
+                    success_message = f'Interview scheduled successfully! Email sent to {interview.candidate_email}.'
+                    logger.info(f"Email sent successfully to {interview.candidate_email}")
+                    
+                except Exception as e:
+                    logger.warning(f'Email sending failed: {str(e)}')
+                    success_message = 'Interview scheduled successfully! Email could not be sent, but candidate can see the interview link on dashboard.'
                 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [interview.candidate_email],
-                    fail_silently=False
-                )
-                
-                # Return JSON response for AJAX
+                # Return JSON response for AJAX (modal submission)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
-                        'message': f'Interview scheduled successfully! Email sent to {interview.candidate_email}.',
+                        'message': success_message,
                         'interview_id': interview.id
                     })
                 
-                messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}.')
+                messages.success(request, success_message)
+                return redirect('recruiter_dashboard')
                 
             except Exception as e:
-                logger.warning(f'Email sending failed: {str(e)}')
+                logger.error(f"Error saving interview: {str(e)}")
+                error_message = f'Error scheduling interview: {str(e)}'
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
-                        'success': True,
-                        'message': 'Interview scheduled successfully! Email could not be sent, but candidate can see the interview link on dashboard.',
-                        'interview_id': interview.id
+                        'success': False,
+                        'message': error_message
                     })
                 
-                messages.warning(request, 'Interview scheduled successfully! Email could not be sent.')
-            
-            return redirect('recruiter_dashboard')
+                messages.error(request, error_message)
         else:
+            logger.error(f"Form validation failed: {form.errors}")
+            
+            # Handle AJAX form submission (modal)
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                error_messages = []
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        if field == '__all__':
+                            error_messages.append(error)
+                        else:
+                            field_name = form.fields[field].label if field in form.fields else field.title()
+                            error_messages.append(f'{field_name}: {error}')
+                
                 return JsonResponse({
                     'success': False,
-                    'errors': form.errors
+                    'errors': form.errors,
+                    'message': 'Please fix the following errors: ' + '; '.join(error_messages)
                 })
             
-            messages.error(request, 'Please correct the errors below.')
+            # Handle regular form submission
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        field_name = form.fields[field].label if field in form.fields else field.title()
+                        messages.error(request, f'{field_name}: {error}')
     else:
         form = ScheduleInterviewForm(user=request.user)
     

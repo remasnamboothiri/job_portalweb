@@ -306,7 +306,9 @@ class ScheduleInterviewForm(forms.ModelForm):
             self.fields['job'].queryset = Job.objects.filter(posted_by=user)
         
         # Set up existing candidate choices
-        self.fields['existing_candidate'].queryset = User.objects.filter(is_recruiter=False)
+        #self.fields['existing_candidate'].queryset = User.objects.filter(is_recruiter=False)
+        from django.contrib.auth import get_user_model
+        self.fields['existing_candidate'].queryset = get_user_model().objects.filter(is_recruiter=False)
         
         # Make existing_candidate field conditional
         self.fields['existing_candidate'].widget.attrs.update({'style': 'display: none;'})

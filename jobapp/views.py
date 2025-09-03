@@ -946,44 +946,41 @@ HR Team
     
 #handle un registered users trying to access interview link 
 @login_required
-def schedule_interview_external(request, job_id):
-    """Schedule interview for any candidate (registered or unregistered)"""
+@user_passes_test(lambda u: u.is_recruiter)
+def schedule_interview_simple(request):
+    """Simple schedule interview for candidates added by recruiters"""
     from django.core.mail import send_mail
     from django.conf import settings
-    
-    if not request.user.is_recruiter:
-        messages.error(request, 'Only recruiters can schedule interviews.')
-        return redirect('login')
-    
-    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    from django.urls import reverse
     
     if request.method == 'POST':
         form = ScheduleInterviewForm(request.POST, user=request.user)
         if form.is_valid():
-            interview = form.save(commit=False)
-            interview.job = job
-            interview.save()
+            interview = form.save()
             
             # Send email to candidate
             try:
-                interview_url = f"https://yourdomain.com/interview/ready/{interview.uuid}/"
+                # Generate full interview URL
+                domain = settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'localhost:8000'
+                protocol = 'https' if not settings.DEBUG else 'http'
+                interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
                 
-                email_subject = f'Interview Scheduled - {job.title}'
+                email_subject = f'Interview Scheduled - {interview.job.title}'
                 email_body = f"""Hello {interview.candidate_name},
 
-Your interview for the position of {job.title} has been scheduled.
+Your interview for the position of {interview.job.title} has been scheduled.
 
 Interview Details:
 - Date & Time: {interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p')}
-- Position: {job.title}
-- Company: {job.company}
+- Position: {interview.job.title}
+- Company: {interview.job.company}
 - Interview Link: {interview_url}
 
 Please click the link above to join your interview at the scheduled time.
 
 Best regards,
 {request.user.get_full_name() or request.user.username}
-{job.company}"""
+{interview.job.company}"""
                 
                 send_mail(
                     email_subject,
@@ -992,20 +989,43 @@ Best regards,
                     [interview.candidate_email],
                     fail_silently=False
                 )
+                
+                # Return JSON response for AJAX
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Interview scheduled successfully! Email sent to {interview.candidate_email}.',
+                        'interview_id': interview.id
+                    })
+                
                 messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}.')
+                
             except Exception as e:
                 logger.warning(f'Email sending failed: {str(e)}')
-                messages.warning(request, 'Interview scheduled but email could not be sent.')
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Interview scheduled successfully! Email could not be sent, but candidate can see the interview link on dashboard.',
+                        'interview_id': interview.id
+                    })
+                
+                messages.warning(request, 'Interview scheduled successfully! Email could not be sent.')
             
             return redirect('recruiter_dashboard')
         else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                })
+            
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = ScheduleInterviewForm(user=request.user, initial={'job': job})
+        form = ScheduleInterviewForm(user=request.user)
     
-    return render(request, 'jobapp/schedule_interview_external.html', {
-        'form': form,
-        'job': job
+    return render(request, 'jobapp/schedule_interview.html', {
+        'form': form
     })    
     
 
@@ -2005,50 +2025,63 @@ def add_candidates(request, job_id):
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def add_candidate_dashboard(request):
-    """Add candidate directly from recruiter dashboard - updated version"""
+    """Add candidate directly from recruiter dashboard"""
     if request.method == 'POST':
-        job_id = request.POST.get('job_id', '').strip()
-        candidate_name = request.POST.get('candidate_name', '').strip()
-        candidate_email = request.POST.get('candidate_email', '').strip()
-        candidate_phone = request.POST.get('candidate_phone', '').strip()
-        candidate_resume = request.FILES.get('candidate_resume')
+        form = AddCandidateForm(request.POST, request.FILES)
         
-        # Validation
-        if not all([job_id, candidate_name, candidate_email, candidate_phone]):
-            messages.error(request, 'All fields are required.')
-            return redirect('recruiter_dashboard')
-        
-        try:
-            job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+        if form.is_valid():
+            try:
+                # Check if candidate already exists for this recruiter
+                candidate_email = form.cleaned_data['email']
+                existing_candidate = Candidate.objects.filter(
+                    email=candidate_email,
+                    added_by=request.user
+                ).first()
+                
+                if existing_candidate:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'Candidate with email {candidate_email} already exists in your candidates list.'
+                        })
+                    messages.warning(request, f'Candidate with email {candidate_email} already exists in your candidates list.')
+                    return redirect('recruiter_dashboard')
+                
+                # Create candidate
+                candidate = form.save(commit=False)
+                candidate.added_by = request.user
+                candidate.save()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Candidate {candidate.name} added successfully!',
+                        'candidate_id': candidate.id
+                    })
+                
+                messages.success(request, f'Candidate {candidate.name} added successfully!')
+                logger.info(f'Candidate {candidate.name} added by user {request.user.username} via dashboard')
+                
+            except Exception as e:
+                logger.error(f'Error adding candidate via dashboard: {e}')
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Error adding candidate: {str(e)}'
+                    })
+                
+                messages.error(request, f'Error adding candidate: {str(e)}')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                })
             
-            # Check if candidate already exists for this job
-            existing_candidate = Candidate.objects.filter(
-                job=job, 
-                email=candidate_email
-            ).first()
-            
-            if existing_candidate:
-                messages.warning(request, f'Candidate with email {candidate_email} already exists for job "{job.title}".')
-                return redirect('recruiter_dashboard')
-            
-            # Create candidate
-            candidate = Candidate.objects.create(
-                job=job,
-                name=candidate_name,
-                email=candidate_email,
-                phone=candidate_phone,
-                resume=candidate_resume,
-                added_by=request.user
-            )
-            
-            messages.success(request, f'Candidate {candidate_name} added successfully to "{job.title}"!')
-            logger.info(f'Candidate {candidate_name} added to job {job.title} by user {request.user.username} via dashboard')
-            
-        except Job.DoesNotExist:
-            messages.error(request, 'Job not found or you do not have permission to add candidates to this job.')
-        except Exception as e:
-            logger.error(f'Error adding candidate via dashboard: {e}')
-            messages.error(request, f'Error adding candidate: {str(e)}')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     
     return redirect('recruiter_dashboard')
 
@@ -2308,4 +2341,21 @@ def duplicate_job(request, job_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': f'Error duplicating job: {str(e)}'})
     
-    return redirect('recruiter_dashboard')        
+    return redirect('recruiter_dashboard')
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def get_candidate_email(request, candidate_id):
+    """API endpoint to get candidate email"""
+    try:
+        candidate = get_object_or_404(Candidate, id=candidate_id, added_by=request.user)
+        return JsonResponse({
+            'success': True,
+            'email': candidate.email,
+            'name': candidate.name
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

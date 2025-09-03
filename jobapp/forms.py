@@ -256,93 +256,47 @@ class ApplicationForm(forms.ModelForm):
         
         
         
-#schedult interview form 
 class ScheduleInterviewForm(forms.ModelForm):
-    # Add a choice field to specify candidate type
-    candidate_type = forms.ChoiceField(
-        choices=[
-            ('unregistered', 'New/Unregistered Candidate'),
-            ('registered', 'Existing Registered User'),
-        ],
-        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        initial='unregistered'
-    )
-    
-    # Field to search for existing users (only shown for registered option)
-    existing_candidate = forms.ModelChoiceField(
+    candidate = forms.ModelChoiceField(
         queryset=None,  # Will be set in __init__
-        required=False,
         widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='Search and select an existing registered candidate'
+        label='Select Candidate',
+        help_text='Choose from candidates you have added'
     )
     
     class Meta:
         model = Interview
-        fields = ['job', 'candidate_name', 'candidate_email', 'candidate_phone', 'scheduled_at', 'link']
+        fields = ['job', 'candidate', 'scheduled_at']
         widgets = {
             'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'job': forms.Select(attrs={'class': 'form-control'}),
-            'candidate_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter candidate full name'}),
-            'candidate_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'candidate@example.com'}),
-            'candidate_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
-            'link': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://meet.google.com/abc-defg-hij'}),
         }
         labels = {
-            'job': 'Job Position',
-            'candidate_name': 'Candidate Name',
-            'candidate_email': 'Candidate Email',
-            'candidate_phone': 'Candidate Phone',
+            'job': 'Which job is it?',
             'scheduled_at': 'Interview Date & Time',
-            'link': 'Interview Link (optional)',
         }
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # Filter jobs for this recruiter
         if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
+            # Filter jobs for this recruiter
             self.fields['job'].queryset = Job.objects.filter(posted_by=user)
-        
-        # Set up existing candidate choices
-        #self.fields['existing_candidate'].queryset = User.objects.filter(is_recruiter=False)
-        from django.contrib.auth import get_user_model
-        self.fields['existing_candidate'].queryset = get_user_model().objects.filter(is_recruiter=False)
-        
-        # Make existing_candidate field conditional
-        self.fields['existing_candidate'].widget.attrs.update({'style': 'display: none;'})
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        candidate_type = cleaned_data.get('candidate_type')
-        existing_candidate = cleaned_data.get('existing_candidate')
-        candidate_name = cleaned_data.get('candidate_name')
-        candidate_email = cleaned_data.get('candidate_email')
-        
-        if candidate_type == 'registered':
-            if not existing_candidate:
-                raise forms.ValidationError('Please select an existing candidate.')
-            # Auto-fill fields from selected user
-            cleaned_data['candidate_name'] = existing_candidate.get_full_name() or existing_candidate.username
-            cleaned_data['candidate_email'] = existing_candidate.email
-        else:
-            if not candidate_name:
-                raise forms.ValidationError('Candidate name is required.')
-            if not candidate_email:
-                raise forms.ValidationError('Candidate email is required.')
-        
-        return cleaned_data
+            # Filter candidates added by this recruiter
+            self.fields['candidate'].queryset = Candidate.objects.filter(added_by=user)
     
     def save(self, commit=True):
         interview = super().save(commit=False)
         
-        # Handle registered vs unregistered candidates
-        candidate_type = self.cleaned_data.get('candidate_type')
-        if candidate_type == 'registered':
-            interview.candidate = self.cleaned_data.get('existing_candidate')
-        else:
-            interview.candidate = None  # Unregistered candidate
+        # Get candidate info from selected candidate
+        candidate = self.cleaned_data.get('candidate')
+        if candidate:
+            interview.candidate_name = candidate.name
+            interview.candidate_email = candidate.email
+            interview.candidate_phone = candidate.phone
         
+        # Generate unique interview link
         if not interview.link:
             interview.link = f"/interview/ready/{interview.uuid}/"
         
@@ -355,4 +309,34 @@ class ScheduleInterviewForm(forms.ModelForm):
 class AddCandidateForm(forms.ModelForm):
     class Meta:
         model = Candidate
-        fields = ('name', 'email', 'phone', 'resume')        
+        fields = ('name', 'email', 'phone', 'resume')
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter candidate full name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'candidate@example.com'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            'resume': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
+        }
+        labels = {
+            'name': 'Candidate Name',
+            'email': 'Email Address',
+            'phone': 'Phone Number',
+            'resume': 'Resume (Optional)',
+        }
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email:
+            raise forms.ValidationError('Email is required.')
+        return email.lower().strip()
+    
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if not name or not name.strip():
+            raise forms.ValidationError('Name is required.')
+        return name.strip()
+    
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if not phone or not phone.strip():
+            raise forms.ValidationError('Phone number is required.')
+        return phone.strip()        

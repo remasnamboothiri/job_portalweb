@@ -29,8 +29,8 @@ urlpatterns = [
     path('dashboard/recruiter/', views.recruiter_dashboard, name='recruiter_dashboard'),
     # 📅 Interview scheduling - existing (for registered candidates)
     path('schedule-interview/<int:job_id>/<int:applicant_id>/', views.schedule_interview, name='schedule_interview'),
-    # Interview scheduling - new (for any candidate)
-    path('schedule-interview-external/<int:job_id>/', views.schedule_interview_external, name='schedule_interview_external'),
+    # Interview scheduling - simplified for added candidates
+    path('schedule-interview/', views.schedule_interview_simple, name='schedule_interview_simple'),
     
     
     
@@ -76,6 +76,9 @@ urlpatterns = [
     
     # Add candidate from dashboard
     path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
+    
+    # API endpoint for candidate email
+    path('api/candidate/<int:candidate_id>/email/', views.get_candidate_email, name='get_candidate_email'),
     
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),

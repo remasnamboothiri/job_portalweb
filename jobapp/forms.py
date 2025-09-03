@@ -300,6 +300,11 @@ class ScheduleInterviewForm(forms.ModelForm):
         if not interview.link:
             interview.link = f"/interview/ready/{interview.uuid}/"
         
+        # Ensure UUID is generated
+        if not interview.uuid:
+            import uuid
+            interview.uuid = uuid.uuid4()
+        
         if commit:
             interview.save()
         return interview        

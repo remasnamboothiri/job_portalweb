@@ -1023,7 +1023,7 @@ Best regards,
     else:
         form = ScheduleInterviewForm(user=request.user)
     
-    return render(request, 'jobapp/schedule_interview.html', {
+    return render(request, 'jobapp/schedule_interview_simple.html', {
         'form': form
     })    
     

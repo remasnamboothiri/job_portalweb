@@ -1071,10 +1071,17 @@ def schedule_interview_with_candidate(request, candidate_id):
     candidate = get_object_or_404(Candidate, id=candidate_id, added_by=request.user)
     
     if request.method == 'POST':
+        logger.info(f"POST data received: {request.POST}")
         form = ScheduleInterviewWithCandidateForm(request.POST, user=request.user, candidate=candidate)
+        
+        logger.info(f"Form is bound: {form.is_bound}")
+        logger.info(f"Form is valid: {form.is_valid()}")
+        if not form.is_valid():
+            logger.error(f"Form errors: {form.errors}")
         
         if form.is_valid():
             try:
+                logger.info(f"Form cleaned data: {form.cleaned_data}")
                 interview = form.save(request.user)
                 logger.info(f"Interview created successfully: {interview.id}")
                 
@@ -1120,8 +1127,11 @@ Best regards,
                 
             except Exception as e:
                 logger.error(f"Error saving interview: {str(e)}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
                 messages.error(request, f'Error scheduling interview: {str(e)}')
         else:
+            logger.error(f"Form validation failed: {form.errors}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')

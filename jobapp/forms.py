@@ -340,11 +340,18 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
         queryset=None,
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Which job is it?',
-        empty_label='Select a job...'
+        empty_label='Select a job...',
+        required=True
     )
     scheduled_at = forms.DateTimeField(
-        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-        label='Interview Date & Time'
+        widget=forms.DateTimeInput(attrs={
+            'type': 'datetime-local', 
+            'class': 'form-control',
+            'required': True
+        }),
+        label='Interview Date & Time',
+        required=True,
+        help_text='Select the date and time for the interview'
     )
     
     def __init__(self, *args, **kwargs):
@@ -359,12 +366,30 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
         
         self.candidate = candidate
     
+    def clean(self):
+        cleaned_data = super().clean()
+        job = cleaned_data.get('job')
+        scheduled_at = cleaned_data.get('scheduled_at')
+        
+        if not job:
+            raise forms.ValidationError('Please select a job position.')
+            
+        if not scheduled_at:
+            raise forms.ValidationError('Please select interview date and time.')
+        
+        return cleaned_data
+    
     def save(self, user):
         from django.contrib.auth import get_user_model
+        from django.utils import timezone
         User = get_user_model()
         
         job = self.cleaned_data['job']
         scheduled_at = self.cleaned_data['scheduled_at']
+        
+        # Ensure scheduled_at is not None
+        if not scheduled_at:
+            scheduled_at = timezone.now() + timezone.timedelta(days=1)  # Default to tomorrow
         
         # Create or get a dummy user for unregistered candidates
         dummy_user, created = User.objects.get_or_create(

@@ -768,8 +768,7 @@ def recruiter_dashboard(request):
                 cursor.execute("""
                     SELECT c.id, c.name, c.email, c.added_at
                     FROM jobapp_candidate c
-                    INNER JOIN jobapp_job j ON c.job_id = j.id
-                    WHERE j.posted_by_id = %s
+                    WHERE c.added_by_id = %s
                     ORDER BY c.added_at DESC
                     LIMIT 100
                 """, [request.user.id])
@@ -2128,7 +2127,7 @@ def recruiter_dashboard(request):
     try:
         all_candidates = Candidate.objects.filter(
             added_by=request.user
-        ).select_related('job').order_by('-added_at')
+        ).order_by('-added_at')
         logger.info(f"Successfully loaded {len(all_candidates)} candidates for recruiter {request.user.username}")
     except Exception as e:
         logger.warning(f"Candidate query failed for recruiter {request.user.username}: {e}")

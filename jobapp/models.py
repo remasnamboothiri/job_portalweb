@@ -167,15 +167,31 @@ class Interview(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # job_position = models.ForeignKey('Job', on_delete=models.CASCADE)
     job = models.ForeignKey('Job', on_delete=models.CASCADE)
+    
+    # Make candidate optional - for registered users only
     candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # These fields will store info for unregistered candidates
     candidate_name = models.CharField(max_length=255, default='Unknown Candidate')
     candidate_email = models.EmailField(default='unknown@example.com')
+    candidate_phone = models.CharField(max_length=20, blank=True, null=True)  # Add phone field
+    
+    
+    # Interview details
     interview_id = models.CharField(max_length=11, unique=True, blank=True)
-    # interview_link = models.URLField(max_length=500, blank=True)
     link = models.URLField(max_length=500, blank=True)
-    # interview_date = models.DateTimeField(null=True, blank=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    
+    # Add status to track interview state
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     
     # Recording fields
     transcript = models.TextField(blank=True, null=True)
@@ -214,11 +230,18 @@ class Interview(models.Model):
             hex_9 = hash_value[:9]
             formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
         return formatted_id
+        pass
     
     @property
     def get_uuid(self):
         """Get UUID safely"""
         return self.uuid
+    
+    
+    @property
+    def is_registered_candidate(self):
+        """Check if candidate is a registered user"""
+        return self.candidate is not None    
     
     
     def __str__(self):

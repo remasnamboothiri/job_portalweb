@@ -940,6 +940,74 @@ HR Team
         'job': job,
         'applicant': applicant
     })
+    
+    
+    
+    
+#handle un registered users trying to access interview link 
+@login_required
+def schedule_interview_external(request, job_id):
+    """Schedule interview for any candidate (registered or unregistered)"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    if not request.user.is_recruiter:
+        messages.error(request, 'Only recruiters can schedule interviews.')
+        return redirect('login')
+    
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    
+    if request.method == 'POST':
+        form = ScheduleInterviewForm(request.POST, user=request.user)
+        if form.is_valid():
+            interview = form.save(commit=False)
+            interview.job = job
+            interview.save()
+            
+            # Send email to candidate
+            try:
+                interview_url = f"https://yourdomain.com/interview/ready/{interview.uuid}/"
+                
+                email_subject = f'Interview Scheduled - {job.title}'
+                email_body = f"""Hello {interview.candidate_name},
+
+Your interview for the position of {job.title} has been scheduled.
+
+Interview Details:
+- Date & Time: {interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p')}
+- Position: {job.title}
+- Company: {job.company}
+- Interview Link: {interview_url}
+
+Please click the link above to join your interview at the scheduled time.
+
+Best regards,
+{request.user.get_full_name() or request.user.username}
+{job.company}"""
+                
+                send_mail(
+                    email_subject,
+                    email_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [interview.candidate_email],
+                    fail_silently=False
+                )
+                messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}.')
+            except Exception as e:
+                logger.warning(f'Email sending failed: {str(e)}')
+                messages.warning(request, 'Interview scheduled but email could not be sent.')
+            
+            return redirect('recruiter_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = ScheduleInterviewForm(user=request.user, initial={'job': job})
+    
+    return render(request, 'jobapp/schedule_interview_external.html', {
+        'form': form,
+        'job': job
+    })    
+    
 
 
 
@@ -970,33 +1038,74 @@ def interview_ready(request, interview_uuid):
 
 
 
+
+            
+            
+            
+            
 @csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
         # Get the interview record
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
-        candidate_name = interview.candidate.get_full_name() or "the candidate"
-        job_title = interview.job.title or "Software Developer"
+        # Handle both registered and unregistered candidates
+        if interview.is_registered_candidate:
+            # For registered candidates, use the User model
+            candidate_name = interview.candidate.get_full_name() or interview.candidate.username
+            job_title = interview.job.title or "Software Developer"
+            
+            # Get resume file from candidate's profile with error handling
+            profile = getattr(interview.candidate, 'profile', None)
+            resume_file = profile.resume if profile and profile.resume else None
+            resume_text = ""
+            
+            if resume_file:
+                try:
+                    resume_text = extract_resume_text(resume_file)
+                except Exception as e:
+                    resume_text = "Resume could not be processed."
+                    logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
+            else:
+                # For registered users without resume, use basic info
+                resume_text = f"Candidate: {candidate_name}, applying for {job_title} position."
+                
+        else:
+            # For unregistered candidates, use the stored candidate information
+            candidate_name = interview.candidate_name or "the candidate"
+            job_title = interview.job_position.title if interview.job_position else "Software Developer"
+            
+            # Handle resume file for unregistered candidates
+            if interview.candidate_resume:
+                try:
+                    resume_text = extract_resume_text(interview.candidate_resume)
+                except Exception as e:
+                    resume_text = f"Resume could not be processed for {candidate_name}."
+                    logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")
+            else:
+                # Create basic resume text from available information
+                resume_text = f"Candidate: {candidate_name}"
+                if hasattr(interview, 'candidate_email') and interview.candidate_email:
+                    resume_text += f", Email: {interview.candidate_email}"
+                if hasattr(interview, 'candidate_phone') and interview.candidate_phone:
+                    resume_text += f", Phone: {interview.candidate_phone}"
+                resume_text += f", applying for {job_title} position."
         
-        # Handle company name safely
+        # Handle company name safely (works for both registered and unregistered)
         try:
-            company_name = interview.job.company
+            if interview.is_registered_candidate:
+                company_name = interview.job.company
+            else:
+                company_name = interview.job_position.company if interview.job_position else "Our Company"
         except AttributeError:
             company_name = "Our Company"
-        
-        # Get resume file from candidate's profile with error handling
-        profile = getattr(interview.candidate, 'profile', None)
-        resume_file = profile.resume if profile and profile.resume else None
 
-        if not resume_file:
-            return HttpResponse("Resume file not found. Please upload your resume in your profile.", status=400)
-
-        try:
-            resume_text = extract_resume_text(resume_file)
-        except Exception as e:
-            resume_text = "Resume could not be processed."
-            logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
+        # Validate that we have minimum required information
+        if not resume_text.strip():
+            return HttpResponse(
+                "Resume information not found. Please ensure your resume is uploaded or contact support.", 
+                status=400
+            )
         
         # Store interview context in session for consistency
         request.session['interview_context'] = {
@@ -1004,9 +1113,14 @@ def start_interview_by_uuid(request, interview_uuid):
             'job_title': job_title,
             'company_name': company_name,
             'resume_text': resume_text,
-            'job_description': interview.job.description,
-            'job_location': interview.job.location,
-            'question_count': 0
+            'job_description': (interview.job.description if interview.is_registered_candidate 
+                              else interview.job_position.description if interview.job_position 
+                              else ""),
+            'job_location': (interview.job.location if interview.is_registered_candidate 
+                           else interview.job_position.location if interview.job_position 
+                           else ""),
+            'question_count': 0,
+            'is_registered_candidate': interview.is_registered_candidate
         }
         
         # Initialize conversation history
@@ -1317,24 +1431,10 @@ Respond as Alex would naturally speak:
         })
         request.session['conversation_history'] = conversation_history
         
-        # Add initial question to conversation history
-        conversation_history = request.session.get('conversation_history', [])
-        conversation_history.append({
-            'speaker': 'interviewer',
-            'message': ai_question,
-            'question_number': 0
-        })
-        request.session['conversation_history'] = conversation_history
-        
         # Generate initial TTS with enhanced error handling
         audio_path = None
         try:
             logger.info(f"Generating initial TTS for interview {interview_uuid}: '{ai_question[:50]}...'")
-            
-            # Skip TTS health check for now
-            # health_check = check_tts_system()
-            # if not health_check.get('gtts_available', False):
-            #     logger.error(f"gTTS not available for interview {interview_uuid}, cannot generate audio")
             
             # Try to generate initial audio
             audio_path = generate_tts(ai_question)
@@ -1387,6 +1487,7 @@ Respond as Alex would naturally speak:
             'company_name': company_name,
             'has_audio': bool(audio_path),  # Helper flag for template
             'csrf_token': get_token(request),  # Ensure fresh CSRF token
+            'is_registered_candidate': interview.is_registered_candidate,  # Add this for template logic
         }
         
         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
@@ -1454,7 +1555,7 @@ Respond as Alex would naturally speak:
             return HttpResponse(
                 'Interview could not be started. Our team has been notified and is working to resolve the issue.',
                 status=500
-            )
+            )            
 
 
 # Additional helper function for better error context
@@ -1833,43 +1934,7 @@ def test_recruiter_auth(request):
     <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
     """)
 
-# # Add candidate from dashboard
-# @login_required
-# def add_candidate_dashboard(request):
-#     """Add candidate directly from recruiter dashboard"""
-#     if not request.user.is_recruiter:
-#         messages.error(request, 'Only recruiters can add candidates.')
-#         return redirect('login')
-    
-#     if request.method == 'POST':
-#         job_id = request.POST.get('job_id')
-#         candidate_name = request.POST.get('candidate_name')
-#         candidate_email = request.POST.get('candidate_email')
-#         candidate_phone = request.POST.get('candidate_phone')
-#         candidate_resume = request.FILES.get('candidate_resume')
-        
-#         try:
-#             job = get_object_or_404(Job, id=job_id, posted_by=request.user)
-            
-#             # Create candidate
-#             candidate = Candidate.objects.create(
-#                 job=job,
-#                 name=candidate_name,
-#                 email=candidate_email,
-#                 phone=candidate_phone,
-#                 resume=candidate_resume,
-#                 added_by=request.user
-#             )
-            
-#             messages.success(request, f'Candidate {candidate_name} added successfully to {job.title}!')
-            
-#         except Exception as e:
-#             messages.error(request, f'Error adding candidate: {str(e)}')
-    
-#     return redirect('recruiter_dashboard')
 
-
-# Add these updated/new view functions to your views.py
 
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)

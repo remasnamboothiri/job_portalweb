@@ -27,8 +27,10 @@ urlpatterns = [
      # 🧑‍💼 Dashboards
     path('dashboard/seeker/', views.jobseeker_dashboard, name='jobseeker_dashboard'),
     path('dashboard/recruiter/', views.recruiter_dashboard, name='recruiter_dashboard'),
-    # 📅 Interview scheduling
+    # 📅 Interview scheduling - existing (for registered candidates)
     path('schedule-interview/<int:job_id>/<int:applicant_id>/', views.schedule_interview, name='schedule_interview'),
+    # Interview scheduling - new (for any candidate)
+    path('schedule-interview-external/<int:job_id>/', views.schedule_interview_external, name='schedule_interview_external'),
     
     
     

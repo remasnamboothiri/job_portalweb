@@ -31,6 +31,8 @@ urlpatterns = [
     path('schedule-interview/<int:job_id>/<int:applicant_id>/', views.schedule_interview, name='schedule_interview'),
     # Interview scheduling - simplified for added candidates
     path('schedule-interview/', views.schedule_interview_simple, name='schedule_interview_simple'),
+    # Schedule interview with specific candidate
+    path('schedule-interview/candidate/<int:candidate_id>/', views.schedule_interview_with_candidate, name='schedule_interview_with_candidate'),
     
     
     

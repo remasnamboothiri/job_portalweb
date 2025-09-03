@@ -335,6 +335,44 @@ class ScheduleInterviewForm(forms.ModelForm):
         
         
         
+class ScheduleInterviewWithCandidateForm(forms.Form):
+    job = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Which job is it?',
+        empty_label='Select a job...'
+    )
+    scheduled_at = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        label='Interview Date & Time'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        candidate = kwargs.pop('candidate', None)
+        super().__init__(*args, **kwargs)
+        
+        if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
+            self.fields['job'].queryset = Job.objects.filter(posted_by=user)
+        else:
+            self.fields['job'].queryset = Job.objects.none()
+        
+        self.candidate = candidate
+    
+    def save(self, user):
+        job = self.cleaned_data['job']
+        scheduled_at = self.cleaned_data['scheduled_at']
+        
+        interview = Interview(
+            job=job,
+            candidate_name=self.candidate.name,
+            candidate_email=self.candidate.email,
+            candidate_phone=self.candidate.phone,
+            scheduled_at=scheduled_at
+        )
+        interview.save()
+        return interview
+
 class AddCandidateForm(forms.ModelForm):
     class Meta:
         model = Candidate

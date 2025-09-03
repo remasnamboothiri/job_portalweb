@@ -499,9 +499,9 @@
                   </a>
                 {% endif %}
                 
-                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleInterviewModal" onclick="selectCandidate({{ candidate.id }}, '{{ candidate.name }}', '{{ candidate.email }}')">
+                <a href="{% url 'schedule_interview_with_candidate' candidate.id %}" class="btn btn-sm btn-success">
                   📅 Schedule Interview
-                </button>
+                </a>
               </div>
               
               <small class="text-muted d-block mt-2">Added on {{ candidate.added_at|date:"M d, Y at g:i A" }}</small>

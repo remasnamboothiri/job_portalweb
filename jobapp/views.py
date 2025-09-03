@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404 , HttpResponse
 from django.contrib.auth import login, authenticate, logout
-from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm, ScheduleInterviewForm , AddCandidateForm
+from .forms import UserRegistrationForm, LoginForm , ProfileForm, JobForm, ApplicationForm, ScheduleInterviewForm , AddCandidateForm, ScheduleInterviewWithCandidateForm
 from .models import CustomUser , Profile, Job, Application , Interview, Candidate
 from django.contrib.auth.decorators import login_required , user_passes_test 
 from django.views.decorators.http import require_http_methods
@@ -1057,6 +1057,80 @@ Best regards,
     
     return render(request, 'jobapp/schedule_interview_simple.html', {
         'form': form
+    })
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def schedule_interview_with_candidate(request, candidate_id):
+    """Schedule interview with a specific candidate"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from django.urls import reverse
+    
+    # Get the candidate
+    candidate = get_object_or_404(Candidate, id=candidate_id, added_by=request.user)
+    
+    if request.method == 'POST':
+        form = ScheduleInterviewWithCandidateForm(request.POST, user=request.user, candidate=candidate)
+        
+        if form.is_valid():
+            try:
+                interview = form.save(request.user)
+                logger.info(f"Interview created successfully: {interview.id}")
+                
+                # Send email to candidate
+                try:
+                    domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                    protocol = 'https' if not settings.DEBUG else 'http'
+                    interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
+                    
+                    email_subject = f'Interview Scheduled - {interview.job.title}'
+                    email_body = f"""Hello {interview.candidate_name},
+
+Your interview for the position of {interview.job.title} has been scheduled.
+
+Interview Details:
+- Date & Time: {interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p')}
+- Position: {interview.job.title}
+- Company: {interview.job.company}
+- Interview Link: {interview_url}
+
+Please click the link above to join your interview at the scheduled time.
+
+Best regards,
+{request.user.get_full_name() or request.user.username}
+{interview.job.company}"""
+                    
+                    send_mail(
+                        email_subject,
+                        email_body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [interview.candidate_email],
+                        fail_silently=False
+                    )
+                    
+                    messages.success(request, f'Interview scheduled successfully! Email sent to {interview.candidate_email}.')
+                    logger.info(f"Email sent successfully to {interview.candidate_email}")
+                    
+                except Exception as e:
+                    logger.warning(f'Email sending failed: {str(e)}')
+                    messages.warning(request, 'Interview scheduled successfully! Email could not be sent.')
+                
+                return redirect('recruiter_dashboard')
+                
+            except Exception as e:
+                logger.error(f"Error saving interview: {str(e)}")
+                messages.error(request, f'Error scheduling interview: {str(e)}')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = ScheduleInterviewWithCandidateForm(user=request.user, candidate=candidate)
+    
+    return render(request, 'jobapp/schedule_interview_with_candidate.html', {
+        'form': form,
+        'candidate': candidate
     })    
     
 

@@ -214,7 +214,6 @@ class Interview(models.Model):
         super().save(*args, **kwargs)
 
     def generate_unique_id(self):
-        # job_name = self.job_position.title.strip().lower()
         job_name = self.job.title.strip().lower()
         candidate = self.candidate_name.strip().lower()
         timestamp = str(int(time.time() * 1000000))  # microseconds
@@ -230,7 +229,6 @@ class Interview(models.Model):
             hex_9 = hash_value[:9]
             formatted_id = f"{hex_9[:3]}-{hex_9[3:6]}-{hex_9[6:9]}"
         return formatted_id
-        pass
     
     @property
     def get_uuid(self):

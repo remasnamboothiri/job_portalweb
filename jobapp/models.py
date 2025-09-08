@@ -61,7 +61,6 @@ DEPARTMENT_CHOICES = [
 EMPLOYMENT_TYPE_CHOICES = [
     ('full_time', 'Full Time'),
     ('part_time', 'Part Time'),
-    ('contract', 'Contract'),
     ('internship', 'Internship'),
     ('freelance', 'Freelance'),
 ]
@@ -74,9 +73,8 @@ EXPERIENCE_LEVEL_CHOICES = [
     ('executive', 'Executive'),
 ]
 STATUS_CHOICES = [
-    ('draft', 'Draft'),
+    
     ('active', 'Active'),
-    ('paused', 'Paused'),
     ('closed', 'Closed'),
     ('expired', 'Expired'),
     ('filled', 'Position Filled'),

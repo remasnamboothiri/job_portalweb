@@ -1633,8 +1633,18 @@ def serve_media(request, path):
         if not os.path.exists(full_path):
             logger.error(f"Media file not found: {full_path}")
             raise Http404(f"Media file not found: {path}")
+        
+        # Get file info
+        file_size = os.path.getsize(full_path)
+        logger.info(f"File size: {file_size} bytes")
+        
+        # For PDF files, ensure proper content type
+        response = serve(request, path, document_root=media_root)
+        if path.lower().endswith('.pdf'):
+            response['Content-Type'] = 'application/pdf'
+            response['Content-Disposition'] = f'inline; filename="{os.path.basename(path)}"'
             
-        return serve(request, path, document_root=media_root)
+        return response
     except Exception as e:
         logger.error(f"Error serving media file {path}: {e}")
         raise Http404(f"Media file not found: {path}")

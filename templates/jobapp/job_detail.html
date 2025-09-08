@@ -133,11 +133,23 @@
 
   <div class="container py-5">
     <div class="bg-white p-5 rounded shadow">
-      <h2 class="text-dark mb-4">{{ job.title }}</h2>
-
-      <p><strong>🏢 Company:</strong> {{ job.company }}</p>
-      <p><strong>📍 Location:</strong> {{ job.location }}</p>
-      <p><strong>👤 Posted by:</strong> {{ job.posted_by.username }}</p>
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <h2 class="text-dark mb-4">{{ job.title }}</h2>
+          <p><strong>🏢 Company:</strong> {{ job.company }}</p>
+          <p><strong>📍 Location:</strong> {{ job.location }}</p>
+          <p><strong>👤 Posted by:</strong> {{ job.posted_by.username }}</p>
+        </div>
+        <div class="col-md-4 text-center">
+          {% if job.featured_image %}
+            <img src="{{ job.featured_image.url }}" alt="{{ job.title }}" class="img-fluid rounded shadow" style="max-width: 200px; max-height: 150px; object-fit: cover;">
+          {% else %}
+            <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 200px; height: 150px; margin: 0 auto;">
+              <span class="text-muted">No Image</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
 
       <!-- Job Description -->
       <h5 class="section-title">

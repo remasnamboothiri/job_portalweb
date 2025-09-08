@@ -679,6 +679,9 @@
 
 <!-- ✅ Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SCRIPTS -->
+  <script src="{% static 'js/jquery.min.js' %}"></script>
+  <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 
 <script>
 // Function to show sections and update active filter button
@@ -820,15 +823,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show only Applications & Interviews by default
     showSection('applications_section');
 });
-</script>
 
 
-    <!-- SCRIPTS -->
-    <script src="{% static 'js/jquery.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+
     
-    <!-- Additional JavaScript for job management -->
-    <script>
+    
+  
+    
     // Edit job modal functions
     function openEditJobModal(jobId) {
         fetch(`/jobs/${jobId}/edit/`, {

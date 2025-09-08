@@ -2159,12 +2159,24 @@ def edit_job(request, job_id):
     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     
     if request.method == 'POST':
+        logger.info(f"Edit job POST request for job {job_id} by user {request.user.id}")
+        logger.info(f"POST data keys: {list(request.POST.keys())}")
+        logger.info(f"FILES data keys: {list(request.FILES.keys())}")
+        
+        # Log current image before update
+        logger.info(f"Current job image before update: {job.featured_image}")
+        
         form = JobForm(request.POST, request.FILES, instance=job)
+        
         if form.is_valid():
+            logger.info("Edit job form is valid, saving...")
             updated_job = form.save(commit=False)
             updated_job.posted_by = request.user  # Ensure ownership stays same
             updated_job.save()
             form.save_m2m()  # For tags
+            
+            # Log image after update
+            logger.info(f"Job image after update: {updated_job.featured_image}")
             
             messages.success(request, f'Job "{updated_job.title}" updated successfully!')
             
@@ -2173,16 +2185,19 @@ def edit_job(request, job_id):
                 return JsonResponse({
                     'success': True, 
                     'message': 'Job updated successfully!',
-                    'job_title': updated_job.title
+                    'job_title': updated_job.title,
+                    'image_url': updated_job.featured_image.url if updated_job.featured_image else None
                 })
             
             return redirect('recruiter_dashboard')
         else:
+            logger.error(f"Edit job form validation failed: {form.errors}")
             # Return form errors for AJAX
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
-                    'errors': form.errors
+                    'errors': form.errors,
+                    'message': 'Form validation failed'
                 })
     else:
         form = JobForm(instance=job)

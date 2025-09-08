@@ -845,6 +845,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editJobModalContent').innerHTML = html;
             const modal = new bootstrap.Modal(document.getElementById('editJobModal'));
             modal.show();
+            
+            // Set the form action URL after loading content
+            const form = document.getElementById('editJobForm');
+            if (form) {
+                form.action = `/jobs/${jobId}/edit/`;
+            }
         })
         .catch(error => {
             console.error('Error loading edit form:', error);

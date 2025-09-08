@@ -164,7 +164,8 @@ def update_profile(request):
     else:
         form = ProfileForm(instance=profile)
         
-    return render(request, 'jobapp/profile_update.html', {'form': form})    
+    return render(request, 'jobapp/profile_update.html', {'form': form})
+    
 
 
   
@@ -608,228 +609,7 @@ def jobseeker_dashboard(request):
         'scheduled_interviews': scheduled_interviews
     })        
 
-#recruiter dashboard
-@login_required
-@user_passes_test(lambda u: u.is_recruiter)
-def recruiter_dashboard(request):
-    # Initialize all variables as empty
-    applications = []
-    jobs = []
-    scheduled_interviews = []
-    all_candidates = []
-    
-    try:
-        # First, get the actual column names for jobapp_job table
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'jobapp_job'
-                ORDER BY ordinal_position
-            """)
-            job_columns = [row[0] for row in cursor.fetchall()]
-            logger.info(f"Available job columns: {job_columns}")
-            
-            # Build a safe SELECT query with only existing columns
-            safe_columns = []
-            column_mapping = {
-                'id': 'id',
-                'title': 'title', 
-                'company': 'company_name',  # Your DB might use 'company' instead
-                'company_name': 'company_name',
-                'location': 'location',
-                'job_type': 'job_type',
-                'date_posted': 'date_posted',
-                'created_at': 'created_at',
-                'posted_by_id': 'posted_by_id'
-            }
-            
-            for db_col, display_name in column_mapping.items():
-                if db_col in job_columns:
-                    safe_columns.append(db_col)
-            
-            if safe_columns and 'posted_by_id' in job_columns:
-                # Build safe SQL query
-                columns_str = ', '.join(safe_columns)
-                cursor.execute(f"""
-                    SELECT {columns_str}
-                    FROM jobapp_job 
-                    WHERE posted_by_id = %s 
-                    ORDER BY {"date_posted" if "date_posted" in safe_columns else "id"} DESC
-                    LIMIT 50
-                """, [request.user.id])
-                
-                job_rows = cursor.fetchall()
-                jobs = []
-                for row in job_rows:
-                    job_dict = {}
-                    for i, col in enumerate(safe_columns):
-                        job_dict[col] = row[i]
-                    jobs.append(job_dict)
-                    
-                logger.info(f"Successfully loaded {len(jobs)} jobs")
-            
-    except Exception as e:
-        logger.error(f"Job query failed completely: {e}")
-        jobs = []
-    
-    # Try to get applications safely
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'jobapp_application'
-            """)
-            app_columns = [row[0] for row in cursor.fetchall()]
-            
-            if app_columns:
-                # Try to get applications via JOIN
-                cursor.execute("""
-                    SELECT a.id, a.applied_at, a.status
-                    FROM jobapp_application a
-                    INNER JOIN jobapp_job j ON a.job_id = j.id  
-                    WHERE j.posted_by_id = %s
-                    ORDER BY a.applied_at DESC
-                    LIMIT 100
-                """, [request.user.id])
-                
-                app_rows = cursor.fetchall()
-                applications = []
-                for row in app_rows:
-                    applications.append({
-                        'id': row[0],
-                        'applied_at': row[1],
-                        'status': row[2]
-                    })
-                logger.info(f"Successfully loaded {len(applications)} applications")
-                
-    except Exception as e:
-        logger.warning(f"Application query failed: {e}")
-        applications = []
-    
-    # Try to get interviews safely
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_name = 'jobapp_interview'
-            """)
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'jobapp_interview'
-                """)
-                interview_columns = [row[0] for row in cursor.fetchall()]
-                logger.info(f"Interview columns: {interview_columns}")
-                
-                # Try different possible column names for job relationship
-                job_fk_column = None
-                if 'job_id' in interview_columns:
-                    job_fk_column = 'job_id'
-                elif 'job_position_id' in interview_columns:
-                    job_fk_column = 'job_position_id'
-                
-                if job_fk_column:
-                    cursor.execute(f"""
-                        SELECT i.id, i.scheduled_at,  COALESCE(i.candidate_name, 'Unknown') 
-                        FROM jobapp_interview i
-                        INNER JOIN jobapp_job j ON i.{job_fk_column} = j.id
-                        WHERE j.posted_by_id = %s
-                        ORDER BY i.scheduled_at DESC
-                        LIMIT 50
-                    """, [request.user.id])
-                    
-                    interview_rows = cursor.fetchall()
-                    scheduled_interviews = []
-                    for row in interview_rows:
-                        scheduled_interviews.append({
-                            'id': row[0],
-                            'scheduled_at': row[1],
-                            'candidate_name': row[2]
-                        })
-                    logger.info(f"Successfully loaded {len(scheduled_interviews)} interviews")
-                
-    except Exception as e:
-        logger.warning(f"Interview query failed: {e}")
-        scheduled_interviews = []
-    
-    # Try to get candidates safely 
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_name = 'jobapp_candidate'
-            """)
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT c.id, c.name, c.email, c.added_at
-                    FROM jobapp_candidate c
-                    WHERE c.added_by_id = %s
-                    ORDER BY c.added_at DESC
-                    LIMIT 100
-                """, [request.user.id])
-                
-                candidate_rows = cursor.fetchall()
-                all_candidates = []
-                for row in candidate_rows:
-                    all_candidates.append({
-                        'id': row[0],
-                        'name': row[1],   
-                        'email': row[3],
-                        'added_at': row[4]
-                    })
-                logger.info(f"Successfully loaded {len(all_candidates)} candidates")
-                
-    except Exception as e:
-        logger.warning(f"Candidate query failed: {e}")
-        all_candidates = []
-        
-        
-     # Get user's jobs for the modal dropdown
-    try:
-        user_jobs = Job.objects.filter(posted_by=request.user).values('id', 'title', 'company', 'status')
-        user_jobs_list = list(user_jobs)
-        logger.info(f"Successfully loaded {len(user_jobs_list)} jobs for modal dropdown")
-    except Exception as e:
-        logger.warning(f"Could not fetch user jobs for modal: {e}")
-        user_jobs_list = []   
-    
-    # Prepare context with safe data
-    context = {
-        'applications': applications,
-        'scheduled_interviews': scheduled_interviews,
-        'all_candidates': all_candidates,
-        'jobs': jobs,
-        'user': request.user,
-        'debug_info': {
-            'jobs_count': len(jobs),
-            'applications_count': len(applications),
-            'interviews_count': len(scheduled_interviews),
-            'candidates_count': len(all_candidates)
-        }
-        
-    }
-    
-    
-    # Retrieve added candidates
-    added_candidates = Candidate.objects.filter(added_by=request.user)
-    
-    
-    # Add the new key-value pair to the context dictionary
-    context['add_candidate_modal'] = 'jobapp/add_candidate_modal.html'
-
-    # Add added_candidates to the context
-    context['added_candidates'] = added_candidates
-    
-    context['user_jobs'] = user_jobs_list
-    
-    logger.info(f"Recruiter dashboard loaded for {request.user.username}: {len(jobs)} jobs, {len(applications)} applications")
-    
-    return render(request, 'jobapp/recruiter_dashboard.html', context)
+# The old recruiter_dashboard function has been replaced with the cleaner version below
 
     
     
@@ -840,12 +620,19 @@ def recruiter_dashboard(request):
 def update_job_status(request, job_id):
     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     status = request.POST.get('status')
-    if status in dict(Job.STATUS_CHOICES):
+    
+    # Get valid status choices from the model
+    valid_statuses = [choice[0] for choice in job._meta.get_field('status').choices]
+    
+    if status in valid_statuses:
         job.status = status
         job.save()
-        messages.success(request, f"Job status updated to {job.get_status_display()}.")
+        messages.success(request, f"Job status updated to {status.replace('_', ' ').title()}.")
+        logger.info(f"Job {job.id} status updated to {status} by user {request.user.username}")
     else:
         messages.error(request, "Invalid status selected.")
+        logger.warning(f"Invalid status '{status}' attempted for job {job.id} by user {request.user.username}")
+    
     return redirect('recruiter_dashboard')    
 
 
@@ -1832,16 +1619,25 @@ def chat_view(request):
 
 def serve_media(request, path):
     """
-    Serve media files in production
+    Serve media files in production with better error handling
     """
     try:
         # Try to serve the file
         media_root = settings.MEDIA_ROOT
-        if not os.path.exists(os.path.join(media_root, path)):
-            raise Http404("Media file not found.")
+        full_path = os.path.join(media_root, path)
+        
+        logger.info(f"Attempting to serve media file: {path}")
+        logger.info(f"Full path: {full_path}")
+        logger.info(f"File exists: {os.path.exists(full_path)}")
+        
+        if not os.path.exists(full_path):
+            logger.error(f"Media file not found: {full_path}")
+            raise Http404(f"Media file not found: {path}")
+            
         return serve(request, path, document_root=media_root)
-    except Exception:
-        raise Http404("Media file not found.")
+    except Exception as e:
+        logger.error(f"Error serving media file {path}: {e}")
+        raise Http404(f"Media file not found: {path}")
 
 # CSRF token endpoint
 def get_csrf_token(request):
@@ -2067,7 +1863,7 @@ def test_recruiter_auth(request):
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def add_candidates(request, job_id):
-    """Add candidates to a specific job - updated version"""
+    """Add candidates to a specific job - fixed version"""
     # Get the job and ensure the recruiter owns it
     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
     
@@ -2091,20 +1887,19 @@ def add_candidates(request, job_id):
             messages.error(request, 'Candidate phone is required.')
             return redirect('add_candidates', job_id=job_id)
         
-        # Check if candidate already exists for this job
+        # Check if candidate already exists for this recruiter (since Candidate model doesn't have job field)
         existing_candidate = Candidate.objects.filter(
-            job=job, 
-            email=candidate_email
+            email=candidate_email,
+            added_by=request.user
         ).first()
         
         if existing_candidate:
-            messages.warning(request, f'Candidate with email {candidate_email} already exists for this job.')
+            messages.warning(request, f'Candidate with email {candidate_email} already exists in your candidates list.')
             return redirect('add_candidates', job_id=job_id)
         
         try:
-            # Create and save the candidate
+            # Create and save the candidate (without job field since it doesn't exist in the model)
             candidate = Candidate.objects.create(
-                job=job,
                 name=candidate_name,
                 email=candidate_email,
                 phone=candidate_phone,
@@ -2113,7 +1908,7 @@ def add_candidates(request, job_id):
             )
             
             messages.success(request, f'Candidate {candidate_name} added successfully!')
-            logger.info(f'Candidate {candidate_name} added to job {job.title} by user {request.user.username}')
+            logger.info(f'Candidate {candidate_name} added by user {request.user.username}')
             
         except Exception as e:
             logger.error(f'Error adding candidate: {e}')
@@ -2121,8 +1916,8 @@ def add_candidates(request, job_id):
         
         return redirect('add_candidates', job_id=job_id)
     
-    # Get all candidates for this job to display
-    candidates = Candidate.objects.filter(job=job).order_by('-added_at')
+    # Get all candidates added by this recruiter (since there's no job relationship)
+    candidates = Candidate.objects.filter(added_by=request.user).order_by('-added_at')
     
     return render(request, 'jobapp/add_candidates.html', {
         'job': job,

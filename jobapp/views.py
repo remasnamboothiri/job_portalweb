@@ -89,9 +89,8 @@ def home_view(request):
     return render(request, 'jobapp/home.html')
 
 
-#register view - now redirects to login page
+#register view - redirects to login (register.html no longer needed)
 def register_view(request):
-    # Redirect all register requests to login page
     return redirect('login')
     
     

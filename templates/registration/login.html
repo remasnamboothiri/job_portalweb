@@ -97,14 +97,14 @@
               
               <li><a href="{% url 'contact' %}">Contact</a></li>
               <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
-              <li class="d-lg-none"><a href="{% url 'login' %}">Log In</a></li>
+              <li class="d-lg-none"><a href="{% url 'login' %}">Login/Register</a></li>
             </ul>
           </nav>
           
           <div class="right-cta-menu text-right d-flex aligin-items-center col-6">
             <div class="ml-auto">
               <a href="{% url 'post_job' %}" class="btn btn-outline-white border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-add"></span>Post a Job</a>
-              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Log In</a>
+              <a href="{% url 'login' %}" class="btn btn-primary border-width-2 d-none d-lg-inline-block"><span class="mr-2 icon-lock_outline"></span>Login/Register</a>
             </div>
             <a href="#" class="site-menu-toggle js-menu-toggle d-inline-block d-xl-none mt-lg-2 ml-3"><span class="icon-menu h3 m-0 p-0 mt-2"></span></a>
           </div>
@@ -144,20 +144,39 @@
       <!-- Sign Up Form -->
       <div class="col-lg-6 mb-5">
         <h2 class="mb-4">Sign Up To JobBoard</h2>
-        <form method="post" action="{% url 'register' %}" class="p-4 border rounded">
+        <form method="post" class="p-4 border rounded">
           {% csrf_token %}
+
+          <!-- Registration Form Errors -->
+          {% if registration_errors and registration_form.errors %}
+            <div class="alert alert-danger">
+              {% for field, errors in registration_form.errors.items %}
+                {% for error in errors %}
+                  <div>{{ field|title }}: {{ error }}</div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          {% endif %}
 
           <div class="row form-group">
             <div class="col-md-12 mb-3 mb-md-0">
               <label class="text-black" for="signupusername">Username</label>
-              <input type="name" id="signupusername" name="username" class="form-control" placeholder="username" required>
+              <input type="text" id="signupusername" name="username" class="form-control" placeholder="username" 
+                     value="{{ registration_form.username.value|default:'' }}" required>
+              {% if registration_form.username.errors %}
+                <div class="text-danger small mt-1">{{ registration_form.username.errors.0 }}</div>
+              {% endif %}
             </div>
           </div>
           
           <div class="row form-group">
             <div class="col-md-12 mb-3 mb-md-0">
               <label class="text-black" for="signupEmail">Email</label>
-              <input type="email" id="signupEmail" name="email" class="form-control" placeholder="Email address" required>
+              <input type="email" id="signupEmail" name="email" class="form-control" placeholder="Email address" 
+                     value="{{ registration_form.email.value|default:'' }}" required>
+              {% if registration_form.email.errors %}
+                <div class="text-danger small mt-1">{{ registration_form.email.errors.0 }}</div>
+              {% endif %}
             </div>
           </div>
           
@@ -165,6 +184,9 @@
             <div class="col-md-12 mb-3 mb-md-0">
               <label class="text-black" for="signupPassword">Password</label>
               <input type="password" id="signupPassword" name="password1" class="form-control" placeholder="Password" required>
+              {% if registration_form.password1.errors %}
+                <div class="text-danger small mt-1">{{ registration_form.password1.errors.0 }}</div>
+              {% endif %}
             </div>
           </div>
           
@@ -172,13 +194,17 @@
             <div class="col-md-12 mb-3 mb-md-0">
               <label class="text-black" for="signupPasswordConfirm">Re-Type Password</label>
               <input type="password" id="signupPasswordConfirm" name="password2" class="form-control" placeholder="Re-type Password" required>
+              {% if registration_form.password2.errors %}
+                <div class="text-danger small mt-1">{{ registration_form.password2.errors.0 }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="row form-group mb-4">
             <div class="col-md-12">
               <div class="form-check">
-                <input type="checkbox" id="registerAsRecruiter" name="is_recruiter" class="form-check-input" value="1">
+                <input type="checkbox" id="registerAsRecruiter" name="is_recruiter" class="form-check-input" value="1" 
+                       {% if registration_form.is_recruiter.value %}checked{% endif %}>
                 <label class="form-check-label text-black" for="registerAsRecruiter">
                   Register as Recruiter
                 </label>
@@ -220,8 +246,14 @@
             </div>
           </div>
 
-          <!-- Non-field Error -->
-          {% if form.non_field_errors %}
+          <!-- Login Form Errors -->
+          {% if login_errors and form.non_field_errors %}
+            <div class="alert alert-danger py-1 mb-3">
+              {{ form.non_field_errors.0 }}
+            </div>
+          {% endif %}
+          
+          {% if form.non_field_errors and not login_errors %}
             <div class="alert alert-danger py-1 mb-3">
               {{ form.non_field_errors.0 }}
             </div>
@@ -258,8 +290,7 @@
           <ul class="list-unstyled">
             <li><a href="{% url 'home' %}">Home</a></li>
             <li><a href="{% url 'job_list' %}">Jobs</a></li>
-            <li><a href="{% url 'register' %}">Register</a></li>
-            <li><a href="{% url 'login' %}">Login</a></li>
+            <li><a href="{% url 'login' %}">Register/Login</a></li>
           </ul>
         </div>
         <div class="col-md-4">

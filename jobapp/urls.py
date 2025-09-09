@@ -8,8 +8,8 @@ from .debug_dashboard import debug_dashboard_view
 urlpatterns = [
       # 🏠 Home
     path('', views.home_view, name='home'),
-    # 🔐 Auth views
-    path('register/', views.register_view, name='register'),
+    # 🔐 Auth views - register redirects to login
+    path('register/', views.register_view, name='register'),  # This now redirects to login
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     # 👤 Profile

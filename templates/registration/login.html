@@ -146,6 +146,13 @@
         <h2 class="mb-4">Sign Up To JobBoard</h2>
         <form method="post" action="{% url 'register' %}" class="p-4 border rounded">
           {% csrf_token %}
+
+          <div class="row form-group">
+            <div class="col-md-12 mb-3 mb-md-0">
+              <label class="text-black" for="signupusername">Username</label>
+              <input type="name" id="signupusername" name="username" class="form-control" placeholder="username" required>
+            </div>
+          </div>
           
           <div class="row form-group">
             <div class="col-md-12 mb-3 mb-md-0">

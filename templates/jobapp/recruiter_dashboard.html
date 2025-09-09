@@ -254,20 +254,35 @@
 
 <div class="container py-5">
   <div class="row">
-    <!-- Sidebar Filter - Closer to margin -->
-    <div class="col-md-4 mb-4">
-      <div class="list-group">
-        <button class="list-group-item list-group-item-action active" onclick="showSection('applications_section')" id="filter-applications">Applications & Interviews</button>
-        <button class="list-group-item list-group-item-action" onclick="showSection('post_job_section')" id="filter-post-job">Your Posted Jobs</button>
-        <button class="list-group-item list-group-item-action" onclick="showSection('edit_jobs_section')" id="filter-edit-jobs">Edit Posted Jobs</button>
-        <button class="list-group-item list-group-item-action" onclick="showSection('add_candidate_section')" id="filter-add-candidate">Add Candidate</button>
-        <button class="list-group-item list-group-item-action" onclick="showSection('scheduled_interviews_section')" id="filter-scheduled-interviews">Scheduled Interviews</button>
-        <button class="list-group-item list-group-item-action" onclick="showSection('all_candidates_section')" id="filter-all-candidates">All Added Candidates</button>
+    <!-- Modern Sidebar Navigation -->
+    <div class="col-md-3 mb-4">
+      <div class="bg-dark text-white p-3 rounded" style="min-height: 500px;">
+        <h6 class="text-uppercase mb-4 text-muted">Menu</h6>
+        <nav class="nav flex-column">
+          <a class="nav-link text-white d-flex align-items-center py-3 active" href="#" onclick="showSection('applications_section')" id="filter-applications">
+            <i class="fas fa-tachometer-alt me-3"></i> Dashboard
+          </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('post_job_section')" id="filter-post-job">
+            <i class="fas fa-briefcase me-3"></i> Job Listings
+          </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('all_candidates_section')" id="filter-all-candidates">
+            <i class="fas fa-users me-3"></i> Applicants
+          </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('scheduled_interviews_section')" id="filter-scheduled-interviews">
+            <i class="fas fa-video me-3"></i> Interviews
+          </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('edit_jobs_section')" id="filter-edit-jobs">
+            <i class="fas fa-star me-3"></i> Saved Candidates
+          </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('add_candidate_section')" id="filter-add-candidate">
+            <i class="fas fa-chart-bar me-3"></i> Reports & Analytics
+          </a>
+        </nav>
       </div>
     </div>
 
     <!-- Main Content Sections -->
-    <div class="col-md-8">
+    <div class="col-md-9">
       <!-- Applications & Interviews Section (default visible) -->
       <div id="applications_section" class="dashboard-section">
         <h3 class="mb-3">Applications & Interviews</h3>
@@ -683,25 +698,27 @@
 <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 
 <script>
-// Function to show sections and update active filter button
+// Function to show sections and update active nav link
 function showSection(sectionId) {
   // Hide all sections
   document.querySelectorAll('.dashboard-section').forEach(function(el) {
     el.style.display = 'none';
   });
   
-  // Remove active class from all filter buttons
-  document.querySelectorAll('.list-group-item').forEach(function(el) {
+  // Remove active class from all nav links
+  document.querySelectorAll('.nav-link').forEach(function(el) {
     el.classList.remove('active');
+    el.style.backgroundColor = '';
   });
   
   // Show selected section
   document.getElementById(sectionId).style.display = 'block';
   
-  // Add active class to clicked filter button
+  // Add active class to clicked nav link
   const filterButton = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
   if (filterButton) {
     filterButton.classList.add('active');
+    filterButton.style.backgroundColor = '#0d6efd';
   }
 }
 

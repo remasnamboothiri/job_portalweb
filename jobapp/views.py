@@ -1395,7 +1395,7 @@ Respond as Alex would naturally speak:
         
         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
         
-        return render(request, 'jobapp/interview_ai.html', context_data)
+        return render(request, 'jobapp/interview_simple.html', context_data)
         
     # Improved error handling with specific exception types
     except Http404:

@@ -6,14 +6,30 @@ import uuid
 import tempfile
 import time
 import logging
+import hashlib
+import json
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-def generate_tts(text, voice_id="female_default", force_gtts=False):
+# RunPod TTS Configuration
+RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
+JWT_SECRET = getattr(settings, 'JWT_SECRET', '')
+RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
+
+# Available models: kokkoro, chatterbox
+AVAILABLE_MODELS = ["kokkoro", "chatterbox"]
+
+# Validate environment variables
+if not RUNPOD_API_KEY:
+    logger.warning("RUNPOD_API_KEY not found in Django settings")
+if not JWT_SECRET:
+    logger.warning("JWT_SECRET not found in Django settings")
+
+def generate_tts(text, model="kokkoro", force_gtts=False):
     """
-    Generate TTS audio with primary API and gTTS fallback
-    Enhanced with better error handling and connection testing
+    Generate TTS audio using RunPod API with gTTS fallback
+    Models available: kokkoro, chatterbox
     """
     
     # Clean and validate text
@@ -26,13 +42,138 @@ def generate_tts(text, voice_id="female_default", force_gtts=False):
         clean_text = clean_text[:5000]
         logger.warning("Text truncated to 5000 characters for TTS")
     
-    # Skip slow primary API and use fast gTTS directly for better performance
-    if force_gtts or True:  # Always use gTTS for speed
-        logger.info("Using fast gTTS for better response speed")
+    # Use gTTS fallback if requested
+    if force_gtts:
+        logger.info("Using gTTS fallback as requested")
         return generate_gtts_fallback(clean_text)
+    
+    # Try RunPod API first
+    logger.info(f"Attempting RunPod TTS with model: {model}")
+    runpod_result = generate_runpod_tts(clean_text, model)
+    
+    if runpod_result:
+        logger.info(f"RunPod TTS successful: {runpod_result}")
+        return runpod_result
+    
+    # Fallback to gTTS if RunPod fails
+    logger.warning("RunPod TTS failed, falling back to gTTS")
+    return generate_gtts_fallback(clean_text)
+
+def generate_runpod_tts(text, model="kokkoro"):
+    """
+    Generate TTS using RunPod API
+    Available models: kokkoro, chatterbox
+    """
+    try:
+        # Validate model
+        if model not in AVAILABLE_MODELS:
+            logger.warning(f"Invalid model '{model}', using 'kokkoro'")
+            model = "kokkoro"
         
-    # This code is now skipped - using gTTS directly above
-    pass
+        logger.info(f"RunPod TTS generation with model '{model}' for: '{text[:50]}...'")
+        
+        # Create filename for caching (use .mp3 since RunPod returns MP3)
+        text_hash = hashlib.md5(f"{text}_{model}".encode()).hexdigest()[:8]
+        filename = f"runpod_{model}_{text_hash}.mp3"
+        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
+        os.makedirs(tts_dir, exist_ok=True)
+        filepath = os.path.join(tts_dir, filename)
+        
+        # Check if file already exists (caching)
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+            media_url = f"/media/tts/{filename}"
+            logger.info(f"Using cached RunPod TTS: {media_url}")
+            return media_url
+        
+        # Prepare RunPod API request
+        headers = {
+            "Authorization": f"Bearer {RUNPOD_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "input": {
+                "text": text,
+                "model": model,
+                "jwt_token": JWT_SECRET
+            }
+        }
+        
+        # Make API request
+        logger.info(f"Sending request to RunPod API: {RUNPOD_ENDPOINT}")
+        response = requests.post(
+            RUNPOD_ENDPOINT,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"RunPod API response: {result}")
+            
+            # Check if the response contains audio data
+            if "output" in result and result["output"]:
+                output = result["output"]
+                
+                # Handle nested RunPod response structure
+                audio_base64 = None
+                
+                # Try to find audio_base64 in nested structure
+                if isinstance(output, dict):
+                    # Check direct audio fields
+                    if "audio_base64" in output:
+                        audio_base64 = output["audio_base64"]
+                    elif "audio_data" in output:
+                        audio_base64 = output["audio_data"]
+                    # Check nested result structure
+                    elif "result" in output and isinstance(output["result"], dict):
+                        nested_result = output["result"]
+                        if "output" in nested_result and isinstance(nested_result["output"], dict):
+                            nested_output = nested_result["output"]
+                            if "output" in nested_output and isinstance(nested_output["output"], dict):
+                                final_output = nested_output["output"]
+                                if "audio_base64" in final_output:
+                                    audio_base64 = final_output["audio_base64"]
+                
+                # Convert base64 to audio file
+                if audio_base64:
+                    try:
+                        import base64
+                        audio_data = base64.b64decode(audio_base64)
+                        with open(filepath, 'wb') as f:
+                            f.write(audio_data)
+                        logger.info(f"Successfully decoded base64 audio data")
+                    except Exception as e:
+                        logger.error(f"Failed to decode base64 audio: {e}")
+                        return None
+                else:
+                    logger.error(f"No audio_base64 found in response: {output}")
+                    return None
+
+                
+                # Verify file was created and has content
+                if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+                    media_url = f"/media/tts/{filename}"
+                    logger.info(f"RunPod TTS complete: {media_url} ({os.path.getsize(filepath)} bytes)")
+                    return media_url
+                else:
+                    logger.error("RunPod TTS file creation failed or file too small")
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+            else:
+                logger.error(f"No output in RunPod response: {result}")
+        else:
+            logger.error(f"RunPod API error: {response.status_code} - {response.text}")
+            
+    except requests.exceptions.Timeout:
+        logger.error("RunPod API request timed out")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"RunPod API request failed: {e}")
+    except Exception as e:
+        logger.error(f"RunPod TTS generation failed: {type(e).__name__}: {e}")
+    
+    return None
 
 def generate_gtts_fallback(text, max_retries=1):
     """
@@ -52,7 +193,6 @@ def generate_gtts_fallback(text, max_retries=1):
             logger.warning("Text truncated to 1000 characters for speed")
         
         # Use hash for consistent filenames (enables caching)
-        import hashlib
         text_hash = hashlib.md5(clean_text.encode()).hexdigest()[:8]
         filename = f"gtts_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
@@ -176,6 +316,15 @@ def cleanup_old_tts_files(days_old=1):
 # Alias for backwards compatibility
 generate_tts_audio = generate_tts
 
+# Helper function to switch models easily
+def generate_tts_kokkoro(text):
+    """Generate TTS using kokkoro model"""
+    return generate_tts(text, model="kokkoro")
+
+def generate_tts_chatterbox(text):
+    """Generate TTS using chatterbox model"""
+    return generate_tts(text, model="chatterbox")
+
 def check_tts_system():
     """
     Comprehensive TTS system health check
@@ -186,7 +335,8 @@ def check_tts_system():
         'media_root': settings.MEDIA_ROOT,
         'media_url': settings.MEDIA_URL,
         'tts_dir_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
-        'tts_api_url': "https://3obn1g343qy9uk-8000.proxy.runpod.net",
+        'runpod_endpoint': RUNPOD_ENDPOINT,
+        'available_models': AVAILABLE_MODELS,
     }
     
     # Check if we can create TTS directory
@@ -224,29 +374,41 @@ def check_tts_system():
         health_info['gtts_functional'] = False
         health_info['gtts_error'] = str(e)
     
-    # Check network connectivity to TTS API with detailed testing
+    # Test RunPod API connectivity
     try:
-        response = requests.get("https://3obn1g343qy9uk-8000.proxy.runpod.net", timeout=10)
-        health_info['api_reachable'] = True
-        health_info['api_status'] = response.status_code
-        health_info['api_response_time'] = response.elapsed.total_seconds()
+        headers = {
+            "Authorization": f"Bearer {RUNPOD_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        # Test the synthesize endpoint
-        try:
-            test_payload = {'text': 'test', 'voice_id': 'female_default'}
-            synth_response = requests.post(
-                "https://3obn1g343qy9uk-8000.proxy.runpod.net/synthesize",
-                json=test_payload,
-                timeout=10,
-                headers={'Content-Type': 'application/json'}
-            )
-            health_info['synthesize_endpoint'] = synth_response.status_code
-        except Exception as e:
-            health_info['synthesize_endpoint'] = f"Error: {e}"
+        test_payload = {
+            "input": {
+                "text": "test",
+                "model": "kokkoro",
+                "jwt_token": JWT_SECRET
+            }
+        }
+        
+        response = requests.post(
+            RUNPOD_ENDPOINT,
+            headers=headers,
+            json=test_payload,
+            timeout=10
+        )
+        
+        health_info['runpod_api_reachable'] = True
+        health_info['runpod_api_status'] = response.status_code
+        health_info['runpod_api_response_time'] = response.elapsed.total_seconds()
+        
+        if response.status_code == 200:
+            health_info['runpod_api_functional'] = True
+        else:
+            health_info['runpod_api_functional'] = False
+            health_info['runpod_api_error'] = response.text
             
     except Exception as e:
-        health_info['api_reachable'] = False
-        health_info['api_error'] = str(e)
+        health_info['runpod_api_reachable'] = False
+        health_info['runpod_api_error'] = str(e)
     
     # Test actual TTS generation
     try:
@@ -272,7 +434,8 @@ def get_tts_with_fallback_chain(text):
     Try multiple TTS methods in order with comprehensive fallback
     """
     methods = [
-        ('Primary API', lambda: generate_tts(text, force_gtts=False)),
+        ('RunPod kokkoro', lambda: generate_tts(text, model="kokkoro")),
+        ('RunPod chatterbox', lambda: generate_tts(text, model="chatterbox")),
         ('gTTS Fallback', lambda: generate_gtts_fallback(text)),
         ('Emergency Text', lambda: create_emergency_response())
     ]
@@ -297,3 +460,60 @@ def create_emergency_response():
     Create a simple text response when all audio generation fails
     """
     return "TEXT_ONLY_RESPONSE"
+
+def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS system."):
+    """
+    Test function specifically for RunPod TTS integration
+    """
+    logger.info("=== RunPod TTS Integration Test ===")
+    logger.info(f"Testing with text: '{test_text}'")
+    
+    results = {}
+    
+    # Test both models
+    for model in AVAILABLE_MODELS:
+        logger.info(f"\nTesting model: {model}")
+        try:
+            result = generate_runpod_tts(test_text, model)
+            if result:
+                results[model] = {
+                    'status': 'success',
+                    'url': result,
+                    'file_path': os.path.join(settings.BASE_DIR, result.lstrip('/'))
+                }
+                
+                # Check if file exists
+                full_path = os.path.join(settings.BASE_DIR, result.lstrip('/'))
+                if os.path.exists(full_path):
+                    file_size = os.path.getsize(full_path)
+                    results[model]['file_size'] = file_size
+                    logger.info(f"✓ {model} model successful: {result} ({file_size} bytes)")
+                else:
+                    results[model]['status'] = 'file_not_found'
+                    logger.error(f"✗ {model} model: File not found at {full_path}")
+            else:
+                results[model] = {'status': 'failed', 'error': 'No result returned'}
+                logger.error(f"✗ {model} model failed")
+        except Exception as e:
+            results[model] = {'status': 'error', 'error': str(e)}
+            logger.error(f"✗ {model} model error: {e}")
+    
+    # Test fallback chain
+    logger.info("\nTesting complete fallback chain...")
+    try:
+        fallback_result = get_tts_with_fallback_chain(test_text)
+        if fallback_result:
+            results['fallback_chain'] = {'status': 'success', 'result': fallback_result}
+            logger.info(f"✓ Fallback chain successful: {fallback_result}")
+        else:
+            results['fallback_chain'] = {'status': 'failed'}
+            logger.error("✗ Fallback chain failed")
+    except Exception as e:
+        results['fallback_chain'] = {'status': 'error', 'error': str(e)}
+        logger.error(f"✗ Fallback chain error: {e}")
+    
+    logger.info("\n=== Test Results Summary ===")
+    for key, value in results.items():
+        logger.info(f"{key}: {value}")
+    
+    return results

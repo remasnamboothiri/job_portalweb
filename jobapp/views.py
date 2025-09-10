@@ -492,43 +492,6 @@ def job_detail(request, job_id):
 
 
 
-#is loged in as a recruiter only 
-# def add_candidates(request, job_id):
-#     # Ensure only recruiters can access this page
-#     if not request.user.is_authenticated or not request.user.is_recruiter:
-#         messages.error(request, 'Only recruiters can access this page.')
-#         return redirect('login')
-    
-#     # Get the job and ensure the recruiter owns it
-#     job = get_object_or_404(Job, id=job_id, posted_by=request.user)
-    
-#     if request.method == 'POST':
-#         # Handle candidate addition form submission
-#         candidate_name = request.POST.get('candidate_name')
-#         candidate_email = request.POST.get('candidate_email')
-#         candidate_phone = request.POST.get('candidate_phone')
-#         candidate_resume = request.FILES.get('candidate_resume')
-        
-#         # Create and save the candidate
-#         candidate = Candidate.objects.create(
-#             job=job,
-#             name=candidate_name,
-#             email=candidate_email,
-#             phone=candidate_phone,
-#             resume=candidate_resume,
-#             added_by=request.user
-#         )
-        
-#         messages.success(request, f'Candidate {candidate_name} added successfully!')
-#         return redirect('add_candidates', job_id=job_id)
-    
-#     # Get all candidates for this job to display
-#     candidates = Candidate.objects.filter(job=job)
-    
-#     return render(request, 'jobapp/add_candidates.html', {
-#         'job': job,
-#         'candidates': candidates
-#     })
 
 
 

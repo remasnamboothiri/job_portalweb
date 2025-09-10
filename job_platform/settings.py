@@ -311,3 +311,7 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+# RunPod TTS Configuration
+RUNPOD_API_KEY = config('RUNPOD_API_KEY', default='')
+JWT_SECRET = config('JWT_SECRET', default='')

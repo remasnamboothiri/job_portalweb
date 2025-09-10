@@ -198,6 +198,29 @@ class Interview(models.Model):
     recording_path = models.CharField(max_length=500, blank=True, null=True, help_text="Path to the recorded interview file")
     recording_duration = models.FloatField(blank=True, null=True, help_text="Duration of recording in seconds")
     is_recorded = models.BooleanField(default=False, help_text="Whether this interview was recorded")
+    
+    # Interview Results Fields
+    questions_asked = models.TextField(blank=True, null=True, help_text="JSON data of questions asked during interview")
+    answers_given = models.TextField(blank=True, null=True, help_text="JSON data of candidate answers")
+    overall_score = models.FloatField(blank=True, null=True, help_text="Overall interview score out of 10")
+    technical_score = models.FloatField(blank=True, null=True, help_text="Technical skills score out of 10")
+    communication_score = models.FloatField(blank=True, null=True, help_text="Communication skills score out of 10")
+    problem_solving_score = models.FloatField(blank=True, null=True, help_text="Problem solving score out of 10")
+    ai_feedback = models.TextField(blank=True, null=True, help_text="AI-generated feedback about the candidate")
+    recommendation = models.CharField(
+        max_length=20,
+        choices=[
+            ('highly_recommended', 'Highly Recommended'),
+            ('recommended', 'Recommended'),
+            ('maybe', 'Maybe'),
+            ('not_recommended', 'Not Recommended'),
+        ],
+        blank=True,
+        null=True,
+        help_text="AI recommendation for hiring"
+    )
+    completed_at = models.DateTimeField(blank=True, null=True, help_text="When the interview was completed")
+    results_generated_at = models.DateTimeField(blank=True, null=True, help_text="When AI results were generated")
 
     def save(self, *args, **kwargs):
         if not self.uuid:
@@ -237,8 +260,33 @@ class Interview(models.Model):
     @property
     def is_registered_candidate(self):
         """Check if candidate is a registered user"""
-        return self.candidate is not None    
+        return self.candidate is not None
     
+    @property
+    def has_results(self):
+        """Check if interview has results generated"""
+        return bool(self.overall_score or self.ai_feedback or self.recommendation)
+    
+    @property
+    def is_completed(self):
+        """Check if interview is completed"""
+        return self.status == 'completed' and self.completed_at is not None
+    
+    def get_recommendation_display_color(self):
+        """Get color class for recommendation display"""
+        colors = {
+            'highly_recommended': 'success',
+            'recommended': 'info', 
+            'maybe': 'warning',
+            'not_recommended': 'danger'
+        }
+        return colors.get(self.recommendation, 'secondary')
+    
+    def mark_completed(self):
+        """Mark interview as completed"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.save()
     
     def __str__(self):
         return f"Interview for {self.job.title} - {self.candidate_name}"

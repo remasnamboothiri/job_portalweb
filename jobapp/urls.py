@@ -82,6 +82,9 @@ urlpatterns = [
     # API endpoint for candidate email
     path('api/candidate/<int:candidate_id>/email/', views.get_candidate_email, name='get_candidate_email'),
     
+    # Test interview results
+    path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
+    
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),
     

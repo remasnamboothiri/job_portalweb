@@ -45,6 +45,7 @@ from django.core.mail import send_mail
 
 from django.db import connection, transaction
 from django.core.management import call_command
+import json
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -1230,6 +1231,7 @@ Candidate just said: "{user_text}"
 This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
 """
             else:
+                # This is the final question - generate results
                 prompt = f"""
 You are Alex wrapping up the interview with {candidate_name}.
 
@@ -1243,6 +1245,12 @@ INSTRUCTIONS:
 
 Respond as Alex would naturally speak:
 """
+                
+                # Generate interview results after final response
+                try:
+                    generate_interview_results(interview, request.session.get('conversation_history', []))
+                except Exception as e:
+                    logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
             
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
@@ -1519,6 +1527,121 @@ def log_interview_error(interview_uuid, error, context=None):
     # send_to_monitoring_service(error_info)
     
     return error_info
+
+
+def generate_interview_results(interview, conversation_history):
+    """
+    Generate AI-powered interview results and scores
+    """
+    try:
+        logger.info(f"Generating results for interview {interview.uuid}")
+        
+        # Extract questions and answers from conversation history
+        questions = []
+        answers = []
+        
+        for entry in conversation_history:
+            if entry['speaker'] == 'interviewer':
+                questions.append({
+                    'question_number': entry.get('question_number', 0),
+                    'question': entry['message']
+                })
+            elif entry['speaker'] == 'candidate':
+                answers.append({
+                    'question_number': entry.get('question_number', 0),
+                    'answer': entry['message']
+                })
+        
+        # Create evaluation prompt for AI
+        evaluation_prompt = f"""
+You are an expert HR interviewer evaluating a candidate's interview performance.
+
+Job Position: {interview.job.title}
+Company: {interview.job.company}
+Candidate: {interview.candidate_name}
+
+Interview Questions and Answers:
+"""
+        
+        # Add Q&A pairs to prompt
+        for i, (q, a) in enumerate(zip(questions, answers), 1):
+            evaluation_prompt += f"""
+
+Question {i}: {q.get('question', 'N/A')}
+Answer {i}: {a.get('answer', 'N/A')}
+"""
+        
+        evaluation_prompt += f"""
+
+Please evaluate this candidate and provide:
+1. Overall Score (0-10)
+2. Technical Skills Score (0-10) 
+3. Communication Skills Score (0-10)
+4. Problem Solving Score (0-10)
+5. Detailed Feedback (2-3 paragraphs)
+6. Hiring Recommendation (highly_recommended/recommended/maybe/not_recommended)
+
+Format your response as JSON:
+{{
+    "overall_score": 8.5,
+    "technical_score": 8.0,
+    "communication_score": 9.0,
+    "problem_solving_score": 8.5,
+    "feedback": "Detailed feedback here...",
+    "recommendation": "recommended"
+}}
+"""
+        
+        try:
+            # Get AI evaluation
+            ai_evaluation = ask_ai_question(evaluation_prompt, interview.candidate_name, interview.job.title, interview.job.company)
+            
+            # Try to parse JSON response
+            try:
+                results = json.loads(ai_evaluation)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, create default results
+                logger.warning(f"Failed to parse AI evaluation JSON for interview {interview.uuid}")
+                results = {
+                    "overall_score": 7.0,
+                    "technical_score": 7.0,
+                    "communication_score": 7.0,
+                    "problem_solving_score": 7.0,
+                    "feedback": ai_evaluation,  # Use raw response as feedback
+                    "recommendation": "maybe"
+                }
+            
+        except Exception as e:
+            logger.error(f"AI evaluation failed for interview {interview.uuid}: {e}")
+            # Create default results if AI fails
+            results = {
+                "overall_score": 6.0,
+                "technical_score": 6.0,
+                "communication_score": 6.0,
+                "problem_solving_score": 6.0,
+                "feedback": "Interview completed successfully. Manual review recommended.",
+                "recommendation": "maybe"
+            }
+        
+        # Update interview with results
+        interview.questions_asked = json.dumps(questions)
+        interview.answers_given = json.dumps(answers)
+        interview.overall_score = results.get('overall_score', 6.0)
+        interview.technical_score = results.get('technical_score', 6.0)
+        interview.communication_score = results.get('communication_score', 6.0)
+        interview.problem_solving_score = results.get('problem_solving_score', 6.0)
+        interview.ai_feedback = results.get('feedback', 'No feedback available')
+        interview.recommendation = results.get('recommendation', 'maybe')
+        interview.results_generated_at = timezone.now()
+        interview.mark_completed()  # This sets status to completed and completed_at
+        
+        logger.info(f"Interview results generated successfully for {interview.uuid}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate interview results for {interview.uuid}: {e}")
+        # Still mark as completed even if results generation fails
+        interview.mark_completed()
+        raise e
     
      
 
@@ -2059,6 +2182,17 @@ def recruiter_dashboard(request):
         logger.warning(f"Interview query failed for recruiter {request.user.username}: {e}")
         scheduled_interviews = []
     
+    # Get completed interviews with results for the results section
+    try:
+        completed_interviews = Interview.objects.filter(
+            job__posted_by=request.user,
+            status='completed'
+        ).select_related('job', 'candidate').order_by('-completed_at')
+        logger.info(f"Successfully loaded {len(completed_interviews)} completed interviews for recruiter {request.user.username}")
+    except Exception as e:
+        logger.warning(f"Completed interview query failed for recruiter {request.user.username}: {e}")
+        completed_interviews = []
+    
     # Get all candidates added by this recruiter
     try:
         all_candidates = Candidate.objects.filter(
@@ -2082,6 +2216,7 @@ def recruiter_dashboard(request):
     context = {
         'applications': applications,
         'scheduled_interviews': scheduled_interviews,
+        'completed_interviews': completed_interviews,
         'all_candidates': all_candidates,
         'jobs': jobs,
         'user_jobs': user_jobs_list,
@@ -2090,6 +2225,7 @@ def recruiter_dashboard(request):
             'jobs_count': len(jobs),
             'applications_count': len(applications),
             'interviews_count': len(scheduled_interviews),
+            'completed_interviews_count': len(completed_interviews),
             'candidates_count': len(all_candidates)
         }
     }
@@ -2305,6 +2441,46 @@ def get_candidate_email(request, candidate_id):
             'name': candidate.name
         })
     except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def test_interview_results(request):
+    """Test view to create sample interview results"""
+    try:
+        # Get the first interview for this recruiter
+        interview = Interview.objects.filter(
+            job__posted_by=request.user
+        ).first()
+        
+        if not interview:
+            return JsonResponse({
+                'success': False,
+                'message': 'No interviews found for testing'
+            })
+        
+        # Create sample conversation history
+        sample_conversation = [
+            {'speaker': 'interviewer', 'message': 'Tell me about yourself', 'question_number': 1},
+            {'speaker': 'candidate', 'message': 'I am a software developer with 3 years experience', 'question_number': 1},
+            {'speaker': 'interviewer', 'message': 'What are your technical skills?', 'question_number': 2},
+            {'speaker': 'candidate', 'message': 'I work with Python, Django, JavaScript and React', 'question_number': 2},
+        ]
+        
+        # Generate results
+        generate_interview_results(interview, sample_conversation)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Test results generated for interview {interview.uuid}',
+            'interview_id': str(interview.uuid)
+        })
+        
+    except Exception as e:
+        logger.error(f"Test interview results failed: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)

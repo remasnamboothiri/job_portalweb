@@ -83,8 +83,24 @@
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
-            max-height: 300px;
+            height: 200px;
             overflow-y: auto;
+            position: relative;
+        }
+        .current-text {
+            background: transparent;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            min-height: 50px;
+            color: white;
+        }
+        .live-text {
+            background: transparent;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 40px;
+            color: white;
         }
         .transcript-item {
             margin: 10px 0;
@@ -134,8 +150,12 @@
         </div>
         
         <div class="transcript-section">
-            <h4>Interview Transcript</h4>
-            <div id="transcript"></div>
+            <div class="current-text" id="currentQuestion">
+                <strong>Interviewer:</strong> {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}
+            </div>
+            <div class="live-text" id="liveResponse">
+                <strong>You:</strong> <em>Click microphone to speak...</em>
+            </div>
         </div>
         
         <div class="controls">
@@ -187,14 +207,19 @@
             }
         }
         
-        // Add message to transcript
-        function addToTranscript(message, isCandidate = false) {
-            const transcript = document.getElementById('transcript');
-            const item = document.createElement('div');
-            item.className = 'transcript-item ' + (isCandidate ? 'candidate-msg' : 'interviewer-msg');
-            item.innerHTML = `<strong>${isCandidate ? 'You' : 'Interviewer'}:</strong> ${message}`;
-            transcript.appendChild(item);
-            transcript.scrollTop = transcript.scrollHeight;
+        // Show current question
+        function showCurrentQuestion(question) {
+            document.getElementById('currentQuestion').innerHTML = `<strong>Interviewer:</strong> ${question}`;
+        }
+        
+        // Show live candidate response
+        function showLiveResponse(text) {
+            document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> ${text}`;
+        }
+        
+        // Clear live response
+        function clearLiveResponse() {
+            document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> <em>Click microphone to speak...</em>`;
         }
         
         // Initialize speech recognition
@@ -223,16 +248,25 @@
                 };
                 
                 recognition.onresult = function(event) {
+                    let interimTranscript = '';
                     let finalTranscript = '';
                     
                     for (let i = event.resultIndex; i < event.results.length; i++) {
                         if (event.results[i].isFinal) {
                             finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
                         }
                     }
                     
+                    // Show live text as user speaks
+                    if (interimTranscript) {
+                        showLiveResponse(interimTranscript);
+                    }
+                    
+                    // Send final transcript
                     if (finalTranscript.trim()) {
-                        addToTranscript(finalTranscript, true);
+                        showLiveResponse(finalTranscript);
                         sendResponse(finalTranscript);
                     }
                 };
@@ -269,8 +303,13 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Add AI response to transcript
-                    addToTranscript(data.response, false);
+                    // Show new question
+                    showCurrentQuestion(data.response);
+                    
+                    // Clear live response for next answer
+                    setTimeout(() => {
+                        clearLiveResponse();
+                    }, 1000);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
@@ -323,9 +362,8 @@
             initSpeech();
             setInterval(updateTimer, 1000);
             
-            // Add initial question to transcript
-            const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
-            addToTranscript(initialQuestion, false);
+            // Clear live response initially
+            clearLiveResponse();
             
             // Play initial audio if available
             const initialAudio = '{{ audio_url|safe }}';

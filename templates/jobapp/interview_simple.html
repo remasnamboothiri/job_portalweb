@@ -16,6 +16,7 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
+            padding-bottom: 100px;
         }
         .video-grid {
             display: grid;
@@ -55,8 +56,12 @@
             font-weight: bold;
         }
         .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             text-align: center;
-            margin: 20px 0;
+            z-index: 1000;
         }
         .btn {
             background: #34a853;
@@ -82,7 +87,7 @@
             background: #303134;
             padding: 20px;
             border-radius: 12px;
-            margin: 20px 0;
+            margin: 20px 0 120px 0;
             height: 200px;
             overflow-y: auto;
             position: relative;
@@ -222,6 +227,8 @@
             document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> <em>Click microphone to speak...</em>`;
         }
         
+        let collectedText = '';
+        
         // Initialize speech recognition
         function initSpeech() {
             if ('webkitSpeechRecognition' in window) {
@@ -232,6 +239,7 @@
                 
                 recognition.onstart = function() {
                     isListening = true;
+                    collectedText = '';
                     document.getElementById('micBtn').classList.add('recording');
                     document.getElementById('micBtn').innerHTML = '🔴 Speaking... (Click to stop)';
                 };
@@ -259,15 +267,15 @@
                         }
                     }
                     
-                    // Show live text as user speaks
-                    if (interimTranscript) {
-                        showLiveResponse(interimTranscript);
+                    // Collect all text but don't send yet
+                    if (finalTranscript) {
+                        collectedText += finalTranscript;
                     }
                     
-                    // Send final transcript
-                    if (finalTranscript.trim()) {
-                        showLiveResponse(finalTranscript);
-                        sendResponse(finalTranscript);
+                    // Show live text (collected + interim)
+                    const displayText = collectedText + interimTranscript;
+                    if (displayText.trim()) {
+                        showLiveResponse(displayText);
                     }
                 };
             }
@@ -278,12 +286,20 @@
             if (!recognition) return;
             
             if (isListening) {
+                // Stop listening and send collected response
                 isListening = false;
                 recognition.stop();
                 document.getElementById('micBtn').classList.remove('recording');
                 document.getElementById('micBtn').innerHTML = '🎤 Start Speaking';
+                
+                // Send the collected text to server
+                if (collectedText.trim()) {
+                    sendResponse(collectedText.trim());
+                }
             } else {
+                // Start listening
                 isListening = true;
+                collectedText = '';
                 recognition.start();
             }
         }

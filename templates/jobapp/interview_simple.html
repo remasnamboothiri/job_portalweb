@@ -14,23 +14,26 @@
             padding: 20px;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         .video-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 2fr;
             gap: 20px;
             margin-bottom: 20px;
         }
         .video-box {
             background: #303134;
             border-radius: 12px;
-            height: 300px;
+            height: 400px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
+        }
+        .candidate-box {
+            height: 500px;
         }
         .ai-avatar {
             font-size: 80px;
@@ -40,6 +43,16 @@
             height: 100%;
             object-fit: cover;
             border-radius: 12px;
+        }
+        .participant-name {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
         }
         .controls {
             text-align: center;
@@ -62,12 +75,29 @@
             background: #ea4335;
             animation: pulse 1s infinite;
         }
-        .question-display {
+        .btn.camera-off {
+            background: #ea4335;
+        }
+        .transcript-section {
             background: #303134;
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
-            text-align: center;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .transcript-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .interviewer-msg {
+            background: #1a73e8;
+            text-align: left;
+        }
+        .candidate-msg {
+            background: #34a853;
+            text-align: right;
         }
         .stats {
             display: flex;
@@ -95,18 +125,22 @@
         <div class="video-grid">
             <div class="video-box">
                 <div class="ai-avatar">🤖</div>
+                <div class="participant-name">Alex - AI Interviewer</div>
             </div>
-            <div class="video-box">
+            <div class="video-box candidate-box">
                 <video id="userVideo" autoplay muted playsinline></video>
+                <div class="participant-name">{{ candidate_name|default:"You" }} - Candidate</div>
             </div>
         </div>
         
-        <div class="question-display">
-            <div id="questionText">{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}</div>
+        <div class="transcript-section">
+            <h4>Interview Transcript</h4>
+            <div id="transcript"></div>
         </div>
         
         <div class="controls">
-            <button class="btn" id="micBtn" onclick="toggleMic()">🎤 Click to Speak</button>
+            <button class="btn" id="micBtn" onclick="toggleMic()">🎤 Start Speaking</button>
+            <button class="btn" id="cameraBtn" onclick="toggleCamera()">📹 Camera On</button>
             <button class="btn" id="endBtn" onclick="endInterview()" style="background: #ea4335;">📞 End Interview</button>
         </div>
     </div>
@@ -119,40 +153,88 @@
         let isListening = false;
         let questionCount = 1;
         let timeLeft = 15 * 60;
+        let userStream = null;
+        let isCameraOn = true;
         
         // Initialize camera
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('userVideo').srcObject = stream;
+                userStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('userVideo').srcObject = userStream;
             } catch (error) {
                 console.error('Camera error:', error);
             }
+        }
+        
+        // Toggle camera
+        function toggleCamera() {
+            if (!userStream) return;
+            
+            const videoTracks = userStream.getVideoTracks();
+            isCameraOn = !isCameraOn;
+            
+            videoTracks.forEach(track => {
+                track.enabled = isCameraOn;
+            });
+            
+            const btn = document.getElementById('cameraBtn');
+            if (isCameraOn) {
+                btn.innerHTML = '📹 Camera On';
+                btn.classList.remove('camera-off');
+            } else {
+                btn.innerHTML = '📹 Camera Off';
+                btn.classList.add('camera-off');
+            }
+        }
+        
+        // Add message to transcript
+        function addToTranscript(message, isCandidate = false) {
+            const transcript = document.getElementById('transcript');
+            const item = document.createElement('div');
+            item.className = 'transcript-item ' + (isCandidate ? 'candidate-msg' : 'interviewer-msg');
+            item.innerHTML = `<strong>${isCandidate ? 'You' : 'Interviewer'}:</strong> ${message}`;
+            transcript.appendChild(item);
+            transcript.scrollTop = transcript.scrollHeight;
         }
         
         // Initialize speech recognition
         function initSpeech() {
             if ('webkitSpeechRecognition' in window) {
                 recognition = new webkitSpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.continuous = true;
+                recognition.interimResults = true;
                 recognition.lang = 'en-US';
                 
                 recognition.onstart = function() {
                     isListening = true;
                     document.getElementById('micBtn').classList.add('recording');
-                    document.getElementById('micBtn').innerHTML = '🔴 Listening...';
+                    document.getElementById('micBtn').innerHTML = '🔴 Speaking... (Click to stop)';
                 };
                 
                 recognition.onend = function() {
-                    isListening = false;
-                    document.getElementById('micBtn').classList.remove('recording');
-                    document.getElementById('micBtn').innerHTML = '🎤 Click to Speak';
+                    if (isListening) {
+                        // Auto-restart if manually stopped
+                        setTimeout(() => {
+                            if (isListening) {
+                                recognition.start();
+                            }
+                        }, 100);
+                    }
                 };
                 
                 recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    sendResponse(transcript);
+                    let finalTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    
+                    if (finalTranscript.trim()) {
+                        addToTranscript(finalTranscript, true);
+                        sendResponse(finalTranscript);
+                    }
                 };
             }
         }
@@ -162,8 +244,12 @@
             if (!recognition) return;
             
             if (isListening) {
+                isListening = false;
                 recognition.stop();
+                document.getElementById('micBtn').classList.remove('recording');
+                document.getElementById('micBtn').innerHTML = '🎤 Start Speaking';
             } else {
+                isListening = true;
                 recognition.start();
             }
         }
@@ -183,8 +269,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Update question
-                    document.getElementById('questionText').textContent = data.response;
+                    // Add AI response to transcript
+                    addToTranscript(data.response, false);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
@@ -223,6 +309,10 @@
         
         // End interview
         function endInterview() {
+            if (recognition && isListening) {
+                isListening = false;
+                recognition.stop();
+            }
             alert('Interview completed! Redirecting to dashboard...');
             window.location.href = '{% url "jobseeker_dashboard" %}';
         }
@@ -232,6 +322,10 @@
             initCamera();
             initSpeech();
             setInterval(updateTimer, 1000);
+            
+            // Add initial question to transcript
+            const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
+            addToTranscript(initialQuestion, false);
             
             // Play initial audio if available
             const initialAudio = '{{ audio_url|safe }}';

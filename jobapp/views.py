@@ -929,11 +929,6 @@ def interview_ready(request, interview_uuid):
         # Get the interview record
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
-        # Check if the user is authorized (optional security check)
-        if hasattr(request.user, 'profile'):
-            if interview.candidate != request.user:
-                return HttpResponse('Unauthorized access to this interview.', status=403)
-        
         return render(request, 'jobapp/interview_ready.html', {
             'interview': interview,
         })

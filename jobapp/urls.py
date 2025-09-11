@@ -85,6 +85,9 @@ urlpatterns = [
     # Test interview results
     path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
     
+    # Debug TTS endpoint
+    path('debug-tts/', views.debug_tts_system, name='debug_tts_system'),
+    
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),
     

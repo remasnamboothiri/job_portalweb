@@ -26,7 +26,7 @@ if not RUNPOD_API_KEY:
 if not JWT_SECRET:
     logger.warning("JWT_SECRET not found in Django settings")
 
-def generate_tts(text, model="kokkoro", force_gtts=False):
+def generate_tts(text, model="kokkoro", force_gtts=True):  # Temporarily force gTTS
     """
     Generate TTS audio using RunPod API with gTTS fallback
     Models available: kokkoro, chatterbox
@@ -101,12 +101,18 @@ def generate_runpod_tts(text, model="kokkoro"):
         
         # Make API request
         logger.info(f"Sending request to RunPod API: {RUNPOD_ENDPOINT}")
+        logger.info(f"Request headers: {headers}")
+        logger.info(f"Request payload: {payload}")
+        
         response = requests.post(
             RUNPOD_ENDPOINT,
             headers=headers,
             json=payload,
             timeout=30
         )
+        
+        logger.info(f"RunPod API response status: {response.status_code}")
+        logger.info(f"RunPod API response headers: {dict(response.headers)}")
         
         if response.status_code == 200:
             result = response.json()
@@ -164,7 +170,16 @@ def generate_runpod_tts(text, model="kokkoro"):
             else:
                 logger.error(f"No output in RunPod response: {result}")
         else:
-            logger.error(f"RunPod API error: {response.status_code} - {response.text}")
+            logger.error(f"RunPod API error: {response.status_code}")
+            logger.error(f"Response text: {response.text}")
+            logger.error(f"Response headers: {dict(response.headers)}")
+            
+            # Try to parse error response
+            try:
+                error_data = response.json()
+                logger.error(f"Error JSON: {error_data}")
+            except:
+                logger.error("Could not parse error response as JSON")
             
     except requests.exceptions.Timeout:
         logger.error("RunPod API request timed out")

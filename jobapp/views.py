@@ -2419,6 +2419,43 @@ def get_candidate_email(request, candidate_id):
             'error': str(e)
         })
 
+def debug_tts_system(request):
+    """Debug TTS system to identify RunPod issues"""
+    from jobapp.tts import check_tts_system, test_runpod_integration, generate_tts
+    
+    debug_info = {
+        'timestamp': timezone.now().isoformat(),
+        'runpod_api_key_present': bool(getattr(settings, 'RUNPOD_API_KEY', '')),
+        'jwt_secret_present': bool(getattr(settings, 'JWT_SECRET', '')),
+    }
+    
+    try:
+        # Test system health
+        health_check = check_tts_system()
+        debug_info['health_check'] = health_check
+        
+        # Test RunPod integration
+        runpod_test = test_runpod_integration("Hello, this is a test of the Kokkoro voice model.")
+        debug_info['runpod_test'] = runpod_test
+        
+        # Test actual TTS generation
+        test_audio = generate_tts("Testing Kokkoro voice generation", model="kokkoro")
+        debug_info['test_audio_result'] = test_audio
+        
+        if test_audio:
+            debug_info['audio_file_path'] = test_audio
+            full_path = os.path.join(settings.BASE_DIR, test_audio.lstrip('/'))
+            debug_info['file_exists'] = os.path.exists(full_path)
+            if os.path.exists(full_path):
+                debug_info['file_size'] = os.path.getsize(full_path)
+        
+    except Exception as e:
+        debug_info['error'] = str(e)
+        import traceback
+        debug_info['traceback'] = traceback.format_exc()
+    
+    return JsonResponse(debug_info, indent=2)
+
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def test_interview_results(request):

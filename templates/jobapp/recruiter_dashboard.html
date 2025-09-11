@@ -1,4 +1,5 @@
 {% load static %}
+{% load interview_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -554,7 +555,12 @@
 
       <!-- NEW: Interview Results Section -->
       <div id="interview_results_section" class="dashboard-section" style="display:none;">
-        <h3 class="mb-3">Interview Results</h3>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="mb-0">Interview Results</h3>
+          <button class="btn btn-outline-secondary btn-sm" onclick="testInterviewResults()" title="Generate test results for development">
+            <i class="fas fa-flask"></i> Test Results
+          </button>
+        </div>
         <p class="text-muted mb-4">View AI-generated interview results and candidate evaluations.</p>
         
         {% for interview in completed_interviews %}
@@ -624,6 +630,120 @@
               </div>
             </div>
           </div>
+          
+          <!-- Interview Result Detail Modal -->
+          <div class="modal fade" id="interviewResultModal{{ interview.id }}" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Interview Results - {{ interview.candidate_name }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="row mb-4">
+                    <div class="col-md-6">
+                      <h6>Interview Information</h6>
+                      <p><strong>Position:</strong> {{ interview.job.title }}</p>
+                      <p><strong>Company:</strong> {{ interview.job.company }}</p>
+                      <p><strong>Candidate:</strong> {{ interview.candidate_name }}</p>
+                      <p><strong>Email:</strong> {{ interview.candidate_email }}</p>
+                      <p><strong>Date:</strong> {{ interview.completed_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Scores Summary</h6>
+                      <div class="row">
+                        <div class="col-6">
+                          <div class="text-center p-2 border rounded">
+                            <div class="h5 text-primary">{{ interview.overall_score|floatformat:1 }}/10</div>
+                            <small>Overall</small>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center p-2 border rounded">
+                            <div class="h6">{{ interview.technical_score|floatformat:1 }}/10</div>
+                            <small>Technical</small>
+                          </div>
+                        </div>
+                        <div class="col-6 mt-2">
+                          <div class="text-center p-2 border rounded">
+                            <div class="h6">{{ interview.communication_score|floatformat:1 }}/10</div>
+                            <small>Communication</small>
+                          </div>
+                        </div>
+                        <div class="col-6 mt-2">
+                          <div class="text-center p-2 border rounded">
+                            <div class="h6">{{ interview.problem_solving_score|floatformat:1 }}/10</div>
+                            <small>Problem Solving</small>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mt-3 text-center">
+                        <span class="badge bg-{{ interview.get_recommendation_display_color }} fs-6">
+                          {{ interview.get_recommendation_display }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Questions and Answers -->
+                  <div class="mb-4">
+                    <h6>Interview Questions & Answers</h6>
+                    {% if interview.questions_asked and interview.answers_given %}
+                      <div class="accordion" id="qaAccordion{{ interview.id }}">
+                        {% for question in interview.questions_asked|from_json %}
+                          <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ interview.id }}_{{ forloop.counter }}">
+                              <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ interview.id }}_{{ forloop.counter }}">
+                                <strong>Q{{ forloop.counter }}:</strong>&nbsp;{{ question.question|truncatewords:10 }}
+                              </button>
+                            </h2>
+                            <div id="collapse{{ interview.id }}_{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#qaAccordion{{ interview.id }}">
+                              <div class="accordion-body">
+                                <div class="mb-3">
+                                  <strong class="text-primary">Question:</strong>
+                                  <p class="mt-1">{{ question.question }}</p>
+                                </div>
+                                {% for answer in interview.answers_given|from_json %}
+                                  {% if answer.question_number == question.question_number %}
+                                    <div>
+                                      <strong class="text-success">Answer:</strong>
+                                      <p class="mt-1">{{ answer.answer }}</p>
+                                    </div>
+                                  {% endif %}
+                                {% endfor %}
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Questions and answers data not available for this interview.
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- AI Feedback -->
+                  <div class="mb-4">
+                    <h6>AI Feedback</h6>
+                    <div class="bg-light p-3 rounded">
+                      {{ interview.ai_feedback|linebreaks }}
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  {% if interview.recording_path %}
+                  <a href="{{ interview.recording_path }}" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-play"></i> View Recording
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          
           {% endif %}
         {% empty %}
           <div class="alert alert-info text-center">
@@ -1001,6 +1121,32 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error deleting job');
+            });
+        }
+    }
+    
+    // Test interview results function
+    function testInterviewResults() {
+        if (confirm('This will generate test interview results for development. Continue?')) {
+            fetch('/test-interview-results/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Success! ${data.message}\n\nCandidate: ${data.candidate_name}\nJob: ${data.job_title}`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || data.error));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error generating test results');
             });
         }
     }

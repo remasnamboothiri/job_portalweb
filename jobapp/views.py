@@ -1206,9 +1206,21 @@ Respond as Alex would naturally speak:
                 
                 # Generate interview results after final response
                 try:
-                    generate_interview_results(interview, request.session.get('conversation_history', []))
+                    conversation_history = request.session.get('conversation_history', [])
+                    # Add the final candidate response to history before generating results
+                    conversation_history.append({
+                        'speaker': 'candidate',
+                        'message': user_text,
+                        'question_number': question_count
+                    })
+                    
+                    logger.info(f"Generating final interview results for {interview_uuid} with {len(conversation_history)} conversation entries")
+                    generate_interview_results(interview, conversation_history)
+                    logger.info(f"Interview results generation completed for {interview_uuid}")
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
+                    import traceback
+                    logger.error(f"Full traceback: {traceback.format_exc()}")
             
             try:
                 ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
@@ -1218,15 +1230,14 @@ Respond as Alex would naturally speak:
             
             logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
             
-            # Add AI response to conversation history
-            if question_count < 8:
-                conversation_history = request.session.get('conversation_history', [])
-                conversation_history.append({
-                    'speaker': 'interviewer',
-                    'message': ai_response,
-                    'question_number': question_count
-                })
-                request.session['conversation_history'] = conversation_history
+            # Add AI response to conversation history (for all questions including final)
+            conversation_history = request.session.get('conversation_history', [])
+            conversation_history.append({
+                'speaker': 'interviewer',
+                'message': ai_response,
+                'question_number': question_count
+            })
+            request.session['conversation_history'] = conversation_history
             
             # Generate TTS for response with enhanced error handling and fallback
             audio_path = None
@@ -1594,12 +1605,16 @@ Format your response as JSON:
         interview.mark_completed()  # This sets status to completed and completed_at
         
         logger.info(f"Interview results generated successfully for {interview.uuid}")
+        logger.info(f"Questions saved: {len(questions)}, Answers saved: {len(answers)}")
+        logger.info(f"Scores - Overall: {interview.overall_score}, Technical: {interview.technical_score}")
+        logger.info(f"Recommendation: {interview.recommendation}")
         
     except Exception as e:
         logger.error(f"Failed to generate interview results for {interview.uuid}: {e}")
         # Still mark as completed even if results generation fails
         interview.mark_completed()
-        raise e
+        # Don't raise the exception to prevent interview from failing
+        logger.warning(f"Interview {interview.uuid} marked as completed despite results generation failure")
     
      
 
@@ -2420,12 +2435,14 @@ def test_interview_results(request):
                 'message': 'No interviews found for testing'
             })
         
-        # Create sample conversation history
+        # Create sample conversation history with more realistic data
         sample_conversation = [
-            {'speaker': 'interviewer', 'message': 'Tell me about yourself', 'question_number': 1},
-            {'speaker': 'candidate', 'message': 'I am a software developer with 3 years experience', 'question_number': 1},
-            {'speaker': 'interviewer', 'message': 'What are your technical skills?', 'question_number': 2},
-            {'speaker': 'candidate', 'message': 'I work with Python, Django, JavaScript and React', 'question_number': 2},
+            {'speaker': 'interviewer', 'message': 'Hello! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this position?', 'question_number': 1},
+            {'speaker': 'candidate', 'message': 'Hi! I am a software developer with 3 years of experience in full-stack development. I have worked extensively with Python, Django, JavaScript, and React. I am particularly interested in this position because it offers opportunities to work on challenging projects and grow my skills in cloud technologies.', 'question_number': 1},
+            {'speaker': 'interviewer', 'message': 'That sounds great! Can you tell me about a challenging project you have worked on recently and how you approached solving the problems you encountered?', 'question_number': 2},
+            {'speaker': 'candidate', 'message': 'Recently, I worked on a e-commerce platform where we had performance issues with the database queries. I identified the bottlenecks using profiling tools, optimized the queries by adding proper indexes, and implemented caching strategies using Redis. This reduced the page load time by 60%.', 'question_number': 2},
+            {'speaker': 'interviewer', 'message': 'Excellent problem-solving approach! How do you handle working in a team environment, especially when there are conflicting opinions on technical decisions?', 'question_number': 3},
+            {'speaker': 'candidate', 'message': 'I believe in open communication and data-driven decisions. When there are conflicting opinions, I try to understand different perspectives, present the pros and cons of each approach, and if needed, create small prototypes to test the solutions. I also value team consensus and am willing to compromise when it benefits the overall project.', 'question_number': 3},
         ]
         
         # Generate results
@@ -2434,7 +2451,9 @@ def test_interview_results(request):
         return JsonResponse({
             'success': True,
             'message': f'Test results generated for interview {interview.uuid}',
-            'interview_id': str(interview.uuid)
+            'interview_id': str(interview.uuid),
+            'candidate_name': interview.candidate_name,
+            'job_title': interview.job.title if interview.job else 'N/A'
         })
         
     except Exception as e:

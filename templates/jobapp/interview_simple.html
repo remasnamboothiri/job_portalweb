@@ -12,11 +12,15 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
+            height: 100vh;
+            overflow: hidden;
         }
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding-bottom: 100px;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
         }
         .video-grid {
             display: grid;
@@ -87,25 +91,22 @@
             background: #303134;
             padding: 20px;
             border-radius: 12px;
-            margin: 20px 0 120px 0;
-            height: 200px;
-            overflow-y: auto;
+            margin: 20px 0;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
         }
-        .current-text {
+        .conversation-text {
             background: transparent;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
-            margin-bottom: 15px;
-            min-height: 50px;
             color: white;
-        }
-        .live-text {
-            background: transparent;
-            padding: 10px;
-            border-radius: 8px;
-            min-height: 40px;
-            color: white;
+            font-size: 18px;
+            line-height: 1.6;
+            text-align: center;
+            width: 100%;
         }
         .transcript-item {
             margin: 10px 0;
@@ -155,9 +156,7 @@
         </div>
         
         <div class="transcript-section">
-            <div class="current-text" id="currentQuestion">
-            </div>
-            <div class="live-text" id="liveResponse">
+            <div class="conversation-text" id="conversationArea">
             </div>
         </div>
         
@@ -212,7 +211,7 @@
         
         // Show current question with streaming effect
         function showCurrentQuestion(question) {
-            const element = document.getElementById('currentQuestion');
+            const element = document.getElementById('conversationArea');
             element.innerHTML = '';
             
             let index = 0;
@@ -220,31 +219,33 @@
                 if (index < question.length) {
                     element.innerHTML += question.charAt(index);
                     index++;
-                    setTimeout(streamText, 30); // Adjust speed here
+                    setTimeout(streamText, 30);
                 }
             };
             streamText();
         }
         
-        // Show live candidate response with streaming effect
-        function showLiveResponse(text) {
-            const element = document.getElementById('liveResponse');
+        // Show candidate response in same area after question disappears
+        function showCandidateResponse(text) {
+            const element = document.getElementById('conversationArea');
+            // Clear the question first
             element.innerHTML = '';
             
+            // Then stream the response
             let index = 0;
             const streamText = () => {
                 if (index < text.length) {
                     element.innerHTML += text.charAt(index);
                     index++;
-                    setTimeout(streamText, 20); // Faster for live response
+                    setTimeout(streamText, 20);
                 }
             };
             streamText();
         }
         
-        // Clear live response
-        function clearLiveResponse() {
-            document.getElementById('liveResponse').innerHTML = '';
+        // Clear conversation area
+        function clearConversation() {
+            document.getElementById('conversationArea').innerHTML = '';
         }
         
         let collectedText = '';
@@ -295,7 +296,7 @@
                     // Show live text (collected + interim) - direct display without streaming for real-time
                     const displayText = collectedText + interimTranscript;
                     if (displayText.trim()) {
-                        document.getElementById('liveResponse').innerHTML = displayText;
+                        document.getElementById('conversationArea').innerHTML = displayText;
                     }
                 };
             }
@@ -339,12 +340,9 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show new question
-                    showCurrentQuestion(data.response);
-                    
-                    // Clear live response for next answer
+                    // Wait a moment, then show new question
                     setTimeout(() => {
-                        clearLiveResponse();
+                        showCurrentQuestion(data.response);
                     }, 1000);
                     
                     // Update counter
@@ -398,8 +396,8 @@
             initSpeech();
             setInterval(updateTimer, 1000);
             
-            // Clear live response initially
-            clearLiveResponse();
+            // Clear conversation area initially
+            clearConversation();
             
             // Show initial question with streaming effect
             const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';

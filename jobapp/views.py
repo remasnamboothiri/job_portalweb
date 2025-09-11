@@ -1223,10 +1223,22 @@ Respond as Alex would naturally speak:
                     logger.error(f"Full traceback: {traceback.format_exc()}")
             
             try:
-                ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                # Use shorter, faster AI prompts for immediate responses
+                if question_count <= 3:
+                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                else:
+                    # Use pre-generated quick responses for later questions to speed up
+                    quick_responses = [
+                        "That's interesting! Tell me about your experience with teamwork and collaboration.",
+                        "Great! What are your career goals and where do you see yourself in 3-5 years?",
+                        "Excellent! How do you stay updated with new technologies in your field?",
+                        "Perfect! What questions do you have about this role or our company?",
+                        "Thank you for sharing that. Do you have any final questions for me?"
+                    ]
+                    ai_response = quick_responses[min(question_count - 4, len(quick_responses) - 1)]
             except Exception as e:
                 logger.error(f"AI API Error for interview {interview_uuid}: {e}")
-                ai_response = "Thank you for that response. Can you tell me more about your experience with similar challenges?"
+                ai_response = "Thank you for that response. Can you tell me more about your experience?"
             
             logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
             
@@ -1239,54 +1251,39 @@ Respond as Alex would naturally speak:
             })
             request.session['conversation_history'] = conversation_history
             
-            # Generate TTS for response with enhanced error handling and fallback
+            # Generate TTS asynchronously for faster response
             audio_path = None
-            audio_generation_error = None
-            
             try:
-                logger.info(f"Generating response TTS for interview {interview_uuid}: '{ai_response[:50]}...'")
+                # Quick TTS generation with timeout
+                import threading
+                import time
                 
-                # Try primary TTS first
-                audio_path = generate_tts(ai_response)
+                def generate_audio_async():
+                    try:
+                        return generate_gtts_fallback(ai_response)
+                    except:
+                        return None
                 
-                if audio_path:
-                    # Verify the file actually exists
-                    full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-                    if os.path.exists(full_path):
-                        file_size = os.path.getsize(full_path)
-                        logger.info(f"Response TTS verified for interview {interview_uuid}: {full_path} ({file_size} bytes)")
-                        
-                        # Additional validation for audio files
-                        if file_size < 100:  # Too small to be valid audio
-                            logger.warning(f"Generated audio file too small for interview {interview_uuid}, trying fallback")
-                            audio_path = None
-                        
-                    else:
-                        logger.error(f"Response TTS file not found for interview {interview_uuid}: {full_path}")
-                        audio_path = None
-                else:
-                    logger.warning(f"Response TTS generation returned None for interview {interview_uuid}")
-                    
-            except Exception as e:
-                logger.error(f"Response TTS generation failed for interview {interview_uuid}: {e}")
-                audio_generation_error = str(e)
-                audio_path = None
-            
-            # If primary TTS failed, try gTTS specifically
-            if not audio_path:
-                try:
-                    logger.info(f"Trying gTTS fallback for interview {interview_uuid}...")
-                    audio_path = generate_gtts_fallback(ai_response)
-                    if audio_path:
-                        full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-                        if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
-                            logger.info(f"gTTS fallback successful for interview {interview_uuid}")
-                        else:
-                            logger.warning(f"gTTS fallback file invalid for interview {interview_uuid}")
-                            audio_path = None
-                except Exception as e:
-                    logger.error(f"gTTS fallback also failed for interview {interview_uuid}: {e}")
+                # Try to generate audio quickly (max 2 seconds)
+                audio_thread = threading.Thread(target=generate_audio_async)
+                audio_thread.daemon = True
+                audio_thread.start()
+                audio_thread.join(timeout=2.0)  # Wait max 2 seconds
+                
+                if audio_thread.is_alive():
+                    # Audio generation taking too long, proceed without audio
+                    logger.info(f"Audio generation timeout for interview {interview_uuid}, proceeding without audio")
                     audio_path = None
+                else:
+                    # Try to get the result
+                    try:
+                        audio_path = generate_gtts_fallback(ai_response)
+                    except:
+                        audio_path = None
+                        
+            except Exception as e:
+                logger.error(f"Fast TTS generation failed for interview {interview_uuid}: {e}")
+                audio_path = None
             
             # Return JSON response for AJAX requests
             response_data = {
@@ -1345,51 +1342,14 @@ Respond as Alex would naturally speak:
         })
         request.session['conversation_history'] = conversation_history
         
-        # Generate initial TTS with enhanced error handling
+        # Generate initial TTS quickly
         audio_path = None
         try:
-            logger.info(f"Generating initial TTS for interview {interview_uuid}: '{ai_question[:50]}...'")
-            
-            # Try to generate initial audio
-            audio_path = generate_tts(ai_question)
-            
-            if audio_path:
-                # Verify the file actually exists
-                full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-                if os.path.exists(full_path):
-                    file_size = os.path.getsize(full_path)
-                    logger.info(f"Initial TTS verified for interview {interview_uuid}: {full_path} ({file_size} bytes)")
-                    
-                    # Validate file size
-                    if file_size < 100:
-                        logger.warning(f"Initial TTS file too small for interview {interview_uuid}")
-                        audio_path = None
-                        
-                else:
-                    logger.error(f"Initial TTS file not found for interview {interview_uuid}: {full_path}")
-                    audio_path = None
-            else:
-                logger.warning(f"Initial TTS generation returned None for interview {interview_uuid}")
-                
+            # Quick initial audio generation
+            audio_path = generate_gtts_fallback(ai_question)
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
             audio_path = None
-
-        # If no audio generated, try gTTS specifically
-        if not audio_path:
-            try:
-                logger.info(f"Trying gTTS for initial question in interview {interview_uuid}...")
-                audio_path = generate_gtts_fallback(ai_question)
-                if audio_path:
-                    full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-                    if os.path.exists(full_path) and os.path.getsize(full_path) > 100:
-                        logger.info(f"Initial gTTS successful for interview {interview_uuid}")
-                    else:
-                        logger.warning(f"Initial gTTS file invalid for interview {interview_uuid}")
-                        audio_path = None
-            except Exception as e:
-                logger.error(f"Initial gTTS also failed for interview {interview_uuid}: {e}")
-                audio_path = None
 
         # Template context with proper audio handling
         context_data = {

@@ -148,7 +148,7 @@
         <!-- Professional Interview Status Indicator -->
         <div class="interview-status recording" id="interviewStatus">
             <div class="status-dot"></div>
-            <span>LIVE INTERVIEW</span>
+            
         </div>
         
         <!-- Audio Level Indicator -->
@@ -277,7 +277,7 @@
                 if (index < question.length) {
                     element.innerHTML += question.charAt(index);
                     index++;
-                    setTimeout(streamText, 30);
+                    setTimeout(streamText, 15);
                 }
             };
             streamText();
@@ -380,12 +380,12 @@
                             clearTimeout(speechTimeout);
                         }
                         
-                        // Set timeout to auto-submit after 2 seconds of silence
+                        // Set timeout to auto-submit after 1 second of silence
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse) {
                                 autoSubmitResponse();
                             }
-                        }, 2000);
+                        }, 1000);
                     }
                     
                     // Show live text with interim results
@@ -519,13 +519,13 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show AI is thinking
-                    document.getElementById('conversationArea').innerHTML = 'AI is preparing next question...';
+                    // Show AI is thinking briefly
+                    document.getElementById('conversationArea').innerHTML = 'AI is responding...';
                     
-                    // Wait a moment, then show new question
+                    // Show new question immediately
                     setTimeout(() => {
                         showCurrentQuestion(data.response);
-                    }, 800);
+                    }, 200);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
@@ -553,7 +553,7 @@
                                             console.log('Failed to restart recognition after audio:', e);
                                         }
                                     }
-                                }, 500);
+                                }, 100);
                             }, { once: true });
                         }
                         
@@ -563,13 +563,14 @@
                         setTimeout(() => {
                             if (isListening && !isProcessingResponse) {
                                 try {
+                                    isProcessingResponse = false;
                                     recognition.start();
                                     console.log('Ready for next candidate response (no audio)');
                                 } catch (e) {
                                     console.log('Failed to restart recognition:', e);
                                 }
                             }
-                        }, 1000);
+                        }, 200);
                     }
                     
                     // Check if complete
@@ -712,12 +713,12 @@
                     clearTimeout(speechTimeout);
                 }
                 
-                // Set timeout to auto-submit after 2 seconds of silence
+                // Set timeout to auto-submit after 1 second of silence
                 speechTimeout = setTimeout(() => {
                     if (collectedText.trim() && !isProcessingResponse) {
                         autoSubmitResponse();
                     }
-                }, 2000);
+                }, 1000);
             }
             
             // Show live text with enhanced styling

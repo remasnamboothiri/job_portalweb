@@ -307,8 +307,11 @@
         }
         
         let collectedText = '';
+        let speechTimeout = null;
+        let lastSpeechTime = 0;
+        let isProcessingResponse = false;
         
-        // Initialize speech recognition with auto-start
+        // Initialize speech recognition with auto-start and auto-submit
         function initSpeech() {
             if ('webkitSpeechRecognition' in window) {
                 recognition = new webkitSpeechRecognition();
@@ -325,10 +328,10 @@
                 };
                 
                 recognition.onend = function() {
-                    if (isListening) {
+                    if (isListening && !isProcessingResponse) {
                         // Auto-restart to keep microphone always on
                         setTimeout(() => {
-                            if (isListening) {
+                            if (isListening && !isProcessingResponse) {
                                 try {
                                     recognition.start();
                                 } catch (e) {
@@ -344,7 +347,7 @@
                     if (event.error === 'no-speech' || event.error === 'audio-capture') {
                         // Restart on common errors
                         setTimeout(() => {
-                            if (isListening) {
+                            if (isListening && !isProcessingResponse) {
                                 try {
                                     recognition.start();
                                 } catch (e) {
@@ -367,21 +370,64 @@
                         }
                     }
                     
-                    // Collect all text but don't send yet
+                    // Collect all text
                     if (finalTranscript) {
                         collectedText += finalTranscript;
+                        lastSpeechTime = Date.now();
+                        
+                        // Clear any existing timeout
+                        if (speechTimeout) {
+                            clearTimeout(speechTimeout);
+                        }
+                        
+                        // Set timeout to auto-submit after 2 seconds of silence
+                        speechTimeout = setTimeout(() => {
+                            if (collectedText.trim() && !isProcessingResponse) {
+                                autoSubmitResponse();
+                            }
+                        }, 2000);
                     }
                     
-                    // Show live text (collected + interim) - direct display without streaming for real-time
+                    // Show live text with interim results
                     const displayText = collectedText + interimTranscript;
                     if (displayText.trim()) {
                         document.getElementById('conversationArea').innerHTML = displayText;
+                        
+                        // Update last speech time for interim results too
+                        if (interimTranscript.trim()) {
+                            lastSpeechTime = Date.now();
+                        }
                     }
                 };
                 
                 // Start microphone automatically
                 startMicrophone();
             }
+        }
+        
+        // Auto-submit response when candidate stops speaking
+        function autoSubmitResponse() {
+            if (isProcessingResponse || !collectedText.trim()) return;
+            
+            console.log('Auto-submitting response after speech pause');
+            isProcessingResponse = true;
+            
+            // Clear the timeout
+            if (speechTimeout) {
+                clearTimeout(speechTimeout);
+                speechTimeout = null;
+            }
+            
+            // Send the response
+            const responseText = collectedText.trim();
+            collectedText = ''; // Clear for next response
+            
+            sendResponse(responseText).finally(() => {
+                // Reset processing flag after response is handled
+                setTimeout(() => {
+                    isProcessingResponse = false;
+                }, 1000);
+            });
         }
         
         // Start microphone automatically
@@ -405,13 +451,21 @@
                 // Only allow manual turn off, but warn user
                 if (confirm('Are you sure you want to turn off the microphone? This is not recommended during an interview.')) {
                     isListening = false;
+                    isProcessingResponse = true;
                     recognition.stop();
                     document.getElementById('micBtn').classList.remove('recording');
                     document.getElementById('micBtn').innerHTML = '🎤';
                     
+                    // Clear any pending timeouts
+                    if (speechTimeout) {
+                        clearTimeout(speechTimeout);
+                        speechTimeout = null;
+                    }
+                    
                     // Send the collected text to server if any
                     if (collectedText.trim()) {
                         sendResponse(collectedText.trim());
+                        collectedText = '';
                     }
                     
                     // Show warning message
@@ -420,6 +474,7 @@
             } else {
                 // Restart listening
                 isListening = true;
+                isProcessingResponse = false;
                 collectedText = '';
                 try {
                     recognition.start();
@@ -450,6 +505,8 @@
         // Send response to server
         async function sendResponse(text) {
             try {
+                console.log('Sending response:', text);
+                
                 const response = await fetch(window.location.href, {
                     method: 'POST',
                     headers: {
@@ -462,10 +519,13 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    // Show AI is thinking
+                    document.getElementById('conversationArea').innerHTML = 'AI is preparing next question...';
+                    
                     // Wait a moment, then show new question
                     setTimeout(() => {
                         showCurrentQuestion(data.response);
-                    }, 1000);
+                    }, 800);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
@@ -479,12 +539,16 @@
                         
                         // Temporarily pause speech recognition during AI speech
                         if (recognition && isListening) {
+                            isProcessingResponse = true;
                             recognition.stop();
+                            
                             audio.addEventListener('ended', () => {
                                 setTimeout(() => {
                                     if (isListening) {
                                         try {
+                                            isProcessingResponse = false;
                                             recognition.start();
+                                            console.log('Ready for next candidate response');
                                         } catch (e) {
                                             console.log('Failed to restart recognition after audio:', e);
                                         }
@@ -494,6 +558,18 @@
                         }
                         
                         audio.play().catch(e => console.log('Audio play failed:', e));
+                    } else {
+                        // No audio, restart recognition immediately
+                        setTimeout(() => {
+                            if (isListening && !isProcessingResponse) {
+                                try {
+                                    recognition.start();
+                                    console.log('Ready for next candidate response (no audio)');
+                                } catch (e) {
+                                    console.log('Failed to restart recognition:', e);
+                                }
+                            }
+                        }, 1000);
                     }
                     
                     // Check if complete
@@ -503,6 +579,7 @@
                 }
             } catch (error) {
                 console.error('Send error:', error);
+                isProcessingResponse = false; // Reset on error
             }
         }
         
@@ -612,7 +689,7 @@
             });
         }
         
-        // Handle speech result with enhanced UI
+        // Handle speech result with enhanced UI and auto-submission
         function handleSpeechResult(event) {
             let interimTranscript = '';
             let finalTranscript = '';
@@ -625,9 +702,22 @@
                 }
             }
             
-            // Collect all text but don't send yet
+            // Collect all text and handle auto-submission
             if (finalTranscript) {
                 collectedText += finalTranscript;
+                lastSpeechTime = Date.now();
+                
+                // Clear any existing timeout
+                if (speechTimeout) {
+                    clearTimeout(speechTimeout);
+                }
+                
+                // Set timeout to auto-submit after 2 seconds of silence
+                speechTimeout = setTimeout(() => {
+                    if (collectedText.trim() && !isProcessingResponse) {
+                        autoSubmitResponse();
+                    }
+                }, 2000);
             }
             
             // Show live text with enhanced styling
@@ -639,6 +729,11 @@
                 
                 // Simulate audio level based on speech activity
                 updateAudioLevelIndicator(interimTranscript ? 60 : 20);
+                
+                // Update last speech time for interim results too
+                if (interimTranscript.trim()) {
+                    lastSpeechTime = Date.now();
+                }
             }
         }
         

@@ -150,13 +150,13 @@
             </div>
             <div class="video-box candidate-box">
                 <video id="userVideo" autoplay muted playsinline></video>
-                <div class="participant-name">{{ candidate_name|default:"You" }} - Candidate</div>
+                <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
             </div>
         </div>
         
         <div class="transcript-section">
             <div class="current-text" id="currentQuestion">
-                <strong>Interviewer:</strong> {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}
+                <strong></strong> {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}
             </div>
             <div class="live-text" id="liveResponse">
                 <strong></strong> <em></em>
@@ -204,10 +204,10 @@
             
             const btn = document.getElementById('cameraBtn');
             if (isCameraOn) {
-                btn.innerHTML = '📹 Camera On';
+                btn.innerHTML = '📹';
                 btn.classList.remove('camera-off');
             } else {
-                btn.innerHTML = '📹 Camera Off';
+                btn.innerHTML = '📹';
                 btn.classList.add('camera-off');
             }
         }

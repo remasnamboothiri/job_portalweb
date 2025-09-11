@@ -156,10 +156,8 @@
         
         <div class="transcript-section">
             <div class="current-text" id="currentQuestion">
-                <strong>Interviewer:</strong> 
             </div>
             <div class="live-text" id="liveResponse">
-                <strong></strong> <em></em>
             </div>
         </div>
         
@@ -215,7 +213,7 @@
         // Show current question with streaming effect
         function showCurrentQuestion(question) {
             const element = document.getElementById('currentQuestion');
-            element.innerHTML = '<strong>Interviewer:</strong> ';
+            element.innerHTML = '';
             
             let index = 0;
             const streamText = () => {
@@ -231,7 +229,7 @@
         // Show live candidate response with streaming effect
         function showLiveResponse(text) {
             const element = document.getElementById('liveResponse');
-            element.innerHTML = '<strong>You:</strong> ';
+            element.innerHTML = '';
             
             let index = 0;
             const streamText = () => {
@@ -246,7 +244,7 @@
         
         // Clear live response
         function clearLiveResponse() {
-            document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> <em>Click microphone to speak...</em>`;
+            document.getElementById('liveResponse').innerHTML = '';
         }
         
         let collectedText = '';
@@ -297,7 +295,7 @@
                     // Show live text (collected + interim) - direct display without streaming for real-time
                     const displayText = collectedText + interimTranscript;
                     if (displayText.trim()) {
-                        document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> ${displayText}`;
+                        document.getElementById('liveResponse').innerHTML = displayText;
                     }
                 };
             }

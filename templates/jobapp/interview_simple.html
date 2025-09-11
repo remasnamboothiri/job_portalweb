@@ -156,7 +156,7 @@
         
         <div class="transcript-section">
             <div class="current-text" id="currentQuestion">
-                <strong></strong> {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}
+                <strong>Interviewer:</strong> 
             </div>
             <div class="live-text" id="liveResponse">
                 <strong></strong> <em></em>
@@ -212,14 +212,36 @@
             }
         }
         
-        // Show current question
+        // Show current question with streaming effect
         function showCurrentQuestion(question) {
-            document.getElementById('currentQuestion').innerHTML = `<strong>Interviewer:</strong> ${question}`;
+            const element = document.getElementById('currentQuestion');
+            element.innerHTML = '<strong>Interviewer:</strong> ';
+            
+            let index = 0;
+            const streamText = () => {
+                if (index < question.length) {
+                    element.innerHTML += question.charAt(index);
+                    index++;
+                    setTimeout(streamText, 30); // Adjust speed here
+                }
+            };
+            streamText();
         }
         
-        // Show live candidate response
+        // Show live candidate response with streaming effect
         function showLiveResponse(text) {
-            document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> ${text}`;
+            const element = document.getElementById('liveResponse');
+            element.innerHTML = '<strong>You:</strong> ';
+            
+            let index = 0;
+            const streamText = () => {
+                if (index < text.length) {
+                    element.innerHTML += text.charAt(index);
+                    index++;
+                    setTimeout(streamText, 20); // Faster for live response
+                }
+            };
+            streamText();
         }
         
         // Clear live response
@@ -241,7 +263,7 @@
                     isListening = true;
                     collectedText = '';
                     document.getElementById('micBtn').classList.add('recording');
-                    document.getElementById('micBtn').innerHTML = '🔴 Speaking... (Click to stop)';
+                    document.getElementById('micBtn').innerHTML = '🔴';
                 };
                 
                 recognition.onend = function() {
@@ -272,10 +294,10 @@
                         collectedText += finalTranscript;
                     }
                     
-                    // Show live text (collected + interim)
+                    // Show live text (collected + interim) - direct display without streaming for real-time
                     const displayText = collectedText + interimTranscript;
                     if (displayText.trim()) {
-                        showLiveResponse(displayText);
+                        document.getElementById('liveResponse').innerHTML = `<strong>You:</strong> ${displayText}`;
                     }
                 };
             }
@@ -290,7 +312,7 @@
                 isListening = false;
                 recognition.stop();
                 document.getElementById('micBtn').classList.remove('recording');
-                document.getElementById('micBtn').innerHTML = '🎤 Start Speaking';
+                document.getElementById('micBtn').innerHTML = '🎤';
                 
                 // Send the collected text to server
                 if (collectedText.trim()) {
@@ -380,6 +402,10 @@
             
             // Clear live response initially
             clearLiveResponse();
+            
+            // Show initial question with streaming effect
+            const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
+            showCurrentQuestion(initialQuestion);
             
             // Play initial audio if available
             const initialAudio = '{{ audio_url|safe }}';

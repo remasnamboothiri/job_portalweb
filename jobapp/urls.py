@@ -87,6 +87,7 @@ urlpatterns = [
     
     # Debug TTS endpoint
     path('debug-tts/', views.debug_tts_system, name='debug_tts_system'),
+    path('test-kokkoro/', views.test_kokkoro_voice, name='test_kokkoro_voice'),
     
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),

@@ -17,8 +17,30 @@ RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
 JWT_SECRET = getattr(settings, 'JWT_SECRET', '')
 RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
 
-# Available models: kokkoro, chatterbox
-AVAILABLE_MODELS = ["kokkoro", "chatterbox"]
+# Available voice models with proper IDs
+AVAILABLE_VOICES = {
+    "kokkoro": {
+        "voice_id": "kokkoro",
+        "name": "Kokkoro",
+        "description": "Anime-style female voice",
+        "type": "character"
+    },
+    "chatterbox": {
+        "voice_id": "chatterbox", 
+        "name": "Chatterbox",
+        "description": "Natural conversational voice",
+        "type": "natural"
+    },
+    "female_default": {
+        "voice_id": "female_default",
+        "name": "Female Default",
+        "description": "Professional female voice",
+        "type": "builtin"
+    }
+}
+
+# Backwards compatibility
+AVAILABLE_MODELS = list(AVAILABLE_VOICES.keys())
 
 # Validate environment variables
 if not RUNPOD_API_KEY:
@@ -26,7 +48,7 @@ if not RUNPOD_API_KEY:
 if not JWT_SECRET:
     logger.warning("JWT_SECRET not found in Django settings")
 
-def generate_tts(text, model="kokkoro", force_gtts=True):  # Temporarily force gTTS
+def generate_tts(text, model="kokkoro", force_gtts=False):
     """
     Generate TTS audio using RunPod API with gTTS fallback
     Models available: kokkoro, chatterbox
@@ -65,16 +87,19 @@ def generate_runpod_tts(text, model="kokkoro"):
     Available models: kokkoro, chatterbox
     """
     try:
-        # Validate model
-        if model not in AVAILABLE_MODELS:
-            logger.warning(f"Invalid model '{model}', using 'kokkoro'")
+        # Validate voice model
+        if model not in AVAILABLE_VOICES:
+            logger.warning(f"Invalid voice '{model}', using 'kokkoro'")
             model = "kokkoro"
+        
+        voice_config = AVAILABLE_VOICES[model]
+        voice_id = voice_config["voice_id"]
         
         logger.info(f"RunPod TTS generation with model '{model}' for: '{text[:50]}...'")
         
         # Create filename for caching (use .mp3 since RunPod returns MP3)
-        text_hash = hashlib.md5(f"{text}_{model}".encode()).hexdigest()[:8]
-        filename = f"runpod_{model}_{text_hash}.mp3"
+        text_hash = hashlib.md5(f"{text}_{voice_id}".encode()).hexdigest()[:8]
+        filename = f"runpod_{voice_id}_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         os.makedirs(tts_dir, exist_ok=True)
         filepath = os.path.join(tts_dir, filename)
@@ -91,11 +116,16 @@ def generate_runpod_tts(text, model="kokkoro"):
             "Content-Type": "application/json"
         }
         
+        # Updated payload format for proper voice selection
         payload = {
             "input": {
                 "text": text,
-                "model": model,
-                "jwt_token": JWT_SECRET
+                "voice_id": voice_id,  # Use the correct voice_id
+                "jwt_token": JWT_SECRET,
+                "voice_settings": {
+                    "stability": 0.75,
+                    "similarity_boost": 0.75
+                }
             }
         }
         
@@ -340,6 +370,23 @@ def generate_tts_chatterbox(text):
     """Generate TTS using chatterbox model"""
     return generate_tts(text, model="chatterbox")
 
+def test_kokkoro_voice(text="Hello! I'm Kokkoro, your AI interviewer. Let's begin the interview."):
+    """Test specifically the Kokkoro voice model"""
+    logger.info("Testing Kokkoro voice specifically...")
+    
+    # Force RunPod API (no fallback to gTTS)
+    try:
+        result = generate_runpod_tts(text, "kokkoro")
+        if result:
+            logger.info(f"✅ Kokkoro voice test successful: {result}")
+            return result
+        else:
+            logger.error("❌ Kokkoro voice test failed - no audio generated")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Kokkoro voice test error: {e}")
+        return None
+
 def check_tts_system():
     """
     Comprehensive TTS system health check
@@ -351,7 +398,8 @@ def check_tts_system():
         'media_url': settings.MEDIA_URL,
         'tts_dir_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
         'runpod_endpoint': RUNPOD_ENDPOINT,
-        'available_models': AVAILABLE_MODELS,
+        'available_voices': AVAILABLE_VOICES,
+        'available_models': list(AVAILABLE_VOICES.keys()),
     }
     
     # Check if we can create TTS directory
@@ -485,8 +533,8 @@ def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS s
     
     results = {}
     
-    # Test both models
-    for model in AVAILABLE_MODELS:
+    # Test both voice models
+    for model in AVAILABLE_VOICES.keys():
         logger.info(f"\nTesting model: {model}")
         try:
             result = generate_runpod_tts(test_text, model)

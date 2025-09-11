@@ -2456,6 +2456,48 @@ def debug_tts_system(request):
     
     return JsonResponse(debug_info, indent=2)
 
+def test_kokkoro_voice(request):
+    """Test Kokkoro voice specifically"""
+    from jobapp.tts import test_kokkoro_voice as test_kokkoro, generate_tts
+    
+    test_text = request.GET.get('text', "Hello! I'm Kokkoro, your AI interviewer. Welcome to your interview today!")
+    
+    result = {
+        'timestamp': timezone.now().isoformat(),
+        'test_text': test_text,
+        'kokkoro_test': None,
+        'regular_tts_test': None,
+        'success': False
+    }
+    
+    try:
+        # Test Kokkoro specifically
+        kokkoro_result = test_kokkoro(test_text)
+        result['kokkoro_test'] = kokkoro_result
+        
+        # Test regular TTS with Kokkoro model
+        regular_result = generate_tts(test_text, model="kokkoro")
+        result['regular_tts_test'] = regular_result
+        
+        if kokkoro_result or regular_result:
+            result['success'] = True
+            result['audio_url'] = kokkoro_result or regular_result
+            
+            # Check if file exists
+            if result['audio_url']:
+                full_path = os.path.join(settings.BASE_DIR, result['audio_url'].lstrip('/'))
+                result['file_exists'] = os.path.exists(full_path)
+                if os.path.exists(full_path):
+                    result['file_size'] = os.path.getsize(full_path)
+                    result['file_path'] = full_path
+        
+    except Exception as e:
+        result['error'] = str(e)
+        import traceback
+        result['traceback'] = traceback.format_exc()
+    
+    return JsonResponse(result, indent=2)
+
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def test_interview_results(request):

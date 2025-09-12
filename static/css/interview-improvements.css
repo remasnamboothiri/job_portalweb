@@ -1,238 +1,77 @@
-/* Interview System Improvements */
+/* Interview improvements for WebRTC AEC and partial questions */
 
-/* Speech isolation status indicator */
-.speech-status {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 12px;
-    z-index: 1001;
-    transition: all 0.3s ease;
+.show-full-btn {
+    margin-left: 10px !important;
+    padding: 4px 8px !important;
+    background: #1a73e8 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
 }
 
-.speech-status.ai-speaking {
-    background: #ea4335;
-    animation: pulse 1s infinite;
+.show-full-btn:hover {
+    background: #1557b0 !important;
 }
 
-.speech-status.candidate-ready {
-    background: #34a853;
-}
-
-.speech-status.processing {
-    background: #fbbc04;
-}
-
-/* Microphone warning styles */
-.mic-warning {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #ea4335;
-    color: white;
-    padding: 20px 30px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: bold;
-    z-index: 10000;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    animation: slideDown 0.3s ease-out;
-}
-
-/* Professional interview notice */
-.professional-notice {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1a73e8;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-size: 14px;
-    font-weight: bold;
-    z-index: 1000;
-    animation: slideDown 0.5s ease-out;
-}
-
-/* Live transcription styling */
-.conversation-text.live-transcription {
-    border: 2px solid #34a853;
-    background: rgba(52, 168, 83, 0.1);
-    animation: livePulse 2s infinite;
-}
-
-.conversation-text.ai-response {
-    border: 2px solid #1a73e8;
-    background: rgba(26, 115, 232, 0.1);
-}
-
-/* Audio level indicator improvements */
-.audio-level-indicator {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 3px;
-    z-index: 999;
-}
-
-.audio-level-bar {
-    width: 4px;
-    height: 20px;
-    background: #666;
-    border-radius: 2px;
-    transition: all 0.1s ease;
-}
-
-.audio-level-bar.active {
-    background: #34a853;
-    height: 30px;
-}
-
-/* Interview status improvements */
-.interview-status {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
+.subtitle-text {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
+}
+
+.question-preview, .question-full {
+    flex: 1;
+    min-width: 0;
+}
+
+/* WebRTC Audio Status Indicator */
+.webrtc-status {
+    position: fixed;
+    top: 80px;
+    right: 20px;
     background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 8px 16px;
+    padding: 8px 12px;
     border-radius: 20px;
     font-size: 12px;
     z-index: 1000;
+    display: none;
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #34a853;
+.webrtc-status.active {
+    display: block;
+    background: rgba(52, 168, 83, 0.9);
 }
 
-.interview-status.recording .status-dot {
-    background: #ea4335;
-    animation: pulse 1s infinite;
+.webrtc-status.error {
+    display: block;
+    background: rgba(234, 67, 53, 0.9);
 }
 
-/* Animations */
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Improved subtitle overlay */
+.subtitle-overlay {
+    max-width: 90%;
+    word-wrap: break-word;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
+.subtitle-overlay .subtitle-text {
+    line-height: 1.4;
 }
 
-@keyframes livePulse {
-    0%, 100% {
-        border-color: #34a853;
-        box-shadow: 0 0 0 0 rgba(52, 168, 83, 0.4);
-    }
-    50% {
-        border-color: #4caf50;
-        box-shadow: 0 0 0 4px rgba(52, 168, 83, 0.1);
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 0.8;
-    }
-}
-
-/* Responsive improvements */
+/* Better responsive design for question display */
 @media (max-width: 768px) {
-    .speech-status {
-        top: 5px;
-        right: 5px;
-        font-size: 10px;
-        padding: 6px 12px;
+    .subtitle-text {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
-    .professional-notice {
-        top: 10px;
-        font-size: 12px;
-        padding: 10px 20px;
+    .show-full-btn {
+        margin-left: 0 !important;
+        margin-top: 8px !important;
+        align-self: flex-start;
     }
-    
-    .mic-warning {
-        padding: 15px 20px;
-        font-size: 14px;
-    }
-}
-
-/* Enhanced button states */
-.btn.recording {
-    background: #ea4335 !important;
-    box-shadow: 0 0 0 4px rgba(234, 67, 53, 0.3);
-    animation: recordingPulse 2s infinite;
-}
-
-@keyframes recordingPulse {
-    0%, 100% {
-        box-shadow: 0 0 0 4px rgba(234, 67, 53, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(234, 67, 53, 0.1);
-    }
-}
-
-/* Conversation area improvements */
-.conversation-text {
-    transition: all 0.3s ease;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.conversation-text:empty::before {
-    content: "Listening for your response...";
-    color: #888;
-    font-style: italic;
-}
-
-/* Error state styling */
-.conversation-text.error {
-    border: 2px solid #ea4335;
-    background: rgba(234, 67, 53, 0.1);
-    color: #ea4335;
-}
-
-/* Success state styling */
-.conversation-text.success {
-    border: 2px solid #34a853;
-    background: rgba(52, 168, 83, 0.1);
-    color: #34a853;
 }

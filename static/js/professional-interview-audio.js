@@ -99,55 +99,46 @@ class ProfessionalInterviewAudio {
         console.log('🔇 AI audio isolation configured');
     }
 
-    // Handle AI audio start - completely disable speech recognition during AI speech
+    // Handle AI audio start - reduce microphone sensitivity
     handleAIAudioStart() {
-        console.log('🔇 AI audio started - disabling speech recognition to prevent feedback');
+        if (this.gainNode) {
+            // Reduce microphone gain during AI speech
+            this.gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+        }
         
-        // Completely disable speech recognition during AI speech
+        // Pause speech recognition temporarily
         if (window.recognition && window.isListening) {
             try {
                 window.recognition.stop();
                 this.speechRecognitionActive = true;
-                console.log('✅ Speech recognition stopped during AI speech');
             } catch (e) {
                 console.log('Could not pause speech recognition:', e);
             }
         }
         
-        // Also disable microphone processing to prevent any audio feedback
-        if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
-        }
-        
-        // Set global flag to ignore any speech input
-        window.isProcessingResponse = true;
+        console.log('🔇 AI audio started - microphone sensitivity reduced');
     }
 
-    // Handle AI audio end - restore speech recognition after delay
+    // Handle AI audio end - restore microphone sensitivity
     handleAIAudioEnd() {
-        console.log('🎙️ AI audio ended - preparing to restore speech recognition');
+        if (this.gainNode) {
+            // Restore microphone gain after AI speech
+            this.gainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
+        }
         
-        // Wait longer to ensure AI audio is completely finished
+        // Resume speech recognition after delay
         setTimeout(() => {
-            // Restore microphone gain
-            if (this.gainNode) {
-                this.gainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
-            }
-            
-            // Clear processing flag
-            window.isProcessingResponse = false;
-            
-            // Restart speech recognition
             if (this.speechRecognitionActive && window.recognition && window.isListening) {
                 try {
                     window.recognition.start();
                     this.speechRecognitionActive = false;
-                    console.log('✅ Speech recognition restarted after AI speech');
                 } catch (e) {
                     console.log('Could not resume speech recognition:', e);
                 }
             }
-        }, 1000); // Increased delay to 1 second to ensure clean separation
+        }, 500);
+        
+        console.log('🎙️ AI audio ended - microphone sensitivity restored');
     }
 
     // Apply noise suppression
@@ -267,13 +258,7 @@ class ProfessionalSpeechRecognition {
         };
 
         this.recognition.onresult = (event) => {
-            // Ignore speech recognition results during AI speech
-            if (window.isProcessingResponse || window.professionalAudio?.aiAudioPlaying) {
-                console.log('🚫 Ignoring speech input - AI is currently speaking');
-                return;
-            }
-            
-            // Handle speech recognition results only when AI is not speaking
+            // Handle speech recognition results
             if (window.handleSpeechResult) {
                 window.handleSpeechResult(event);
             }

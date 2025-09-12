@@ -132,7 +132,7 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
                 # Remove common AI artifacts that might confuse speech recognition
                 text = re.sub(r'\b(AI|Interviewer|Candidate)\b:?\s*', '', text, flags=re.IGNORECASE)
                 # Remove quotation marks that might be picked up by speech recognition
-                text = re.sub(r'["""''']', '', text)
+                text = re.sub(r'["""'']', '', text)
                 return text
                 
             raw_response = completion.choices[0].message.content

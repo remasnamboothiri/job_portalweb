@@ -99,13 +99,37 @@ Remember: This is a conversation, not an interrogation. Be genuinely interested 
         try:
             def clean_text(text):
                 import re
+                import html
+                
+                # First decode HTML entities like &quot; &#39; etc.
+                text = html.unescape(text)
+                
                 # Remove markdown and excessive formatting
                 text = re.sub(r'[*#`_>\\-]+', '', text)
-                # Remove extra whitespace and newlines
-                text = re.sub(r'\s+', ' ', text).strip()
+                
+                # Remove quotes and apostrophes that shouldn't be spoken
+                text = re.sub(r'["\'“”‘’]', '', text)
+                
+                # Remove extra punctuation that creates awkward pauses
+                text = re.sub(r'[,]{2,}', ',', text)  # Multiple commas
+                text = re.sub(r'[.]{2,}', '.', text)  # Multiple periods
+                
                 # Remove bullet points or numbered lists
                 text = re.sub(r'^\d+\.\s*', '', text)
                 text = re.sub(r'^[-•]\s*', '', text)
+                
+                # Clean up spacing around punctuation
+                text = re.sub(r'\s*,\s*', ', ', text)
+                text = re.sub(r'\s*\.\s*', '. ', text)
+                text = re.sub(r'\s*!\s*', '! ', text)
+                text = re.sub(r'\s*\?\s*', '? ', text)
+                
+                # Remove extra whitespace and newlines
+                text = re.sub(r'\s+', ' ', text).strip()
+                
+                # Remove any remaining problematic characters
+                text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+                
                 return text
                 
             raw_response = completion.choices[0].message.content

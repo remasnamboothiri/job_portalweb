@@ -1070,13 +1070,24 @@ def start_interview_by_uuid(request, interview_uuid):
             
             logger.info(f"Question count for interview {interview_uuid}: {question_count}")
             
+            # Filter out potential AI speech that was mistakenly transcribed
+            if is_likely_ai_speech(user_text):
+                logger.warning(f"Filtered out potential AI speech in interview {interview_uuid}: {user_text}")
+                return JsonResponse({
+                    'error': 'Please provide your own response, not a repeat of the question.',
+                    'response': 'I didn\'t catch your response clearly. Could you please answer the question?',
+                    'audio': '',
+                    'success': False,
+                    'requires_retry': True
+                })
+            
             # Handle "I can't hear" responses specifically
             user_text_lower = user_text.lower().strip()
             if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
                 logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
                 
                 if question_count == 1:
-                    ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
+                    ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: What interests you most about this {job_title} position at {company_name}?"
                 elif question_count <= 8:
                     ai_response = "I understand you can't hear the audio. That's okay! Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
                 else:
@@ -1126,7 +1137,7 @@ You are Alex, a friendly HR interviewer at {company_name}. The candidate just re
 
 Candidate's response: "{user_text}"
 
-Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
+Now ask about their relevant experience or background for this {job_title} role. Keep it natural and conversational (2-3 sentences max). Avoid repeating common phrases that might confuse speech recognition.
 """
                 elif question_count == 2:
                     prompt = f"""
@@ -1186,7 +1197,7 @@ You are Alex. Previous conversation:
 
 Candidate just said: "{user_text}"
 
-This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
+This is the second-to-last question. Ask what they'd like to know about the role, company, or team. Keep it welcoming (2-3 sentences max). Avoid using "any questions" as it might confuse speech recognition.
 """
             else:
                 # This is the final question - generate results
@@ -1297,10 +1308,11 @@ Resume highlights: {resume_text[:300]}
 
 INSTRUCTIONS:
 - Give a warm, professional greeting
-- Ask them to tell you about themselves and what drew them to this role
+- Ask them what interests them most about this role (avoid "tell me about yourself" as it causes speech recognition conflicts)
 - Keep it natural and conversational (2-3 sentences max)
 - Sound like a real human interviewer, not a robot
 - Be welcoming and put them at ease
+- AVOID common phrases that might be picked up by speech recognition
 
 Respond as Alex would naturally speak:
 """        
@@ -1439,6 +1451,50 @@ def log_interview_error(interview_uuid, error, context=None):
     # send_to_monitoring_service(error_info)
     
     return error_info
+
+
+def is_likely_ai_speech(text):
+    """
+    Determine if the given text is likely AI interviewer speech that was mistakenly transcribed
+    """
+    if not text or len(text.strip()) < 3:
+        return True
+    
+    text_lower = text.lower().strip()
+    
+    # Common AI interviewer phrases
+    ai_phrases = [
+        'hello', 'hi there', 'welcome', 'thanks for joining',
+        'tell me about yourself', 'can you tell me about',
+        'what interests you', 'why do you want',
+        'that\'s great', 'that\'s interesting', 'excellent',
+        'perfect', 'wonderful', 'moving on',
+        'next question', 'any questions for me',
+        'alex', 'ai interviewer', 'interviewer'
+    ]
+    
+    # Count AI phrase matches
+    ai_matches = sum(1 for phrase in ai_phrases if phrase in text_lower)
+    
+    # If multiple AI phrases detected, likely AI speech
+    if ai_matches >= 2:
+        return True
+    
+    # Check for exact matches of common AI responses
+    exact_ai_phrases = [
+        'hello! welcome to your ai interview',
+        'thanks for joining me today',
+        'tell me about yourself',
+        'what interests you about this position',
+        'that\'s great! can you tell me',
+        'excellent! how do you'
+    ]
+    
+    for phrase in exact_ai_phrases:
+        if phrase in text_lower:
+            return True
+    
+    return False
 
 
 def generate_interview_results(interview, conversation_history):

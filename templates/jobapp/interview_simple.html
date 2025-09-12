@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Interview</title>
     <link rel="stylesheet" href="{% static 'css/professional-interview.css' %}">
+    <link rel="stylesheet" href="{% static 'css/interview-improvements.css' %}"
     <style>
         body {
             background: #202124;
@@ -140,6 +141,11 @@
 </head>
 <body>
     <div class="container">
+        <!-- Speech Status Indicator -->
+        <div class="speech-status candidate-ready" id="speechStatus">
+            🎤 Ready for your response
+        </div>
+        
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
             <div class="stat">Time: <span id="timer">15:00</span></div>
@@ -188,6 +194,7 @@
     
     <!-- Professional Interview Audio System -->
     <script src="{% static 'js/professional-interview-audio.js' %}"></script>
+    <script src="{% static 'js/speech-isolation-fix.js' %}"></script>
 
     <script>
         let recognition = null;
@@ -267,10 +274,23 @@
             }
         }
         
+        // Update speech status indicator
+        function updateSpeechStatus(status, message) {
+            const statusElement = document.getElementById('speechStatus');
+            if (!statusElement) return;
+            
+            statusElement.className = `speech-status ${status}`;
+            statusElement.innerHTML = message;
+        }
+        
         // Show current question with streaming effect
         function showCurrentQuestion(question) {
             const element = document.getElementById('conversationArea');
             element.innerHTML = '';
+            element.className = 'conversation-text ai-response';
+            
+            // Update status to show AI is speaking
+            updateSpeechStatus('ai-speaking', '🤖 AI Speaking...');
             
             let index = 0;
             const streamText = () => {
@@ -278,6 +298,11 @@
                     element.innerHTML += question.charAt(index);
                     index++;
                     setTimeout(streamText, 15);
+                } else {
+                    // Question finished streaming, update status
+                    setTimeout(() => {
+                        updateSpeechStatus('candidate-ready', '🎤 Ready for your response');
+                    }, 1000);
                 }
             };
             streamText();
@@ -286,8 +311,11 @@
         // Show candidate response in same area after question disappears
         function showCandidateResponse(text) {
             const element = document.getElementById('conversationArea');
-            // Clear the question first
             element.innerHTML = '';
+            element.className = 'conversation-text live-transcription';
+            
+            // Update status to show candidate is speaking
+            updateSpeechStatus('processing', '🗣️ Processing your response...');
             
             // Then stream the response
             let index = 0;
@@ -359,9 +387,9 @@
                 };
                 
                 recognition.onresult = function(event) {
-                    // Ignore speech input while AI is speaking
-                    if (isProcessingResponse) {
-                        console.log('Ignoring speech input - AI is speaking');
+                    // Ignore speech input while AI is speaking or processing
+                    if (isProcessingResponse || window.professionalAudio?.aiAudioPlaying) {
+                        console.log('🚫 Ignoring speech input - AI is currently speaking or processing');
                         return;
                     }
                     
@@ -376,31 +404,37 @@
                         }
                     }
                     
-                    // Collect all text
-                    if (finalTranscript) {
-                        collectedText += finalTranscript;
+                    // Filter out potential AI speech that might have been picked up
+                    const filteredFinalTranscript = filterAISpeech(finalTranscript);
+                    const filteredInterimTranscript = filterAISpeech(interimTranscript);
+                    
+                    // Collect all text (only if it's likely candidate speech)
+                    if (filteredFinalTranscript && filteredFinalTranscript.trim()) {
+                        collectedText += filteredFinalTranscript;
                         lastSpeechTime = Date.now();
+                        
+                        console.log('✅ Candidate speech detected:', filteredFinalTranscript);
                         
                         // Clear any existing timeout
                         if (speechTimeout) {
                             clearTimeout(speechTimeout);
                         }
                         
-                        // Set timeout to auto-submit after 0.5 seconds of silence (faster response)
+                        // Set timeout to auto-submit after 1 second of silence (increased for better accuracy)
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse) {
                                 autoSubmitResponse();
                             }
-                        }, 500);
+                        }, 1000);
                     }
                     
-                    // Show live text with interim results
-                    const displayText = collectedText + interimTranscript;
+                    // Show live text with interim results (only filtered content)
+                    const displayText = collectedText + filteredInterimTranscript;
                     if (displayText.trim()) {
                         document.getElementById('conversationArea').innerHTML = displayText;
                         
                         // Update last speech time for interim results too
-                        if (interimTranscript.trim()) {
+                        if (filteredInterimTranscript.trim()) {
                             lastSpeechTime = Date.now();
                         }
                     }
@@ -409,6 +443,44 @@
                 // Start microphone automatically
                 startMicrophone();
             }
+        }
+        
+        // Filter out potential AI speech from candidate input
+        function filterAISpeech(text) {
+            if (!text || !text.trim()) return text;
+            
+            // Common AI interviewer phrases that should be filtered out
+            const aiPhrases = [
+                'hello', 'hi there', 'welcome', 'thanks for joining',
+                'tell me about yourself', 'can you describe', 'what interests you',
+                'that\'s great', 'excellent', 'interesting', 'perfect',
+                'next question', 'moving on', 'let\'s talk about',
+                'thank you for', 'any questions', 'do you have',
+                'alex', 'interviewer', 'ai interviewer'
+            ];
+            
+            const lowerText = text.toLowerCase();
+            
+            // If the text contains multiple AI phrases, it's likely AI speech
+            let aiPhraseCount = 0;
+            for (const phrase of aiPhrases) {
+                if (lowerText.includes(phrase)) {
+                    aiPhraseCount++;
+                }
+            }
+            
+            // If more than 2 AI phrases detected, filter it out
+            if (aiPhraseCount >= 2) {
+                console.log('🚫 Filtered out potential AI speech:', text);
+                return '';
+            }
+            
+            // Also filter out very short responses that might be audio artifacts
+            if (text.trim().length < 3) {
+                return '';
+            }
+            
+            return text;
         }
         
         // Auto-submit response when candidate stops speaking
@@ -429,8 +501,10 @@
             collectedText = ''; // Clear for next response
             
             sendResponse(responseText).finally(() => {
-                // Reset processing flag immediately (no delay)
-                isProcessingResponse = false;
+                // Reset processing flag with a small delay to prevent immediate re-triggering
+                setTimeout(() => {
+                    isProcessingResponse = false;
+                }, 500);
             });
         }
         
@@ -523,6 +597,11 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    // Store AI response for speech filtering
+                    if (window.speechIsolationManager) {
+                        window.speechIsolationManager.setLastAIResponse(data.response);
+                    }
+                    
                     // Show new question immediately (no delay)
                     showCurrentQuestion(data.response);
                     
@@ -530,32 +609,47 @@
                     questionCount = data.question_count || questionCount + 1;
                     document.getElementById('questionCount').textContent = questionCount + '/8';
                     
-                    // Play audio if available (with feedback prevention)
+                    // Play audio if available (with enhanced feedback prevention)
                     if (data.audio) {
                         const audio = document.getElementById('aiAudio');
                         audio.src = data.audio;
-                        audio.volume = 0.7; // Reduce volume to prevent feedback
+                        audio.volume = 0.6; // Further reduced volume to prevent feedback
                         
-                        // Temporarily disable speech processing during AI speech (mic stays on)
-                        if (recognition && isListening) {
-                            isProcessingResponse = true;
-                            
-                            // Don't stop recognition, just ignore results during AI speech
-                            console.log('AI speaking - ignoring speech input temporarily');
-                            
-                            audio.addEventListener('ended', () => {
-                                setTimeout(() => {
-                                    isProcessingResponse = false;
-                                    console.log('AI finished speaking - ready for candidate response');
-                                }, 100);
-                            }, { once: true });
-                        }
+                        // Set processing flag to prevent speech recognition during AI speech
+                        isProcessingResponse = true;
                         
-                        audio.play().catch(e => console.log('Audio play failed:', e));
+                        // Update visual status
+                        updateSpeechStatus('ai-speaking', '🔊 AI Speaking - Please Listen');
+                        
+                        console.log('🔊 AI speaking - speech recognition disabled');
+                        
+                        // Handle audio end with proper cleanup
+                        audio.addEventListener('ended', () => {
+                            console.log('🔊 AI audio ended');
+                            setTimeout(() => {
+                                isProcessingResponse = false;
+                                updateSpeechStatus('candidate-ready', '🎤 Ready for your response');
+                                console.log('✅ Ready for candidate response');
+                            }, 1000); // Increased delay to ensure clean separation
+                        }, { once: true });
+                        
+                        // Handle audio errors
+                        audio.addEventListener('error', () => {
+                            console.log('❌ AI audio error - resetting processing flag');
+                            isProcessingResponse = false;
+                        }, { once: true });
+                        
+                        audio.play().catch(e => {
+                            console.log('Audio play failed:', e);
+                            isProcessingResponse = false;
+                        });
                     } else {
-                        // No audio, ready for next response immediately
-                        isProcessingResponse = false;
-                        console.log('Ready for next candidate response (no audio)');
+                        // No audio, ready for next response after a short delay
+                        setTimeout(() => {
+                            isProcessingResponse = false;
+                            updateSpeechStatus('candidate-ready', '🎤 Ready for your response');
+                            console.log('✅ Ready for next candidate response (no audio)');
+                        }, 500);
                     }
                     
                     // Check if complete
@@ -627,20 +721,41 @@
             
             // Show initial question with streaming effect
             const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
+            
+            // Store initial AI question for speech filtering
+            if (window.speechIsolationManager) {
+                window.speechIsolationManager.setLastAIResponse(initialQuestion);
+            }
+            
             showCurrentQuestion(initialQuestion);
             
             // Show professional interview notice
             showProfessionalNotice();
             
-            // Play initial audio if available (with isolation)
+            // Play initial audio if available (with enhanced isolation)
             const initialAudio = '{{ audio_url|safe }}';
             if (initialAudio && initialAudio !== 'None' && initialAudio !== '') {
                 setTimeout(() => {
                     const audio = document.getElementById('aiAudio');
                     audio.src = initialAudio;
-                    audio.volume = 0.7; // Reduce volume to prevent feedback
-                    audio.play().catch(e => console.log('Initial audio failed:', e));
-                }, 1000);
+                    audio.volume = 0.6; // Further reduced volume to prevent feedback
+                    
+                    // Set processing flag during initial audio
+                    isProcessingResponse = true;
+                    
+                    audio.addEventListener('ended', () => {
+                        setTimeout(() => {
+                            isProcessingResponse = false;
+                            updateSpeechStatus('candidate-ready', '🎤 Ready for your response');
+                            console.log('✅ Initial audio ended - ready for candidate response');
+                        }, 1000);
+                    }, { once: true });
+                    
+                    audio.play().catch(e => {
+                        console.log('Initial audio failed:', e);
+                        isProcessingResponse = false;
+                    });
+                }, 1500); // Increased delay to ensure speech recognition is fully initialized
             }
         });
         
@@ -675,8 +790,14 @@
             });
         }
         
-        // Handle speech result with enhanced UI and auto-submission
+        // Handle speech result with enhanced filtering and UI
         function handleSpeechResult(event) {
+            // Double-check that AI is not speaking
+            if (isProcessingResponse || window.professionalAudio?.aiAudioPlaying) {
+                console.log('🚫 Speech result ignored - AI is speaking');
+                return;
+            }
+            
             let interimTranscript = '';
             let finalTranscript = '';
             
@@ -688,36 +809,45 @@
                 }
             }
             
-            // Collect all text and handle auto-submission
-            if (finalTranscript) {
-                collectedText += finalTranscript;
+            // Filter out potential AI speech
+            const filteredFinalTranscript = filterAISpeech(finalTranscript);
+            const filteredInterimTranscript = filterAISpeech(interimTranscript);
+            
+            // Collect all text and handle auto-submission (only filtered content)
+            if (filteredFinalTranscript && filteredFinalTranscript.trim()) {
+                collectedText += filteredFinalTranscript;
                 lastSpeechTime = Date.now();
+                
+                console.log('✅ Valid candidate speech collected:', filteredFinalTranscript);
                 
                 // Clear any existing timeout
                 if (speechTimeout) {
                     clearTimeout(speechTimeout);
                 }
                 
-                // Set timeout to auto-submit after 0.5 seconds of silence (faster response)
+                // Set timeout to auto-submit after 1 second of silence (increased for accuracy)
                 speechTimeout = setTimeout(() => {
                     if (collectedText.trim() && !isProcessingResponse) {
                         autoSubmitResponse();
                     }
-                }, 500);
+                }, 1000);
             }
             
-            // Show live text with enhanced styling
-            const displayText = collectedText + interimTranscript;
+            // Show live text with enhanced styling (only filtered content)
+            const displayText = collectedText + filteredInterimTranscript;
             const conversationArea = document.getElementById('conversationArea');
             if (displayText.trim() && conversationArea) {
                 conversationArea.innerHTML = displayText;
                 conversationArea.className = 'conversation-text live-transcription';
                 
+                // Update status to show candidate is speaking
+                updateSpeechStatus('processing', '🗣️ Listening to your response...');
+                
                 // Simulate audio level based on speech activity
-                updateAudioLevelIndicator(interimTranscript ? 60 : 20);
+                updateAudioLevelIndicator(filteredInterimTranscript ? 60 : 20);
                 
                 // Update last speech time for interim results too
-                if (interimTranscript.trim()) {
+                if (filteredInterimTranscript.trim()) {
                     lastSpeechTime = Date.now();
                 }
             }

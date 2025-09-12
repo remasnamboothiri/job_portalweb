@@ -296,8 +296,8 @@
 
         <!-- Subtitle Overlay -->
         <div class="subtitle-overlay" id="subtitleOverlay">
-            <div class="subtitle-text" id="subtitleText">
-                {{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself and why you're interested in this position?" }}
+            <div class="subtitle-text" id="subtitleText" data-initial-text="{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself and why you're interested in this position?" }}">
+                <!-- Text will be populated by typewriter effect -->
             </div>
         </div>
 
@@ -578,7 +578,27 @@
             }, 1000);
         }
 
-        // Handle AI response with proper speech blocking
+        // Typewriter effect for AI questions
+        function typewriterEffect(element, text, duration, callback) {
+            element.textContent = '';
+            let index = 0;
+            const totalChars = text.length;
+            const charDelay = duration / totalChars;
+            
+            function typeChar() {
+                if (index < totalChars) {
+                    element.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(typeChar, charDelay);
+                } else if (callback) {
+                    callback();
+                }
+            }
+            
+            typeChar();
+        }
+        
+        // Handle AI response with typewriter effect synced to audio
         function handleAIResponse(data) {
             // Update question counter
             currentQuestionCount = data.question_count || currentQuestionCount + 1;
@@ -588,13 +608,6 @@
             const progress = (currentQuestionCount / 8) * 100;
             document.getElementById('progressBar').style.width = `${progress}%`;
             
-            // Show AI response in subtitles
-            const subtitleText = document.getElementById('subtitleText');
-            subtitleText.textContent = data.response;
-            
-            const subtitleOverlay = document.getElementById('subtitleOverlay');
-            subtitleOverlay.classList.add('show');
-            
             // Block speech recognition while AI is speaking
             isAISpeaking = true;
             speechRecognitionBlocked = true;
@@ -602,15 +615,31 @@
             
             console.log('🤖 AI is speaking - speech recognition blocked');
             
-            // Play audio if available
-            if (data.audio && data.audio.trim() !== '') {
-                playAIAudio(data.audio);
+            // Show subtitle overlay
+            const subtitleOverlay = document.getElementById('subtitleOverlay');
+            subtitleOverlay.classList.add('show');
+            
+            // Use server-provided duration or fallback to estimation
+            let typewriterDuration;
+            if (data.audio_duration) {
+                typewriterDuration = data.audio_duration * 1000; // Convert to milliseconds
+                console.log(`🕰️ Using server audio duration: ${data.audio_duration}s`);
             } else {
-                // No audio, simulate AI speaking time based on text length
-                const speakingTime = Math.max(3000, data.response.length * 50); // 50ms per character, min 3 seconds
-                setTimeout(() => {
-                    handleAIFinishedSpeaking();
-                }, speakingTime);
+                typewriterDuration = Math.max(3000, data.response.length * 60); // 60ms per character, min 3 seconds
+                console.log(`🕰️ Using estimated duration: ${typewriterDuration}ms`);
+            }
+            
+            // Start typewriter effect and audio simultaneously
+            if (data.audio && data.audio.trim() !== '') {
+                playAIAudioWithTypewriter(data.audio, data.response, typewriterDuration);
+            } else {
+                // No audio, use duration for typewriter
+                const subtitleText = document.getElementById('subtitleText');
+                typewriterEffect(subtitleText, data.response, typewriterDuration, () => {
+                    setTimeout(() => {
+                        handleAIFinishedSpeaking();
+                    }, 1000);
+                });
             }
             
             // Hide subtitles after 8 seconds
@@ -638,7 +667,44 @@
             }, 1000); // 1 second delay to ensure AI audio has fully stopped
         }
         
-        // Play AI audio with proper speech blocking
+        // Play AI audio with synced typewriter effect
+        function playAIAudioWithTypewriter(audioUrl, text, duration) {
+            const audioPlayer = document.getElementById('aiAudioPlayer');
+            const subtitleText = document.getElementById('subtitleText');
+            
+            if (audioUrl && audioUrl.trim() !== '') {
+                audioPlayer.src = audioUrl;
+                
+                // Start typewriter effect immediately with provided duration
+                console.log(`🔊 Starting typewriter effect with duration: ${duration}ms`);
+                typewriterEffect(subtitleText, text, duration);
+                
+                audioPlayer.onended = () => {
+                    console.log('🔊 AI audio finished playing');
+                    handleAIFinishedSpeaking();
+                };
+                
+                audioPlayer.onerror = (error) => {
+                    console.error('Audio playback error:', error);
+                    // Typewriter already started, just handle finish
+                    setTimeout(() => {
+                        handleAIFinishedSpeaking();
+                    }, duration);
+                };
+                
+                audioPlayer.play().catch(error => {
+                    console.error('Audio play failed:', error);
+                    // Typewriter already started, just handle finish
+                    setTimeout(() => {
+                        handleAIFinishedSpeaking();
+                    }, duration);
+                });
+            } else {
+                handleAIFinishedSpeaking();
+            }
+        }
+        
+        // Legacy function for compatibility
         function playAIAudio(audioUrl) {
             const audioPlayer = document.getElementById('aiAudioPlayer');
             
@@ -782,16 +848,40 @@
             // Start timer
             startTimer();
             
-            // Show initial subtitle
+            // Show initial subtitle with typewriter effect
             setTimeout(() => {
-                document.getElementById('subtitleOverlay').classList.add('show');
+                const subtitleOverlay = document.getElementById('subtitleOverlay');
+                const subtitleText = document.getElementById('subtitleText');
+                const initialText = subtitleText.getAttribute('data-initial-text') || subtitleText.textContent;
+                
+                subtitleOverlay.classList.add('show');
+                
+                // Clear text content for typewriter effect
+                subtitleText.textContent = '';
+                
+                // Use server-provided duration or estimate
+                let initialDuration;
+                const serverDuration = {{ audio_duration|default:"null" }};
+                if (serverDuration) {
+                    initialDuration = serverDuration * 1000; // Convert to milliseconds
+                    console.log(`🕰️ Using server initial duration: ${serverDuration}s`);
+                } else {
+                    initialDuration = Math.max(4000, initialText.length * 60); // 60ms per character, min 4 seconds
+                    console.log(`🕰️ Using estimated initial duration: ${initialDuration}ms`);
+                }
+                
+                // Start typewriter effect for initial question
+                typewriterEffect(subtitleText, initialText, initialDuration, () => {
+                    // Enable speech recognition after typewriter completes
+                    setTimeout(() => {
+                        handleAIFinishedSpeaking();
+                    }, 1000);
+                });
             }, 1000);
             
-            // Hide initial subtitle after 10 seconds and enable speech recognition
+            // Hide initial subtitle after 10 seconds
             setTimeout(() => {
                 document.getElementById('subtitleOverlay').classList.remove('show');
-                // Enable speech recognition after initial AI message
-                handleAIFinishedSpeaking();
             }, 11000);
         });
 

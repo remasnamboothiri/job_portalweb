@@ -1254,6 +1254,7 @@ Respond as Alex would naturally speak:
             
             # Generate TTS instantly - Force RunPod first, then gTTS fallback
             audio_path = None
+            audio_duration = None
             audio_generation_error = None
             try:
                 # Try RunPod first (force it)
@@ -1261,15 +1262,41 @@ Respond as Alex would naturally speak:
                 if not audio_path:
                     # Quick gTTS fallback if RunPod fails
                     audio_path = generate_gtts_fallback(ai_response)
+                
+                # Get audio duration for typewriter sync
+                if audio_path:
+                    from jobapp.tts import estimate_audio_duration, get_audio_duration
+                    
+                    # Try to get actual duration first
+                    full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                    actual_duration = get_audio_duration(full_audio_path)
+                    
+                    if actual_duration:
+                        audio_duration = actual_duration
+                    else:
+                        # Fallback to estimation
+                        audio_duration = estimate_audio_duration(ai_response)
+                    
+                    logger.info(f"Audio duration for typewriter sync: {audio_duration} seconds")
+                else:
+                    # No audio, estimate duration for typewriter effect
+                    from jobapp.tts import estimate_audio_duration
+                    audio_duration = estimate_audio_duration(ai_response)
+                    
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
                 audio_generation_error = str(e)
                 audio_path = None
+                
+                # Still estimate duration for typewriter effect
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_response)
             
             # Return JSON response for AJAX requests
             response_data = {
                 'response': ai_response,
                 'audio': audio_path if audio_path else '',
+                'audio_duration': audio_duration,  # Duration in seconds for typewriter sync
                 'success': True,
                 'question_count': question_count,
                 'is_final': question_count >= 8,
@@ -1325,21 +1352,46 @@ Respond as Alex would naturally speak:
         
         # Generate initial TTS - Force RunPod first
         audio_path = None
+        audio_duration = None
         try:
             # Try RunPod first for initial question
             audio_path = generate_tts(ai_question, model="chatterbox", force_runpod=False)
             if not audio_path:
                 # Quick gTTS fallback
                 audio_path = generate_gtts_fallback(ai_question)
+            
+            # Get audio duration for typewriter sync
+            if audio_path:
+                from jobapp.tts import estimate_audio_duration, get_audio_duration
+                
+                # Try to get actual duration first
+                full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                actual_duration = get_audio_duration(full_audio_path)
+                
+                if actual_duration:
+                    audio_duration = actual_duration
+                else:
+                    # Fallback to estimation
+                    audio_duration = estimate_audio_duration(ai_question)
+            else:
+                # No audio, estimate duration for typewriter effect
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_question)
+                
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
             audio_path = None
+            
+            # Still estimate duration for typewriter effect
+            from jobapp.tts import estimate_audio_duration
+            audio_duration = estimate_audio_duration(ai_question)
 
         # Template context with proper audio handling
         context_data = {
             'interview': interview,
             'ai_question': ai_question,
             'audio_url': audio_path if audio_path else '',
+            'audio_duration': audio_duration,  # Duration for typewriter sync
             'candidate_name': candidate_name,
             'job_title': job_title,
             'company_name': company_name,

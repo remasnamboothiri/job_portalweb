@@ -544,6 +544,57 @@ def get_tts_with_fallback_chain(text):
     logger.error("All TTS methods failed")
     return None
 
+def estimate_audio_duration(text, words_per_minute=150):
+    """
+    Estimate audio duration based on text length and speaking rate
+    Default speaking rate: 150 words per minute (natural conversational pace)
+    """
+    if not text or not text.strip():
+        return 0
+    
+    # Count words
+    word_count = len(text.split())
+    
+    # Calculate duration in seconds
+    duration_seconds = (word_count / words_per_minute) * 60
+    
+    # Add padding for natural pauses (10% extra)
+    duration_seconds *= 1.1
+    
+    # Minimum duration of 2 seconds
+    duration_seconds = max(2.0, duration_seconds)
+    
+    return duration_seconds
+
+def get_audio_duration(audio_path):
+    """
+    Get actual audio duration from file (requires mutagen library)
+    Falls back to estimation if mutagen is not available
+    """
+    try:
+        # Try to get actual duration using mutagen
+        try:
+            from mutagen import File
+            audio_file = File(audio_path)
+            if audio_file and audio_file.info:
+                return audio_file.info.length
+        except ImportError:
+            logger.warning("Mutagen not available, using estimation")
+        except Exception as e:
+            logger.warning(f"Could not get audio duration: {e}")
+        
+        # Fallback: estimate based on file size (rough approximation)
+        if os.path.exists(audio_path):
+            file_size = os.path.getsize(audio_path)
+            # Rough estimate: 1KB per second for compressed audio
+            estimated_duration = file_size / 1024
+            return max(2.0, min(estimated_duration, 30.0))  # Cap between 2-30 seconds
+        
+    except Exception as e:
+        logger.error(f"Error getting audio duration: {e}")
+    
+    return None
+
 def create_emergency_response():
     """
     Create a simple text response when all audio generation fails

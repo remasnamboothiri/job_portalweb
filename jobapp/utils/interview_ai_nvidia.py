@@ -26,41 +26,37 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         if not prompt or not prompt.strip():
             raise Exception("Empty prompt provided to AI function")
                 
-        # Simplified system prompt focused on natural conversation
+        # Natural conversation system prompt
         system_prompt = f"""
-    You are Alex, an experienced and friendly HR professional conducting a job interview for a {job_title} position at {company_name}.
+You are Alex, a warm and experienced HR interviewer at {company_name}. You're having a natural conversation with {candidate_name} about the {job_title} position.
 
-    CRITICAL INSTRUCTIONS:
-    - Output ONLY the exact words you would speak
-    - NO quotation marks, labels, or descriptions
-    - NO stage directions or narrations like "Waiting for response" or "AI Interviewer says"
-    - NO formatting or explanations
-    - Just speak naturally as Alex would speak
+YOUR PERSONALITY:
+- Genuinely curious and interested in people
+- Warm, approachable, and encouraging
+- Good listener who responds to what people actually say
+- Professional but friendly, like talking to a colleague
 
+CONVERSATION RULES:
+- ALWAYS respond directly to what the candidate just said
+- Ask follow-up questions based on their specific answers
+- Show you're listening by referencing their responses
+- Keep it natural - like two professionals chatting over coffee
+- 1-2 sentences maximum per response
+- NO scripted questions - let the conversation flow naturally
 
+HOW TO RESPOND:
+1. Acknowledge something specific they mentioned
+2. Ask a natural follow-up question about what they said
+3. OR explore something interesting they brought up
+4. OR ask them to elaborate on a point they made
 
-    COMMUNICATION STYLE:
-    - Be natural, warm, and conversational like a real human interviewer
-    - Use simple, clear language - avoid corporate jargon
-    - Keep responses concise (2-3 sentences maximum)
-    - Show genuine interest in the candidate's responses
-    - Ask one question at a time
-    - Use natural transitions like "That's interesting," "I see," "Tell me more about..."
+EXAMPLES:
+- "That project sounds challenging! How did you handle the technical difficulties?"
+- "Three years in full-stack development - what's been your favorite part?"
+- "You mentioned React - what drew you to that framework?"
 
-    INTERVIEW APPROACH:
-    - Focus on having a natural conversation, not interrogation
-    - Ask follow-up questions based on what the candidate says
-    - Be encouraging and supportive
-    - Keep the flow smooth and engaging
-    
-    
-    RESPONSE PATTERN:
-    - Briefly acknowledge what they just said (optional, 1 sentence max)
-    - Ask ONE specific, relevant follow-up question
-    - Keep the conversation flowing naturally
-
-    Remember: You're having a friendly professional conversation, not giving speeches.
-    """
+Remember: This is a conversation, not an interrogation. Be genuinely interested in their story.
+"""
                     
         try:
             import signal
@@ -94,15 +90,11 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
                 signal.alarm(0)  # Cancel the alarm
                 
         except (TimeoutError, Exception) as e:
-            # Fallback to default questions if AI fails
-            if "tell me about yourself" in prompt.lower():
-                return f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
-            elif "technical" in prompt.lower():
-                return "That's great! Can you tell me about your technical experience and the technologies you've worked with?"
-            elif "project" in prompt.lower():
-                return "Interesting! Can you describe a challenging project you've worked on and how you approached it?"
+            # Natural fallback responses
+            if "opening" in prompt.lower() or "start" in prompt.lower():
+                return f"Hi {candidate_name}! Great to meet you. I'd love to hear about your background and what brought you to apply for this role."
             else:
-                return f"Thank you for that response. Can you tell me more about your experience relevant to this {job_title} role?"
+                return "That's really interesting! Tell me more about that - I'd love to hear the details."
         
         try:
             def clean_text(text):
@@ -119,10 +111,10 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
             raw_response = completion.choices[0].message.content
             cleaned_response = clean_text(raw_response)
             
-            # Additional check to ensure response isn't too long
+            # Keep responses conversational and brief
             sentences = cleaned_response.split('. ')
-            if len(sentences) > 3:
-                cleaned_response = '. '.join(sentences[:3]) + '.'
+            if len(sentences) > 2:
+                cleaned_response = '. '.join(sentences[:2]) + '.'
                 
             return cleaned_response
         except Exception as e:

@@ -2381,7 +2381,8 @@ def get_candidate_email(request, candidate_id):
 
 def debug_tts_system(request):
     """Debug TTS system to identify RunPod issues with chatterbox model"""
-    from jobapp.tts import check_tts_system, test_runpod_integration, generate_tts
+    from jobapp.tts import check_tts_system, test_runpod_integration, generate_tts, generate_runpod_tts
+    import requests
     
     debug_info = {
         'timestamp': timezone.now().isoformat(),
@@ -2392,13 +2393,54 @@ def debug_tts_system(request):
     }
     
     try:
+        # Direct API test
+        RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
+        JWT_SECRET = getattr(settings, 'JWT_SECRET', '')
+        RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
+        
+        headers = {
+            "Authorization": f"Bearer {RUNPOD_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "input": {
+                "text": "Hello, this is a direct API test.",
+                "model": "chatterbox",
+                "voice_id": "female_default",
+                "jwt_token": JWT_SECRET
+            }
+        }
+        
+        logger.info(f"Testing direct API call with payload: {payload}")
+        
+        response = requests.post(
+            RUNPOD_ENDPOINT,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        debug_info['direct_api_test'] = {
+            'status_code': response.status_code,
+            'response_text': response.text[:500],  # First 500 chars
+            'headers': dict(response.headers)
+        }
+        
+        if response.status_code == 200:
+            try:
+                result = response.json()
+                debug_info['direct_api_test']['response_json'] = result
+            except:
+                debug_info['direct_api_test']['json_parse_error'] = True
+        
         # Test system health
         health_check = check_tts_system()
         debug_info['health_check'] = health_check
         
-        # Test RunPod integration with chatterbox model
-        runpod_test = test_runpod_integration("Hello, this is a test of the chatterbox model with female_default voice.")
-        debug_info['runpod_test'] = runpod_test
+        # Test RunPod function directly
+        direct_runpod_test = generate_runpod_tts("Testing direct RunPod function", "chatterbox")
+        debug_info['direct_runpod_function'] = direct_runpod_test
         
         # Test actual TTS generation with chatterbox model
         test_audio = generate_tts("Testing chatterbox model with female_default voice generation", model="chatterbox")
@@ -2423,23 +2465,31 @@ def test_chatterbox_voice(request):
     from jobapp.tts import test_chatterbox_voice as test_chatterbox, generate_tts
     
     test_text = request.GET.get('text', "Hello! I'm your AI interviewer using the female default voice. Welcome to your interview today!")
+    force_runpod = request.GET.get('force_runpod', 'false').lower() == 'true'
     
     result = {
         'timestamp': timezone.now().isoformat(),
         'test_text': test_text,
+        'force_runpod': force_runpod,
         'chatterbox_test': None,
         'regular_tts_test': None,
+        'runpod_only_test': None,
         'success': False
     }
     
     try:
-        # Test chatterbox specifically
+        # Test chatterbox specifically (RunPod only)
         chatterbox_result = test_chatterbox(test_text)
         result['chatterbox_test'] = chatterbox_result
         
         # Test regular TTS with chatterbox model
         regular_result = generate_tts(test_text, model="chatterbox")
         result['regular_tts_test'] = regular_result
+        
+        # Test RunPod only (no fallback)
+        if force_runpod:
+            runpod_only_result = generate_tts(test_text, model="chatterbox", force_runpod=True)
+            result['runpod_only_test'] = runpod_only_result
         
         if chatterbox_result or regular_result:
             result['success'] = True
@@ -2452,6 +2502,14 @@ def test_chatterbox_voice(request):
                 if os.path.exists(full_path):
                     result['file_size'] = os.path.getsize(full_path)
                     result['file_path'] = full_path
+                    
+                    # Check if it's from RunPod or gTTS
+                    if 'runpod' in result['audio_url']:
+                        result['source'] = 'RunPod'
+                    elif 'gtts' in result['audio_url']:
+                        result['source'] = 'gTTS'
+                    else:
+                        result['source'] = 'Unknown'
         
     except Exception as e:
         result['error'] = str(e)

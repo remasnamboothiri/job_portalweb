@@ -56,10 +56,10 @@ if not RUNPOD_API_KEY:
 if not JWT_SECRET:
     logger.warning("JWT_SECRET not found in Django settings")
 
-def generate_tts(text, model="chatterbox", force_gtts=False):
+def generate_tts(text, model="chatterbox", force_gtts=False, force_runpod=False):
     """
     Generate TTS audio using RunPod API with gTTS fallback
-    Models available: kokkoro, chatterbox
+    Models available: chatterbox
     """
     
     # Clean and validate text
@@ -77,16 +77,29 @@ def generate_tts(text, model="chatterbox", force_gtts=False):
         logger.info("Using gTTS fallback as requested")
         return generate_gtts_fallback(clean_text)
     
+    # Check if we have RunPod credentials
+    if not RUNPOD_API_KEY or not JWT_SECRET:
+        logger.warning("RunPod credentials missing, using gTTS fallback")
+        return generate_gtts_fallback(clean_text)
+    
     # Try RunPod API first
-    logger.info(f"Attempting RunPod TTS with model: {model}")
+    logger.info(f"🚀 Attempting RunPod TTS with model: {model}")
+    logger.info(f"🔑 API Key present: {bool(RUNPOD_API_KEY)}")
+    logger.info(f"🔐 JWT Secret present: {bool(JWT_SECRET)}")
+    
     runpod_result = generate_runpod_tts(clean_text, model)
     
     if runpod_result:
-        logger.info(f"RunPod TTS successful: {runpod_result}")
+        logger.info(f"✅ RunPod TTS successful: {runpod_result}")
         return runpod_result
     
+    # If force_runpod is True, don't fallback to gTTS
+    if force_runpod:
+        logger.error("❌ RunPod TTS failed and force_runpod=True, returning None")
+        return None
+    
     # Fallback to gTTS if RunPod fails
-    logger.warning("RunPod TTS failed, falling back to gTTS")
+    logger.warning("⚠️  RunPod TTS failed, falling back to gTTS")
     return generate_gtts_fallback(clean_text)
 
 def generate_runpod_tts(text, model="chatterbox"):
@@ -456,7 +469,8 @@ def check_tts_system():
         test_payload = {
             "input": {
                 "text": "test",
-                "model": "kokkoro",
+                "model": "chatterbox",
+                "voice_id": "female_default",
                 "jwt_token": JWT_SECRET
             }
         }

@@ -2380,13 +2380,15 @@ def get_candidate_email(request, candidate_id):
         })
 
 def debug_tts_system(request):
-    """Debug TTS system to identify RunPod issues"""
+    """Debug TTS system to identify RunPod issues with chatterbox model"""
     from jobapp.tts import check_tts_system, test_runpod_integration, generate_tts
     
     debug_info = {
         'timestamp': timezone.now().isoformat(),
         'runpod_api_key_present': bool(getattr(settings, 'RUNPOD_API_KEY', '')),
         'jwt_secret_present': bool(getattr(settings, 'JWT_SECRET', '')),
+        'model': 'chatterbox',
+        'voice': 'female_default'
     }
     
     try:
@@ -2394,12 +2396,12 @@ def debug_tts_system(request):
         health_check = check_tts_system()
         debug_info['health_check'] = health_check
         
-        # Test RunPod integration
-        runpod_test = test_runpod_integration("Hello, this is a test of the Kokkoro voice model.")
+        # Test RunPod integration with chatterbox model
+        runpod_test = test_runpod_integration("Hello, this is a test of the chatterbox model with female_default voice.")
         debug_info['runpod_test'] = runpod_test
         
-        # Test actual TTS generation
-        test_audio = generate_tts("Testing Kokkoro voice generation", model="kokkoro")
+        # Test actual TTS generation with chatterbox model
+        test_audio = generate_tts("Testing chatterbox model with female_default voice generation", model="chatterbox")
         debug_info['test_audio_result'] = test_audio
         
         if test_audio:
@@ -2416,32 +2418,32 @@ def debug_tts_system(request):
     
     return JsonResponse(debug_info, indent=2)
 
-def test_kokkoro_voice(request):
-    """Test Kokkoro voice specifically"""
-    from jobapp.tts import test_kokkoro_voice as test_kokkoro, generate_tts
+def test_chatterbox_voice(request):
+    """Test chatterbox voice with female_default specifically"""
+    from jobapp.tts import test_chatterbox_voice as test_chatterbox, generate_tts
     
-    test_text = request.GET.get('text', "Hello! I'm Kokkoro, your AI interviewer. Welcome to your interview today!")
+    test_text = request.GET.get('text', "Hello! I'm your AI interviewer using the female default voice. Welcome to your interview today!")
     
     result = {
         'timestamp': timezone.now().isoformat(),
         'test_text': test_text,
-        'kokkoro_test': None,
+        'chatterbox_test': None,
         'regular_tts_test': None,
         'success': False
     }
     
     try:
-        # Test Kokkoro specifically
-        kokkoro_result = test_kokkoro(test_text)
-        result['kokkoro_test'] = kokkoro_result
+        # Test chatterbox specifically
+        chatterbox_result = test_chatterbox(test_text)
+        result['chatterbox_test'] = chatterbox_result
         
-        # Test regular TTS with Kokkoro model
-        regular_result = generate_tts(test_text, model="kokkoro")
+        # Test regular TTS with chatterbox model
+        regular_result = generate_tts(test_text, model="chatterbox")
         result['regular_tts_test'] = regular_result
         
-        if kokkoro_result or regular_result:
+        if chatterbox_result or regular_result:
             result['success'] = True
-            result['audio_url'] = kokkoro_result or regular_result
+            result['audio_url'] = chatterbox_result or regular_result
             
             # Check if file exists
             if result['audio_url']:

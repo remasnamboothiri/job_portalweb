@@ -12,30 +12,38 @@ import json
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# RunPod TTS Configuration
+# RunPod TTS Configuration - Using Kokkoro endpoint with chatterbox model
 RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
 JWT_SECRET = getattr(settings, 'JWT_SECRET', '')
 RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
 
-# Available voice models with proper IDs
+# Built-in voices configuration for chatterbox model
+BUILTIN_VOICES = {
+    "female_default": {
+        "voice_id": "female_default",
+        "name": "Female Default",
+        "description": "Professional female voice",
+        "audio_url": "https://storage.googleapis.com/chatterbox-demo-samples/prompts/female_shadowheart4.flac",
+        "type": "builtin",
+        "created_at": "2024-01-01T00:00:00Z"
+    }
+}
+
+# Available voice models - Updated to use chatterbox with female_default
 AVAILABLE_VOICES = {
-    "kokkoro": {
-        "voice_id": "kokkoro",
-        "name": "Kokkoro",
-        "description": "Anime-style female voice",
-        "type": "character"
-    },
     "chatterbox": {
-        "voice_id": "chatterbox", 
-        "name": "Chatterbox",
-        "description": "Natural conversational voice",
-        "type": "natural"
+        "voice_id": "female_default",  # Use female_default voice in chatterbox model
+        "name": "Chatterbox Female",
+        "description": "Professional female voice using chatterbox model",
+        "type": "chatterbox",
+        "model": "chatterbox"
     },
     "female_default": {
         "voice_id": "female_default",
         "name": "Female Default",
         "description": "Professional female voice",
-        "type": "builtin"
+        "type": "builtin",
+        "model": "chatterbox"
     }
 }
 
@@ -48,7 +56,7 @@ if not RUNPOD_API_KEY:
 if not JWT_SECRET:
     logger.warning("JWT_SECRET not found in Django settings")
 
-def generate_tts(text, model="kokkoro", force_gtts=False):
+def generate_tts(text, model="chatterbox", force_gtts=False):
     """
     Generate TTS audio using RunPod API with gTTS fallback
     Models available: kokkoro, chatterbox
@@ -81,16 +89,16 @@ def generate_tts(text, model="kokkoro", force_gtts=False):
     logger.warning("RunPod TTS failed, falling back to gTTS")
     return generate_gtts_fallback(clean_text)
 
-def generate_runpod_tts(text, model="kokkoro"):
+def generate_runpod_tts(text, model="chatterbox"):
     """
-    Generate TTS using RunPod API
-    Available models: kokkoro, chatterbox
+    Generate TTS using RunPod API with chatterbox model and female_default voice
+    Available models: chatterbox
     """
     try:
         # Validate voice model
         if model not in AVAILABLE_VOICES:
-            logger.warning(f"Invalid voice '{model}', using 'kokkoro'")
-            model = "kokkoro"
+            logger.warning(f"Invalid voice '{model}', using 'chatterbox'")
+            model = "chatterbox"
         
         voice_config = AVAILABLE_VOICES[model]
         voice_id = voice_config["voice_id"]
@@ -98,8 +106,8 @@ def generate_runpod_tts(text, model="kokkoro"):
         logger.info(f"RunPod TTS generation with model '{model}' for: '{text[:50]}...'")
         
         # Create filename for caching (use .mp3 since RunPod returns MP3)
-        text_hash = hashlib.md5(f"{text}_{voice_id}".encode()).hexdigest()[:8]
-        filename = f"runpod_{voice_id}_{text_hash}.mp3"
+        text_hash = hashlib.md5(f"{text}_chatterbox_female_default".encode()).hexdigest()[:8]
+        filename = f"runpod_chatterbox_female_default_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         os.makedirs(tts_dir, exist_ok=True)
         filepath = os.path.join(tts_dir, filename)
@@ -116,11 +124,12 @@ def generate_runpod_tts(text, model="kokkoro"):
             "Content-Type": "application/json"
         }
         
-        # Updated payload format for proper voice selection
+        # Updated payload format for chatterbox model with female_default voice
         payload = {
             "input": {
                 "text": text,
-                "voice_id": voice_id,  # Use the correct voice_id
+                "model": "chatterbox",  # Specify chatterbox model
+                "voice_id": "female_default",  # Use female_default voice
                 "jwt_token": JWT_SECRET,
                 "voice_settings": {
                     "stability": 0.75,
@@ -362,29 +371,29 @@ def cleanup_old_tts_files(days_old=1):
 generate_tts_audio = generate_tts
 
 # Helper function to switch models easily
-def generate_tts_kokkoro(text):
-    """Generate TTS using kokkoro model"""
-    return generate_tts(text, model="kokkoro")
-
 def generate_tts_chatterbox(text):
-    """Generate TTS using chatterbox model"""
+    """Generate TTS using chatterbox model with female_default voice"""
     return generate_tts(text, model="chatterbox")
 
-def test_kokkoro_voice(text="Hello! I'm Kokkoro, your AI interviewer. Let's begin the interview."):
-    """Test specifically the Kokkoro voice model"""
-    logger.info("Testing Kokkoro voice specifically...")
+def generate_tts_female_default(text):
+    """Generate TTS using female_default voice in chatterbox model"""
+    return generate_tts(text, model="chatterbox")
+
+def test_chatterbox_voice(text="Hello! I'm your AI interviewer using the female default voice. Let's begin the interview."):
+    """Test specifically the chatterbox model with female_default voice"""
+    logger.info("Testing chatterbox model with female_default voice specifically...")
     
     # Force RunPod API (no fallback to gTTS)
     try:
-        result = generate_runpod_tts(text, "kokkoro")
+        result = generate_runpod_tts(text, "chatterbox")
         if result:
-            logger.info(f"✅ Kokkoro voice test successful: {result}")
+            logger.info(f"✅ Chatterbox female_default voice test successful: {result}")
             return result
         else:
-            logger.error("❌ Kokkoro voice test failed - no audio generated")
+            logger.error("❌ Chatterbox female_default voice test failed - no audio generated")
             return None
     except Exception as e:
-        logger.error(f"❌ Kokkoro voice test error: {e}")
+        logger.error(f"❌ Chatterbox female_default voice test error: {e}")
         return None
 
 def check_tts_system():
@@ -497,8 +506,7 @@ def get_tts_with_fallback_chain(text):
     Try multiple TTS methods in order with comprehensive fallback
     """
     methods = [
-        ('RunPod kokkoro', lambda: generate_tts(text, model="kokkoro")),
-        ('RunPod chatterbox', lambda: generate_tts(text, model="chatterbox")),
+        ('RunPod chatterbox female_default', lambda: generate_tts(text, model="chatterbox")),
         ('gTTS Fallback', lambda: generate_gtts_fallback(text)),
         ('Emergency Text', lambda: create_emergency_response())
     ]
@@ -524,18 +532,18 @@ def create_emergency_response():
     """
     return "TEXT_ONLY_RESPONSE"
 
-def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS system."):
+def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS system with chatterbox model and female_default voice."):
     """
-    Test function specifically for RunPod TTS integration
+    Test function specifically for RunPod TTS integration with chatterbox model
     """
-    logger.info("=== RunPod TTS Integration Test ===")
+    logger.info("=== RunPod TTS Integration Test (Chatterbox Model) ===")
     logger.info(f"Testing with text: '{test_text}'")
     
     results = {}
     
-    # Test both voice models
+    # Test chatterbox model with female_default voice
     for model in AVAILABLE_VOICES.keys():
-        logger.info(f"\nTesting model: {model}")
+        logger.info(f"\nTesting model: {model} with female_default voice")
         try:
             result = generate_runpod_tts(test_text, model)
             if result:
@@ -550,7 +558,7 @@ def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS s
                 if os.path.exists(full_path):
                     file_size = os.path.getsize(full_path)
                     results[model]['file_size'] = file_size
-                    logger.info(f"✓ {model} model successful: {result} ({file_size} bytes)")
+                    logger.info(f"✓ {model} model with female_default voice successful: {result} ({file_size} bytes)")
                 else:
                     results[model]['status'] = 'file_not_found'
                     logger.error(f"✗ {model} model: File not found at {full_path}")

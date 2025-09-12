@@ -6,109 +6,224 @@
     <title>Typewriter Sync Test</title>
     <style>
         body {
-            background: #202124;
-            color: white;
             font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
+            background: #f0f0f0;
         }
-        .test-area {
-            background: #303134;
+        .test-container {
+            background: white;
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 10px;
             margin: 20px 0;
-            min-height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .test-text {
+        .typewriter-text {
             font-size: 18px;
             line-height: 1.6;
-            text-align: center;
+            min-height: 100px;
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fafafa;
         }
         button {
-            background: #34a853;
+            background: #007bff;
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            margin: 10px;
+            margin: 10px 5px;
         }
         button:hover {
-            opacity: 0.8;
+            background: #0056b3;
         }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
     </style>
 </head>
 <body>
-    <h1>Typewriter Synchronization Test</h1>
+    <h1>🔤 Typewriter Synchronization Test</h1>
     
-    <div class="test-area">
-        <div class="test-text" id="testText">
-            Click a button below to test typewriter synchronization
-        </div>
+    <div class="test-container">
+        <h2>Test 1: Natural Typewriter (No Audio)</h2>
+        <div id="test1" class="typewriter-text"></div>
+        <button onclick="testNaturalTypewriter()">Start Natural Typewriter</button>
+        <div id="status1" class="status info">Ready to test</div>
     </div>
     
-    <button onclick="testWithAudio()">Test With Audio Sync</button>
-    <button onclick="testWithoutAudio()">Test Without Audio</button>
-    <button onclick="testNaturalTiming()">Test Natural Timing</button>
+    <div class="test-container">
+        <h2>Test 2: Synchronized Typewriter (With Audio)</h2>
+        <div id="test2" class="typewriter-text"></div>
+        <button onclick="testSynchronizedTypewriter()">Start Synchronized Typewriter</button>
+        <div id="status2" class="status info">Ready to test</div>
+        <audio id="testAudio" controls style="width: 100%; margin: 10px 0;"></audio>
+    </div>
     
-    <audio id="testAudio" style="display: none;"></audio>
-    
-    <script src="{% static 'js/typewriter-sync.js' %}"></script>
-    
+    <div class="test-container">
+        <h2>Test 3: Interview Simulation</h2>
+        <div id="test3" class="typewriter-text"></div>
+        <button onclick="testInterviewSimulation()">Start Interview Simulation</button>
+        <div id="status3" class="status info">Ready to test</div>
+        <audio id="interviewAudio" controls style="width: 100%; margin: 10px 0;"></audio>
+    </div>
+
+    <!-- Load the typewriter sync system -->
+    <script src="/static/js/typewriter-sync.js"></script>
+
     <script>
-        const testText = "Hello! Welcome to your AI interview. I'm excited to learn more about you and understand what makes you a great candidate for this position. Can you start by telling me about yourself and your background?";
-        
-        function testWithAudio() {
-            const element = document.getElementById('testText');
-            const audio = document.getElementById('testAudio');
+        const testTexts = {
+            short: "Hello! Welcome to your AI interview. I'm excited to learn more about you.",
+            medium: "Hello! Welcome to your AI interview. I'm excited to learn more about you and understand what makes you a great candidate for this position. Can you start by telling me about yourself?",
+            long: "Hello! Welcome to your AI interview. I'm excited to learn more about you and understand what makes you a great candidate for this position. Can you start by telling me about yourself and what drew you to apply for this role? I'd love to hear about your background, experience, and what you're passionate about in your career."
+        };
+
+        function updateStatus(testNum, message, type = 'info') {
+            const statusEl = document.getElementById(`status${testNum}`);
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function testNaturalTypewriter() {
+            const element = document.getElementById('test1');
+            const text = testTexts.medium;
             
-            // Use a sample audio URL (you can replace with actual audio)
-            audio.src = '/media/tts/sample_audio.mp3';
-            
-            element.textContent = '';
+            updateStatus(1, 'Starting natural typewriter...', 'info');
             
             if (window.TypewriterSync) {
-                window.TypewriterSync.createSynchronized(element, testText, audio)
+                window.TypewriterSync.createNatural(element, text, 5)
                     .then(() => {
-                        console.log('Audio sync test completed');
+                        updateStatus(1, 'Natural typewriter completed successfully!', 'success');
+                    })
+                    .catch(error => {
+                        updateStatus(1, `Error: ${error.message}`, 'error');
                     });
             } else {
-                console.error('TypewriterSync not loaded');
+                updateStatus(1, 'TypewriterSync not available', 'error');
             }
         }
-        
-        function testWithoutAudio() {
-            const element = document.getElementById('testText');
+
+        function testSynchronizedTypewriter() {
+            const element = document.getElementById('test2');
+            const audioElement = document.getElementById('testAudio');
+            const text = testTexts.medium;
             
-            element.textContent = '';
+            updateStatus(2, 'Loading test audio...', 'info');
             
-            if (window.TypewriterSync) {
-                window.TypewriterSync.createNatural(element, testText, 8)
-                    .then(() => {
-                        console.log('Natural timing test completed');
-                    });
-            } else {
-                console.error('TypewriterSync not loaded');
-            }
-        }
-        
-        function testNaturalTiming() {
-            const element = document.getElementById('testText');
-            element.textContent = '';
-            
-            let index = 0;
-            const streamText = () => {
-                if (index < testText.length) {
-                    element.textContent += testText.charAt(index);
-                    index++;
-                    setTimeout(streamText, 50);
+            // Use a sample TTS audio file or generate one
+            fetch('/test-tts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.audio_url) {
+                    audioElement.src = data.audio_url;
+                    updateStatus(2, 'Audio loaded, starting synchronized typewriter...', 'info');
+                    
+                    if (window.TypewriterSync) {
+                        window.TypewriterSync.createSynchronized(element, text, audioElement)
+                            .then(() => {
+                                updateStatus(2, 'Synchronized typewriter completed successfully!', 'success');
+                            })
+                            .catch(error => {
+                                updateStatus(2, `Error: ${error.message}`, 'error');
+                            });
+                    } else {
+                        updateStatus(2, 'TypewriterSync not available', 'error');
+                    }
+                } else {
+                    updateStatus(2, 'Failed to generate test audio', 'error');
                 }
-            };
-            streamText();
+            })
+            .catch(error => {
+                updateStatus(2, `Audio generation failed: ${error.message}`, 'error');
+            });
         }
+
+        function testInterviewSimulation() {
+            const element = document.getElementById('test3');
+            const audioElement = document.getElementById('interviewAudio');
+            const text = testTexts.long;
+            
+            updateStatus(3, 'Simulating interview question with audio...', 'info');
+            
+            // Simulate the actual interview flow
+            fetch('/test-tts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.audio_url) {
+                    audioElement.src = data.audio_url;
+                    
+                    // Simulate the interview audio loading process
+                    audioElement.oncanplaythrough = () => {
+                        updateStatus(3, 'Audio ready, starting playback and typewriter...', 'info');
+                        
+                        audioElement.play().then(() => {
+                            if (window.TypewriterSync) {
+                                window.TypewriterSync.createSynchronized(element, text, audioElement)
+                                    .then(() => {
+                                        updateStatus(3, 'Interview simulation completed successfully!', 'success');
+                                    })
+                                    .catch(error => {
+                                        updateStatus(3, `Error: ${error.message}`, 'error');
+                                    });
+                            }
+                        }).catch(error => {
+                            updateStatus(3, `Audio playback failed: ${error.message}`, 'error');
+                        });
+                    };
+                    
+                    audioElement.load();
+                } else {
+                    updateStatus(3, 'Failed to generate interview audio', 'error');
+                }
+            })
+            .catch(error => {
+                updateStatus(3, `Interview simulation failed: ${error.message}`, 'error');
+            });
+        }
+
+        function getCsrfToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return '';
+        }
+
+        // Test system availability on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.TypewriterSync) {
+                console.log('✅ TypewriterSync system loaded successfully');
+                console.log('Available methods:', Object.keys(window.TypewriterSync));
+            } else {
+                console.error('❌ TypewriterSync system not available');
+            }
+        });
     </script>
 </body>
 </html>

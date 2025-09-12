@@ -398,7 +398,8 @@ __all__ = [
     'get_audio_duration',
     'create_typewriter_sync_data',
     'ensure_audio_sync_data',
-    'test_typewriter_sync_system'
+    'test_typewriter_sync_system',
+    'get_audio_duration_with_fallback'
 ]
 
 # Helper function to switch models easily

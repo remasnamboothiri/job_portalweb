@@ -26,37 +26,41 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         if not prompt or not prompt.strip():
             raise Exception("Empty prompt provided to AI function")
                 
-        # Natural conversation system prompt
+        # Simplified system prompt focused on natural conversation
         system_prompt = f"""
-You are Alex, a warm and experienced HR interviewer at {company_name}. You're having a natural conversation with {candidate_name} about the {job_title} position.
+    You are Alex, an experienced and friendly HR professional conducting a job interview for a {job_title} position at {company_name}.
 
-YOUR PERSONALITY:
-- Genuinely curious and interested in people
-- Warm, approachable, and encouraging
-- Good listener who responds to what people actually say
-- Professional but friendly, like talking to a colleague
+    CRITICAL INSTRUCTIONS:
+    - Output ONLY the exact words you would speak
+    - NO quotation marks, labels, or descriptions
+    - NO stage directions or narrations like "Waiting for response" or "AI Interviewer says"
+    - NO formatting or explanations
+    - Just speak naturally as Alex would speak
 
-CONVERSATION RULES:
-- ALWAYS respond directly to what the candidate just said
-- Ask follow-up questions based on their specific answers
-- Show you're listening by referencing their responses
-- Keep it natural - like two professionals chatting over coffee
-- 1-2 sentences maximum per response
-- NO scripted questions - let the conversation flow naturally
 
-HOW TO RESPOND:
-1. Acknowledge something specific they mentioned
-2. Ask a natural follow-up question about what they said
-3. OR explore something interesting they brought up
-4. OR ask them to elaborate on a point they made
 
-EXAMPLES:
-- "That project sounds challenging! How did you handle the technical difficulties?"
-- "Three years in full-stack development - what's been your favorite part?"
-- "You mentioned React - what drew you to that framework?"
+    COMMUNICATION STYLE:
+    - Be natural, warm, and conversational like a real human interviewer
+    - Use simple, clear language - avoid corporate jargon
+    - Keep responses concise (2-3 sentences maximum)
+    - Show genuine interest in the candidate's responses
+    - Ask one question at a time
+    - Use natural transitions like "That's interesting," "I see," "Tell me more about..."
 
-Remember: This is a conversation, not an interrogation. Be genuinely interested in their story.
-"""
+    INTERVIEW APPROACH:
+    - Focus on having a natural conversation, not interrogation
+    - Ask follow-up questions based on what the candidate says
+    - Be encouraging and supportive
+    - Keep the flow smooth and engaging
+    
+    
+    RESPONSE PATTERN:
+    - Briefly acknowledge what they just said (optional, 1 sentence max)
+    - Ask ONE specific, relevant follow-up question
+    - Keep the conversation flowing naturally
+
+    Remember: You're having a friendly professional conversation, not giving speeches.
+    """
                     
         try:
             import signal
@@ -90,55 +94,35 @@ Remember: This is a conversation, not an interrogation. Be genuinely interested 
                 signal.alarm(0)  # Cancel the alarm
                 
         except (TimeoutError, Exception) as e:
-            # Natural fallback responses
-            if "opening" in prompt.lower() or "start" in prompt.lower():
-                return f"Hi {candidate_name}! Great to meet you. I'd love to hear about your background and what brought you to apply for this role."
+            # Fallback to default questions if AI fails
+            if "tell me about yourself" in prompt.lower():
+                return f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+            elif "technical" in prompt.lower():
+                return "That's great! Can you tell me about your technical experience and the technologies you've worked with?"
+            elif "project" in prompt.lower():
+                return "Interesting! Can you describe a challenging project you've worked on and how you approached it?"
             else:
-                return "That's really interesting! Tell me more about that - I'd love to hear the details."
+                return f"Thank you for that response. Can you tell me more about your experience relevant to this {job_title} role?"
         
         try:
             def clean_text(text):
                 import re
-                import html
-                
-                # First decode HTML entities like &quot; &#39; etc.
-                text = html.unescape(text)
-                
                 # Remove markdown and excessive formatting
                 text = re.sub(r'[*#`_>\\-]+', '', text)
-                
-                # Remove quotes and apostrophes that shouldn't be spoken
-                text = re.sub(r'["\'“”‘’]', '', text)
-                
-                # Remove extra punctuation that creates awkward pauses
-                text = re.sub(r'[,]{2,}', ',', text)  # Multiple commas
-                text = re.sub(r'[.]{2,}', '.', text)  # Multiple periods
-                
+                # Remove extra whitespace and newlines
+                text = re.sub(r'\s+', ' ', text).strip()
                 # Remove bullet points or numbered lists
                 text = re.sub(r'^\d+\.\s*', '', text)
                 text = re.sub(r'^[-•]\s*', '', text)
-                
-                # Clean up spacing around punctuation
-                text = re.sub(r'\s*,\s*', ', ', text)
-                text = re.sub(r'\s*\.\s*', '. ', text)
-                text = re.sub(r'\s*!\s*', '! ', text)
-                text = re.sub(r'\s*\?\s*', '? ', text)
-                
-                # Remove extra whitespace and newlines
-                text = re.sub(r'\s+', ' ', text).strip()
-                
-                # Remove any remaining problematic characters
-                text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
-                
                 return text
                 
             raw_response = completion.choices[0].message.content
             cleaned_response = clean_text(raw_response)
             
-            # Keep responses conversational and brief
+            # Additional check to ensure response isn't too long
             sentences = cleaned_response.split('. ')
-            if len(sentences) > 2:
-                cleaned_response = '. '.join(sentences[:2]) + '.'
+            if len(sentences) > 3:
+                cleaned_response = '. '.join(sentences[:3]) + '.'
                 
             return cleaned_response
         except Exception as e:

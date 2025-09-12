@@ -1076,11 +1076,11 @@ def start_interview_by_uuid(request, interview_uuid):
                 logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
                 
                 if question_count == 1:
-                    ai_response = f"No worries about the audio! Let's continue with text. I'd love to hear about your background and what drew you to this {job_title} role."
+                    ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
                 elif question_count <= 8:
-                    ai_response = "That's perfectly fine! Let's keep going with text. What's been the most interesting project you've worked on recently?"
+                    ai_response = "I understand you can't hear the audio. That's okay! Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
                 else:
-                    ai_response = "No problem at all! What questions do you have about this role or our team?"
+                    ai_response = "Thank you for letting me know about the audio issues. We can continue with text-based questions. What questions do you have about this role or our company?"
                 
                 # Force text-only response (no audio generation)
                 response_data = {
@@ -1094,7 +1094,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 
                 return JsonResponse(response_data)
             
-            # Create natural conversation prompt
+            # Create contextual prompt based on conversation flow
             if question_count < 8:
                 # Build conversation context from session
                 conversation_history = request.session.get('conversation_history', [])
@@ -1106,67 +1106,102 @@ def start_interview_by_uuid(request, interview_uuid):
                     'question_number': question_count
                 })
                 
-                # Keep only last 6 exchanges to avoid token limits
-                if len(conversation_history) > 12:  # 6 exchanges = 12 messages
-                    conversation_history = conversation_history[-12:]
+                # Keep only last 4 exchanges to avoid token limits
+                if len(conversation_history) > 8:  # 4 exchanges = 8 messages
+                    conversation_history = conversation_history[-8:]
                 
                 # Update session
                 request.session['conversation_history'] = conversation_history
                 
-                # Build recent conversation context
-                recent_context = ""
-                for entry in conversation_history[-4:]:  # Last 2 exchanges
-                    speaker = "Alex" if entry['speaker'] == 'interviewer' else candidate_name
-                    recent_context += f"{speaker}: {entry['message']}\n"
+                # Build context string
+                context_str = ""
+                for entry in conversation_history[-6:]:  # Last 3 exchanges
+                    speaker = "Interviewer" if entry['speaker'] == 'interviewer' else "Candidate"
+                    context_str += f"{speaker}: {entry['message']}\n"
                 
-                # Create natural conversation prompt
-                prompt = f"""
-You are Alex, having a natural conversation with {candidate_name} about the {job_title} position at {company_name}.
+                # Create different prompts based on question number for variety
+                if question_count == 1:
+                    prompt = f"""
+You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
 
-Recent conversation:
-{recent_context}
+Candidate's response: "{user_text}"
 
-{candidate_name} just said: "{user_text}"
+Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
+"""
+                elif question_count == 2:
+                    prompt = f"""
+You are Alex continuing the interview. Based on their previous responses:
 
-Respond naturally as Alex would:
-- Listen to what they actually said
-- Ask a follow-up question based on their specific response
-- Show genuine interest in their answer
-- Keep it conversational and friendly (1-2 sentences max)
-- Don't follow a script - let the conversation flow naturally
+{context_str}
 
-Examples of natural responses:
-- "That sounds challenging! How did you handle [specific thing they mentioned]?"
-- "Interesting! What made you choose [technology/approach they mentioned]?"
-- "I can see why that would be important. Tell me more about [detail from their answer]."
+Candidate just said: "{user_text}"
 
-Respond as Alex would naturally speak:
+Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max).
+"""
+                elif question_count == 3:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max).
+"""
+                elif question_count == 4:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max).
+"""
+                elif question_count == 5:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max).
+"""
+                elif question_count == 6:
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max).
+"""
+                else:  # question_count == 7
+                    prompt = f"""
+You are Alex. Previous conversation:
+
+{context_str}
+
+Candidate just said: "{user_text}"
+
+This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
 """
             else:
                 # This is the final question - generate results
-                conversation_history = request.session.get('conversation_history', [])
-                
-                # Build full conversation summary for context
-                conversation_summary = ""
-                for entry in conversation_history[-8:]:  # Last 4 exchanges
-                    speaker = "Alex" if entry['speaker'] == 'interviewer' else candidate_name
-                    conversation_summary += f"{speaker}: {entry['message']}\n"
-                
                 prompt = f"""
-You are Alex wrapping up a great conversation with {candidate_name} about the {job_title} position.
+You are Alex wrapping up the interview with {candidate_name}.
 
-Our conversation:
-{conversation_summary}
+The candidate just said: "{user_text}"
 
-{candidate_name} just said: "{user_text}"
+INSTRUCTIONS:
+- Briefly acknowledge their final response
+- Thank them for their time
+- Mention next steps will be communicated soon
+- Keep it warm and professional (2-3 sentences max)
 
-End the conversation naturally:
-- Acknowledge something specific from their final response
-- Thank them warmly for the engaging conversation
-- Mention next steps in a friendly way
-- Keep it genuine and personal (1-2 sentences max)
-
-Wrap up as Alex would naturally speak:
+Respond as Alex would naturally speak:
 """
                 
                 # Generate interview results after final response
@@ -1188,20 +1223,22 @@ Wrap up as Alex would naturally speak:
                     logger.error(f"Full traceback: {traceback.format_exc()}")
             
             try:
-                # Always use AI for natural conversation flow
-                ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                # Use shorter, faster AI prompts for immediate responses
+                if question_count <= 3:
+                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                else:
+                    # Use pre-generated quick responses for later questions to speed up
+                    quick_responses = [
+                        "That's interesting! Tell me about your experience with teamwork and collaboration.",
+                        "Great! What are your career goals and where do you see yourself in 3-5 years?",
+                        "Excellent! How do you stay updated with new technologies in your field?",
+                        "Perfect! What questions do you have about this role or our company?",
+                        "Thank you for sharing that. Do you have any final questions for me?"
+                    ]
+                    ai_response = quick_responses[min(question_count - 4, len(quick_responses) - 1)]
             except Exception as e:
                 logger.error(f"AI API Error for interview {interview_uuid}: {e}")
-                # Natural fallback responses that acknowledge what they said
-                fallback_responses = [
-                    "That's really interesting! Can you tell me more about that?",
-                    "I'd love to hear more details about that experience.",
-                    "That sounds like valuable experience. What did you learn from it?",
-                    "Fascinating! How did that shape your approach to work?",
-                    "That's a great point. Can you give me a specific example?"
-                ]
-                import random
-                ai_response = random.choice(fallback_responses)
+                ai_response = "Thank you for that response. Can you tell me more about your experience?"
             
             logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
             
@@ -1254,25 +1291,25 @@ Wrap up as Alex would naturally speak:
 
         # GET: Show interview UI with first question
         first_prompt = f"""
-You are Alex, a warm and friendly HR professional at {company_name}. You're meeting {candidate_name} for the first time to discuss the {job_title} position.
+You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
 
-What you know about them: {resume_text[:200]}
+Resume highlights: {resume_text[:300]}
 
-Start the conversation naturally:
-- Greet them warmly like you're meeting a friend for coffee
-- Make them feel comfortable and welcome
-- Ask them to share their story in their own words
-- Keep it conversational and genuine (1-2 sentences max)
-- Sound like a real person, not a formal interviewer
+INSTRUCTIONS:
+- Give a warm, professional greeting
+- Ask them to tell you about themselves and what drew them to this role
+- Keep it natural and conversational (2-3 sentences max)
+- Sound like a real human interviewer, not a robot
+- Be welcoming and put them at ease
 
-Start the conversation as Alex would naturally speak:
+Respond as Alex would naturally speak:
 """        
         
         try:
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
         except Exception as e:
             logger.error(f"AI API Error on initial question for interview {interview_uuid}: {e}")
-            ai_question = f"Hi {candidate_name}! Great to meet you. I'd love to hear your story - what brought you to apply for this role?"
+            ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
         
         logger.info(f"Initial AI Question for interview {interview_uuid}: {ai_question}")
         

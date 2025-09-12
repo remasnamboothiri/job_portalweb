@@ -1251,38 +1251,18 @@ Respond as Alex would naturally speak:
             })
             request.session['conversation_history'] = conversation_history
             
-            # Generate TTS asynchronously for faster response
+            # Generate TTS instantly - Force RunPod first, then gTTS fallback
             audio_path = None
+            audio_generation_error = None
             try:
-                # Quick TTS generation with timeout
-                import threading
-                import time
-                
-                def generate_audio_async():
-                    try:
-                        return generate_gtts_fallback(ai_response)
-                    except:
-                        return None
-                
-                # Try to generate audio quickly (max 2 seconds)
-                audio_thread = threading.Thread(target=generate_audio_async)
-                audio_thread.daemon = True
-                audio_thread.start()
-                audio_thread.join(timeout=2.0)  # Wait max 2 seconds
-                
-                if audio_thread.is_alive():
-                    # Audio generation taking too long, proceed without audio
-                    logger.info(f"Audio generation timeout for interview {interview_uuid}, proceeding without audio")
-                    audio_path = None
-                else:
-                    # Try to get the result
-                    try:
-                        audio_path = generate_gtts_fallback(ai_response)
-                    except:
-                        audio_path = None
-                        
+                # Try RunPod first (force it)
+                audio_path = generate_tts(ai_response, model="chatterbox", force_runpod=False)
+                if not audio_path:
+                    # Quick gTTS fallback if RunPod fails
+                    audio_path = generate_gtts_fallback(ai_response)
             except Exception as e:
-                logger.error(f"Fast TTS generation failed for interview {interview_uuid}: {e}")
+                logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
+                audio_generation_error = str(e)
                 audio_path = None
             
             # Return JSON response for AJAX requests
@@ -1342,11 +1322,14 @@ Respond as Alex would naturally speak:
         })
         request.session['conversation_history'] = conversation_history
         
-        # Generate initial TTS quickly
+        # Generate initial TTS - Force RunPod first
         audio_path = None
         try:
-            # Quick initial audio generation
-            audio_path = generate_gtts_fallback(ai_question)
+            # Try RunPod first for initial question
+            audio_path = generate_tts(ai_question, model="chatterbox", force_runpod=False)
+            if not audio_path:
+                # Quick gTTS fallback
+                audio_path = generate_gtts_fallback(ai_question)
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
             audio_path = None
@@ -2462,7 +2445,7 @@ def debug_tts_system(request):
 
 def test_chatterbox_voice(request):
     """Test chatterbox voice with female_default specifically"""
-    from jobapp.tts import test_chatterbox_voice as test_chatterbox, generate_tts
+    from jobapp.tts import test_chatterbox_voice as test_chatterbox, generate_tts, generate_runpod_tts
     
     test_text = request.GET.get('text', "Hello! I'm your AI interviewer using the female default voice. Welcome to your interview today!")
     force_runpod = request.GET.get('force_runpod', 'false').lower() == 'true'
@@ -2471,16 +2454,16 @@ def test_chatterbox_voice(request):
         'timestamp': timezone.now().isoformat(),
         'test_text': test_text,
         'force_runpod': force_runpod,
-        'chatterbox_test': None,
+        'runpod_direct_test': None,
         'regular_tts_test': None,
         'runpod_only_test': None,
         'success': False
     }
     
     try:
-        # Test chatterbox specifically (RunPod only)
-        chatterbox_result = test_chatterbox(test_text)
-        result['chatterbox_test'] = chatterbox_result
+        # Test RunPod directly first
+        runpod_direct = generate_runpod_tts(test_text, "chatterbox")
+        result['runpod_direct_test'] = runpod_direct
         
         # Test regular TTS with chatterbox model
         regular_result = generate_tts(test_text, model="chatterbox")
@@ -2491,25 +2474,26 @@ def test_chatterbox_voice(request):
             runpod_only_result = generate_tts(test_text, model="chatterbox", force_runpod=True)
             result['runpod_only_test'] = runpod_only_result
         
-        if chatterbox_result or regular_result:
+        # Determine success and source
+        audio_url = runpod_direct or regular_result
+        if audio_url:
             result['success'] = True
-            result['audio_url'] = chatterbox_result or regular_result
+            result['audio_url'] = audio_url
             
             # Check if file exists
-            if result['audio_url']:
-                full_path = os.path.join(settings.BASE_DIR, result['audio_url'].lstrip('/'))
-                result['file_exists'] = os.path.exists(full_path)
-                if os.path.exists(full_path):
-                    result['file_size'] = os.path.getsize(full_path)
-                    result['file_path'] = full_path
-                    
-                    # Check if it's from RunPod or gTTS
-                    if 'runpod' in result['audio_url']:
-                        result['source'] = 'RunPod'
-                    elif 'gtts' in result['audio_url']:
-                        result['source'] = 'gTTS'
-                    else:
-                        result['source'] = 'Unknown'
+            full_path = os.path.join(settings.BASE_DIR, audio_url.lstrip('/'))
+            result['file_exists'] = os.path.exists(full_path)
+            if os.path.exists(full_path):
+                result['file_size'] = os.path.getsize(full_path)
+                result['file_path'] = full_path
+                
+                # Check if it's from RunPod or gTTS
+                if 'runpod' in audio_url or 'chatterbox' in audio_url:
+                    result['source'] = 'RunPod'
+                elif 'gtts' in audio_url:
+                    result['source'] = 'gTTS'
+                else:
+                    result['source'] = 'Unknown'
         
     except Exception as e:
         result['error'] = str(e)

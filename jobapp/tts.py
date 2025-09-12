@@ -80,7 +80,11 @@ def generate_tts(text, model="chatterbox", force_gtts=False, force_runpod=False)
     # Check if we have RunPod credentials
     if not RUNPOD_API_KEY or not JWT_SECRET:
         logger.warning("RunPod credentials missing, using gTTS fallback")
-        return generate_gtts_fallback(clean_text)
+        if not force_runpod:
+            return generate_gtts_fallback(clean_text)
+        else:
+            logger.error("RunPod credentials missing and force_runpod=True")
+            return None
     
     # Try RunPod API first
     logger.info(f"🚀 Attempting RunPod TTS with model: {model}")

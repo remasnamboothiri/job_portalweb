@@ -380,12 +380,12 @@
                             clearTimeout(speechTimeout);
                         }
                         
-                        // Set timeout to auto-submit after 1 second of silence
+                        // Set timeout to auto-submit after 0.5 seconds of silence (faster response)
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse) {
                                 autoSubmitResponse();
                             }
-                        }, 1000);
+                        }, 500);
                     }
                     
                     // Show live text with interim results
@@ -423,10 +423,8 @@
             collectedText = ''; // Clear for next response
             
             sendResponse(responseText).finally(() => {
-                // Reset processing flag after response is handled
-                setTimeout(() => {
-                    isProcessingResponse = false;
-                }, 1000);
+                // Reset processing flag immediately (no delay)
+                isProcessingResponse = false;
             });
         }
         
@@ -519,13 +517,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show AI is thinking briefly
-                    document.getElementById('conversationArea').innerHTML = 'AI is responding...';
-                    
-                    // Show new question immediately
-                    setTimeout(() => {
-                        showCurrentQuestion(data.response);
-                    }, 200);
+                    // Show new question immediately (no delay)
+                    showCurrentQuestion(data.response);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
@@ -559,18 +552,16 @@
                         
                         audio.play().catch(e => console.log('Audio play failed:', e));
                     } else {
-                        // No audio, restart recognition immediately
-                        setTimeout(() => {
-                            if (isListening && !isProcessingResponse) {
-                                try {
-                                    isProcessingResponse = false;
-                                    recognition.start();
-                                    console.log('Ready for next candidate response (no audio)');
-                                } catch (e) {
-                                    console.log('Failed to restart recognition:', e);
-                                }
+                        // No audio, restart recognition immediately (no delay)
+                        if (isListening && !isProcessingResponse) {
+                            try {
+                                isProcessingResponse = false;
+                                recognition.start();
+                                console.log('Ready for next candidate response (no audio)');
+                            } catch (e) {
+                                console.log('Failed to restart recognition:', e);
                             }
-                        }, 200);
+                        }
                     }
                     
                     // Check if complete
@@ -713,12 +704,12 @@
                     clearTimeout(speechTimeout);
                 }
                 
-                // Set timeout to auto-submit after 1 second of silence
+                // Set timeout to auto-submit after 0.5 seconds of silence (faster response)
                 speechTimeout = setTimeout(() => {
                     if (collectedText.trim() && !isProcessingResponse) {
                         autoSubmitResponse();
                     }
-                }, 1000);
+                }, 500);
             }
             
             // Show live text with enhanced styling

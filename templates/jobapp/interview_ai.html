@@ -325,6 +325,9 @@
     
     <!-- Interview Microphone Always-On System -->
     <script src="{% static 'js/interview-microphone-always-on.js' %}"></script>
+    
+    <!-- Typewriter Synchronization System -->
+    <script src="{% static 'js/typewriter-sync.js' %}"></script>
 
     <!-- CSRF Token -->
     {% csrf_token %}
@@ -578,27 +581,48 @@
             }, 1000);
         }
 
-        // Typewriter effect for AI questions
+        // Legacy typewriter function for compatibility
         function typewriterEffect(element, text, duration, callback) {
-            element.textContent = '';
-            let index = 0;
-            const totalChars = text.length;
-            const charDelay = duration / totalChars;
-            
-            function typeChar() {
-                if (index < totalChars) {
-                    element.textContent += text.charAt(index);
-                    index++;
-                    setTimeout(typeChar, charDelay);
-                } else if (callback) {
-                    callback();
+            if (window.TypewriterSync) {
+                window.TypewriterSync.createNatural(element, text, duration)
+                    .then(() => {
+                        if (callback) callback();
+                    });
+            } else {
+                // Fallback implementation
+                element.textContent = '';
+                let index = 0;
+                const totalChars = text.length;
+                const effectiveDuration = duration ? duration * 1000 : Math.max(text.length * 80, 2000);
+                const charDelay = effectiveDuration / totalChars;
+                
+                function typeChar() {
+                    if (index < totalChars) {
+                        element.textContent += text.charAt(index);
+                        index++;
+                        setTimeout(typeChar, charDelay);
+                    } else if (callback) {
+                        callback();
+                    }
                 }
+                typeChar();
             }
-            
-            typeChar();
         }
         
-        // Handle AI response with typewriter effect synced to audio
+        // Enhanced synchronized typewriter using new system
+        function synchronizedTypewriter(element, text, audioElement, callback) {
+            if (window.TypewriterSync) {
+                window.TypewriterSync.createSynchronized(element, text, audioElement)
+                    .then(() => {
+                        if (callback) callback();
+                    });
+            } else {
+                // Fallback to regular typewriter
+                typewriterEffect(element, text, null, callback);
+            }
+        }
+        
+        // Handle AI response with improved typewriter sync
         function handleAIResponse(data) {
             // Update question counter
             currentQuestionCount = data.question_count || currentQuestionCount + 1;
@@ -619,33 +643,24 @@
             const subtitleOverlay = document.getElementById('subtitleOverlay');
             subtitleOverlay.classList.add('show');
             
-            // Use server-provided duration or fallback to estimation
-            let typewriterDuration;
-            if (data.audio_duration) {
-                typewriterDuration = data.audio_duration * 1000; // Convert to milliseconds
-                console.log(`🕰️ Using server audio duration: ${data.audio_duration}s`);
-            } else {
-                typewriterDuration = Math.max(3000, data.response.length * 60); // 60ms per character, min 3 seconds
-                console.log(`🕰️ Using estimated duration: ${typewriterDuration}ms`);
-            }
-            
-            // Start typewriter effect and audio simultaneously
+            // Start synchronized typewriter and audio
             if (data.audio && data.audio.trim() !== '') {
-                playAIAudioWithTypewriter(data.audio, data.response, typewriterDuration);
+                playAIAudioWithSyncedTypewriter(data.audio, data.response, data.audio_duration);
             } else {
-                // No audio, use duration for typewriter
+                // No audio, use natural typewriter timing
                 const subtitleText = document.getElementById('subtitleText');
-                typewriterEffect(subtitleText, data.response, typewriterDuration, () => {
+                typewriterEffect(subtitleText, data.response, null, () => {
                     setTimeout(() => {
                         handleAIFinishedSpeaking();
                     }, 1000);
                 });
             }
             
-            // Hide subtitles after 8 seconds
+            // Hide subtitles after appropriate time
+            const hideDelay = data.audio_duration ? (data.audio_duration * 1000) + 3000 : 8000;
             setTimeout(() => {
                 subtitleOverlay.classList.remove('show');
-            }, 8000);
+            }, hideDelay);
             
             // Check if interview is complete
             if (data.is_final || currentQuestionCount >= 8) {
@@ -667,17 +682,54 @@
             }, 1000); // 1 second delay to ensure AI audio has fully stopped
         }
         
-        // Play AI audio with synced typewriter effect
-        function playAIAudioWithTypewriter(audioUrl, text, duration) {
+        // Play AI audio with perfectly synced typewriter effect
+        function playAIAudioWithSyncedTypewriter(audioUrl, text, audioDuration) {
             const audioPlayer = document.getElementById('aiAudioPlayer');
             const subtitleText = document.getElementById('subtitleText');
             
             if (audioUrl && audioUrl.trim() !== '') {
                 audioPlayer.src = audioUrl;
                 
-                // Start typewriter effect immediately with provided duration
-                console.log(`🔊 Starting typewriter effect with duration: ${duration}ms`);
-                typewriterEffect(subtitleText, text, duration);
+                console.log(`🔊 Starting synchronized audio and typewriter`);
+                console.log(`🔊 Audio URL: ${audioUrl}`);
+                console.log(`🔊 Text length: ${text.length} characters`);
+                console.log(`🔊 Audio duration: ${audioDuration} seconds`);
+                
+                // Wait for audio to be ready, then start both simultaneously
+                audioPlayer.oncanplay = () => {
+                    console.log('🔊 Audio ready, starting synchronized playback');
+                    
+                    // Start audio playback
+                    const playPromise = audioPlayer.play();
+                    
+                    if (playPromise) {
+                        playPromise.then(() => {
+                            // Audio started successfully, start synchronized typewriter
+                            if (window.TypewriterSync) {
+                                window.TypewriterSync.start(subtitleText, text, audioPlayer, audioDuration)
+                                    .then(() => {
+                                        console.log('🖊️ Synchronized typewriter completed');
+                                    });
+                            } else {
+                                // Fallback to legacy synchronized typewriter
+                                synchronizedTypewriter(subtitleText, text, audioPlayer, () => {
+                                    console.log('🖊️ Legacy typewriter completed');
+                                });
+                            }
+                        }).catch(error => {
+                            console.error('Audio play failed:', error);
+                            // Fall back to natural typewriter without audio
+                            if (window.TypewriterSync) {
+                                window.TypewriterSync.createNatural(subtitleText, text, audioDuration)
+                                    .then(() => handleAIFinishedSpeaking());
+                            } else {
+                                typewriterEffect(subtitleText, text, audioDuration, () => {
+                                    handleAIFinishedSpeaking();
+                                });
+                            }
+                        });
+                    }
+                };
                 
                 audioPlayer.onended = () => {
                     console.log('🔊 AI audio finished playing');
@@ -686,21 +738,32 @@
                 
                 audioPlayer.onerror = (error) => {
                     console.error('Audio playback error:', error);
-                    // Typewriter already started, just handle finish
-                    setTimeout(() => {
-                        handleAIFinishedSpeaking();
-                    }, duration);
+                    // Fall back to natural typewriter with estimated duration
+                    if (window.TypewriterSync) {
+                        const estimatedDuration = window.TypewriterSync.estimateDuration(text);
+                        window.TypewriterSync.createNatural(subtitleText, text, estimatedDuration)
+                            .then(() => handleAIFinishedSpeaking());
+                    } else {
+                        typewriterEffect(subtitleText, text, audioDuration, () => {
+                            handleAIFinishedSpeaking();
+                        });
+                    }
                 };
                 
-                audioPlayer.play().catch(error => {
-                    console.error('Audio play failed:', error);
-                    // Typewriter already started, just handle finish
-                    setTimeout(() => {
-                        handleAIFinishedSpeaking();
-                    }, duration);
-                });
+                // Load the audio
+                audioPlayer.load();
+                
             } else {
-                handleAIFinishedSpeaking();
+                // No audio, use natural typewriter
+                if (window.TypewriterSync) {
+                    const estimatedDuration = window.TypewriterSync.estimateDuration(text);
+                    window.TypewriterSync.createNatural(subtitleText, text, estimatedDuration)
+                        .then(() => handleAIFinishedSpeaking());
+                } else {
+                    typewriterEffect(subtitleText, text, null, () => {
+                        handleAIFinishedSpeaking();
+                    });
+                }
             }
         }
         
@@ -848,7 +911,7 @@
             // Start timer
             startTimer();
             
-            // Show initial subtitle with typewriter effect
+            // Show initial subtitle with synchronized typewriter effect
             setTimeout(() => {
                 const subtitleOverlay = document.getElementById('subtitleOverlay');
                 const subtitleText = document.getElementById('subtitleText');
@@ -859,24 +922,34 @@
                 // Clear text content for typewriter effect
                 subtitleText.textContent = '';
                 
-                // Use server-provided duration or estimate
-                let initialDuration;
+                // Check if there's initial audio
+                const initialAudio = `{{ audio_url|safe }}`;
                 const serverDuration = {{ audio_duration|default:"null" }};
-                if (serverDuration) {
-                    initialDuration = serverDuration * 1000; // Convert to milliseconds
-                    console.log(`🕰️ Using server initial duration: ${serverDuration}s`);
-                } else {
-                    initialDuration = Math.max(4000, initialText.length * 60); // 60ms per character, min 4 seconds
-                    console.log(`🕰️ Using estimated initial duration: ${initialDuration}ms`);
-                }
                 
-                // Start typewriter effect for initial question
-                typewriterEffect(subtitleText, initialText, initialDuration, () => {
-                    // Enable speech recognition after typewriter completes
-                    setTimeout(() => {
-                        handleAIFinishedSpeaking();
-                    }, 1000);
-                });
+                if (initialAudio && initialAudio !== 'None' && initialAudio !== '' && initialAudio !== 'null') {
+                    console.log('🔊 Playing initial audio with synchronized typewriter');
+                    playAIAudioWithSyncedTypewriter(initialAudio, initialText, serverDuration);
+                } else {
+                    console.log('🖊️ No initial audio, using natural typewriter timing');
+                    // No audio, use natural typewriter timing
+                    if (window.TypewriterSync) {
+                        const estimatedDuration = window.TypewriterSync.estimateDuration(initialText);
+                        window.TypewriterSync.createNatural(subtitleText, initialText, estimatedDuration)
+                            .then(() => {
+                                // Enable speech recognition after typewriter completes
+                                setTimeout(() => {
+                                    handleAIFinishedSpeaking();
+                                }, 1000);
+                            });
+                    } else {
+                        typewriterEffect(subtitleText, initialText, null, () => {
+                            // Enable speech recognition after typewriter completes
+                            setTimeout(() => {
+                                handleAIFinishedSpeaking();
+                            }, 1000);
+                        });
+                    }
+                }
             }, 1000);
             
             // Hide initial subtitle after 10 seconds

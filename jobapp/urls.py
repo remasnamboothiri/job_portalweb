@@ -1,6 +1,7 @@
 # jobapp/urls.py
 
 from django.urls import path
+from django.shortcuts import render
 from . import views
 from .debug_dashboard import debug_dashboard_view 
 
@@ -88,6 +89,9 @@ urlpatterns = [
     # Debug TTS endpoint
     path('debug-tts/', views.debug_tts_system, name='debug_tts_system'),
     path('test-chatterbox/', views.test_chatterbox_voice, name='test_chatterbox_voice'),
+    
+    # Test typewriter synchronization
+    path('test-typewriter/', lambda request: render(request, 'jobapp/test_typewriter.html'), name='test_typewriter'),
     
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),

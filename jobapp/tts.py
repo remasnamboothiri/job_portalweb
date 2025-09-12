@@ -544,13 +544,13 @@ def get_tts_with_fallback_chain(text):
     logger.error("All TTS methods failed")
     return None
 
-def estimate_audio_duration(text, words_per_minute=150):
+def estimate_audio_duration(text, words_per_minute=140):
     """
     Estimate audio duration based on text length and speaking rate
-    Default speaking rate: 150 words per minute (natural conversational pace)
+    Default speaking rate: 140 words per minute (slightly slower for better sync)
     """
     if not text or not text.strip():
-        return 0
+        return 2.0
     
     # Count words
     word_count = len(text.split())
@@ -558,11 +558,11 @@ def estimate_audio_duration(text, words_per_minute=150):
     # Calculate duration in seconds
     duration_seconds = (word_count / words_per_minute) * 60
     
-    # Add padding for natural pauses (10% extra)
-    duration_seconds *= 1.1
+    # Add padding for natural pauses and punctuation (15% extra)
+    duration_seconds *= 1.15
     
-    # Minimum duration of 2 seconds
-    duration_seconds = max(2.0, duration_seconds)
+    # Minimum duration of 2 seconds, maximum of 30 seconds
+    duration_seconds = max(2.0, min(duration_seconds, 30.0))
     
     return duration_seconds
 

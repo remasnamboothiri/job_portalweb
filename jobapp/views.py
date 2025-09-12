@@ -1271,17 +1271,18 @@ Respond as Alex would naturally speak:
                     full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     actual_duration = get_audio_duration(full_audio_path)
                     
-                    if actual_duration:
+                    if actual_duration and actual_duration > 0:
                         audio_duration = actual_duration
+                        logger.info(f"Using actual audio duration: {audio_duration} seconds")
                     else:
                         # Fallback to estimation
                         audio_duration = estimate_audio_duration(ai_response)
-                    
-                    logger.info(f"Audio duration for typewriter sync: {audio_duration} seconds")
+                        logger.info(f"Using estimated audio duration: {audio_duration} seconds")
                 else:
                     # No audio, estimate duration for typewriter effect
                     from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
+                    logger.info(f"No audio - using estimated duration for typewriter: {audio_duration} seconds")
                     
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
@@ -1368,15 +1369,18 @@ Respond as Alex would naturally speak:
                 full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                 actual_duration = get_audio_duration(full_audio_path)
                 
-                if actual_duration:
+                if actual_duration and actual_duration > 0:
                     audio_duration = actual_duration
+                    logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
                 else:
                     # Fallback to estimation
                     audio_duration = estimate_audio_duration(ai_question)
+                    logger.info(f"Initial question - using estimated audio duration: {audio_duration} seconds")
             else:
                 # No audio, estimate duration for typewriter effect
                 from jobapp.tts import estimate_audio_duration
                 audio_duration = estimate_audio_duration(ai_question)
+                logger.info(f"Initial question - no audio, using estimated duration: {audio_duration} seconds")
                 
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")

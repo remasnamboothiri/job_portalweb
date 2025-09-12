@@ -20,31 +20,46 @@
     };
     
     /**
-     * Enhanced typewriter effect with audio synchronization
+     * Enhanced typewriter effect with audio synchronization - FIXED VERSION
      */
     function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
         const config = { ...CONFIG, ...options };
         
         return new Promise((resolve) => {
+            // CRITICAL FIX: Ensure text is cleared and stays empty until audio starts
             element.textContent = '';
             let index = 0;
             let startTime = Date.now();
             let audioStarted = false;
             let isComplete = false;
+            let hasStartedTyping = false;
             
             const totalChars = text.length;
             
-            console.log(`🔤 Starting synchronized typewriter: ${totalChars} chars`);
-            console.log(`🔊 Audio element:`, audioElement ? 'Available' : 'Not available');
+            console.log(`🔤 FIXED: Starting synchronized typewriter: ${totalChars} chars`);
+            console.log(`🔊 FIXED: Audio element:`, audioElement ? 'Available' : 'Not available');
             
             function typeNextCharacter() {
                 if (isComplete || index >= totalChars) {
                     if (!isComplete) {
                         isComplete = true;
-                        console.log('🔤 Typewriter completed');
+                        console.log('🔤 FIXED: Typewriter completed');
                         resolve();
                     }
                     return;
+                }
+                
+                // CRITICAL FIX: Only start typing if audio is playing or no audio
+                if (audioElement && audioElement.paused && !hasStartedTyping) {
+                    // Audio not playing yet, wait
+                    setTimeout(typeNextCharacter, 50);
+                    return;
+                }
+                
+                // Mark that we've started typing
+                if (!hasStartedTyping) {
+                    hasStartedTyping = true;
+                    console.log('🔤 FIXED: Starting to type - audio is ready');
                 }
                 
                 // Add next character
@@ -58,7 +73,7 @@
                     if (!audioStarted) {
                         audioStarted = true;
                         startTime = Date.now();
-                        console.log('🔊 Audio playback detected, syncing typewriter');
+                        console.log('🔊 FIXED: Audio playback detected, syncing typewriter');
                     }
                     
                     // Calculate expected position based on audio progress
@@ -80,7 +95,7 @@
                     
                     // Debug sync info every 10 characters
                     if (index % 10 === 0) {
-                        console.log(`🔄 Sync: audio ${(audioProgress * 100).toFixed(1)}%, text ${((index / totalChars) * 100).toFixed(1)}%, delay ${nextDelay}ms`);
+                        console.log(`🔄 FIXED: Sync: audio ${(audioProgress * 100).toFixed(1)}%, text ${((index / totalChars) * 100).toFixed(1)}%, delay ${nextDelay}ms`);
                     }
                 }
                 
@@ -88,19 +103,21 @@
                 setTimeout(typeNextCharacter, nextDelay);
             }
             
-            // Start typing
-            typeNextCharacter();
+            // CRITICAL FIX: Wait a moment before starting to ensure audio is ready
+            setTimeout(() => {
+                typeNextCharacter();
+            }, 100);
             
             // Fallback completion timer
             const estimatedDuration = Math.max(config.minDuration, Math.min(totalChars * config.naturalTypingSpeed, config.maxDuration));
             setTimeout(() => {
                 if (!isComplete) {
-                    console.log('🔤 Typewriter fallback completion triggered');
+                    console.log('🔤 FIXED: Typewriter fallback completion triggered');
                     isComplete = true;
                     element.textContent = text; // Ensure full text is shown
                     resolve();
                 }
-            }, estimatedDuration + 2000); // Add 2 second buffer
+            }, estimatedDuration + 3000); // Add 3 second buffer
         });
     }
     
@@ -140,23 +157,23 @@
     }
     
     /**
-     * Main typewriter function with automatic sync detection
+     * Main typewriter function with automatic sync detection - FIXED VERSION
      */
     function startTypewriter(element, text, audioElement = null, duration = null, options = {}) {
         if (!element || !text) {
-            console.error('🔤 Typewriter: Invalid element or text');
+            console.error('🔤 FIXED: Typewriter: Invalid element or text');
             return Promise.resolve();
         }
         
-        // Clear element
+        // CRITICAL FIX: Clear element and ensure it stays empty
         element.textContent = '';
         
-        // Choose typewriter method
-        if (audioElement && !audioElement.paused) {
-            console.log('🔤 Using synchronized typewriter with audio');
+        // Choose typewriter method - FIXED logic
+        if (audioElement && audioElement.src && audioElement.src.trim() !== '') {
+            console.log('🔤 FIXED: Using synchronized typewriter with audio');
             return createSynchronizedTypewriter(element, text, audioElement, options);
         } else {
-            console.log('🔤 Using natural typewriter (no audio sync)');
+            console.log('🔤 FIXED: Using natural typewriter (no audio sync)');
             return createNaturalTypewriter(element, text, duration, options);
         }
     }

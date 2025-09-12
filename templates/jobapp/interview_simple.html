@@ -187,6 +187,8 @@
     {% csrf_token %}
     
     <!-- Professional Interview Audio System -->
+    <!-- Load TypewriterSync for better synchronization -->
+    <script src="{% static 'js/typewriter-sync.js' %}"></script>
     <script src="{% static 'js/professional-interview-audio.js' %}"></script>
 
     <script>
@@ -267,17 +269,74 @@
             }
         }
         
-        // Show current question with streaming effect
-        function showCurrentQuestion(question) {
+        // Show current question with streaming effect - FIXED TO SYNC WITH AUDIO
+        function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
             const element = document.getElementById('conversationArea');
             element.innerHTML = '';
             
+            if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
+                console.log('🔊 FIXED: Starting question with audio sync');
+                
+                // Wait for audio to be ready before starting typewriter
+                const audio = document.getElementById('aiAudio');
+                audio.src = audioUrl;
+                audio.volume = 0.7;
+                
+                audio.oncanplaythrough = () => {
+                    console.log('🔊 FIXED: Audio ready, starting synchronized typewriter');
+                    
+                    // Start audio first
+                    audio.play().then(() => {
+                        console.log('🔊 FIXED: Audio playing, now starting typewriter');
+                        
+                        // Start typewriter synchronized with audio
+                        let index = 0;
+                        const totalChars = question.length;
+                        const audioDurationMs = (audioDuration || audio.duration || 5) * 1000;
+                        const charDelay = audioDurationMs / totalChars;
+                        
+                        console.log(`🖊️ FIXED: Typewriter sync - ${totalChars} chars, ${audioDurationMs}ms total, ${charDelay.toFixed(1)}ms per char`);
+                        
+                        const streamText = () => {
+                            if (index < question.length) {
+                                element.innerHTML += question.charAt(index);
+                                index++;
+                                setTimeout(streamText, charDelay);
+                            }
+                        };
+                        streamText();
+                        
+                    }).catch(error => {
+                        console.error('FIXED: Audio play failed, using natural timing:', error);
+                        // Fallback to natural timing
+                        startNaturalTypewriter(element, question);
+                    });
+                };
+                
+                audio.onerror = (error) => {
+                    console.error('FIXED: Audio error, using natural timing:', error);
+                    // Fallback to natural timing
+                    startNaturalTypewriter(element, question);
+                };
+                
+                // Load the audio
+                audio.load();
+                
+            } else {
+                console.log('🖊️ FIXED: No audio, using natural typewriter timing');
+                // No audio, use natural timing
+                startNaturalTypewriter(element, question);
+            }
+        }
+        
+        // Natural typewriter without audio sync
+        function startNaturalTypewriter(element, question) {
             let index = 0;
             const streamText = () => {
                 if (index < question.length) {
                     element.innerHTML += question.charAt(index);
                     index++;
-                    setTimeout(streamText, 15);
+                    setTimeout(streamText, 50); // Natural typing speed
                 }
             };
             streamText();
@@ -523,39 +582,35 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show new question immediately (no delay)
-                    showCurrentQuestion(data.response);
+                    // FIXED: Show new question with audio sync
+                    showCurrentQuestion(data.response, data.audio, data.audio_duration);
                     
                     // Update counter
                     questionCount = data.question_count || questionCount + 1;
                     document.getElementById('questionCount').textContent = questionCount + '/8';
                     
-                    // Play audio if available (with feedback prevention)
-                    if (data.audio) {
-                        const audio = document.getElementById('aiAudio');
-                        audio.src = data.audio;
-                        audio.volume = 0.7; // Reduce volume to prevent feedback
-                        
+                    // Handle audio and speech processing
+                    if (data.audio && data.audio.trim() !== '' && data.audio !== 'None') {
+                        // Audio will be handled by showCurrentQuestion function
                         // Temporarily disable speech processing during AI speech (mic stays on)
                         if (recognition && isListening) {
                             isProcessingResponse = true;
                             
                             // Don't stop recognition, just ignore results during AI speech
-                            console.log('AI speaking - ignoring speech input temporarily');
+                            console.log('FIXED: AI speaking - ignoring speech input temporarily');
                             
+                            const audio = document.getElementById('aiAudio');
                             audio.addEventListener('ended', () => {
                                 setTimeout(() => {
                                     isProcessingResponse = false;
-                                    console.log('AI finished speaking - ready for candidate response');
+                                    console.log('FIXED: AI finished speaking - ready for candidate response');
                                 }, 100);
                             }, { once: true });
                         }
-                        
-                        audio.play().catch(e => console.log('Audio play failed:', e));
                     } else {
                         // No audio, ready for next response immediately
                         isProcessingResponse = false;
-                        console.log('Ready for next candidate response (no audio)');
+                        console.log('FIXED: Ready for next candidate response (no audio)');
                     }
                     
                     // Check if complete
@@ -625,23 +680,16 @@
             // Clear conversation area initially
             clearConversation();
             
-            // Show initial question with streaming effect
+            // FIXED: Show initial question with audio sync
             const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
-            showCurrentQuestion(initialQuestion);
+            const initialAudio = '{{ audio_url|safe }}';
+            const initialDuration = {{ audio_duration|default:"null" }};
+            
+            // Show question with proper audio sync
+            showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
             
             // Show professional interview notice
             showProfessionalNotice();
-            
-            // Play initial audio if available (with isolation)
-            const initialAudio = '{{ audio_url|safe }}';
-            if (initialAudio && initialAudio !== 'None' && initialAudio !== '') {
-                setTimeout(() => {
-                    const audio = document.getElementById('aiAudio');
-                    audio.src = initialAudio;
-                    audio.volume = 0.7; // Reduce volume to prevent feedback
-                    audio.play().catch(e => console.log('Initial audio failed:', e));
-                }, 1000);
-            }
         });
         
         // Show professional interview notice

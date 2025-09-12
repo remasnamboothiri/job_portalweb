@@ -682,13 +682,16 @@
             }, 1000); // 1 second delay to ensure AI audio has fully stopped
         }
         
-        // Play AI audio with perfectly synced typewriter effect
+        // Play AI audio with perfectly synced typewriter effect - FIXED VERSION
         function playAIAudioWithSyncedTypewriter(audioUrl, text, audioDuration) {
             const audioPlayer = document.getElementById('aiAudioPlayer');
             const subtitleText = document.getElementById('subtitleText');
             
+            // CRITICAL FIX: Clear text first and ensure it stays empty until audio is ready
+            subtitleText.textContent = '';
+            
             if (audioUrl && audioUrl.trim() !== '') {
-                console.log(`🔊 Starting synchronized audio and typewriter`);
+                console.log(`🔊 FIXED: Starting synchronized audio and typewriter - WAITING FOR AUDIO`);
                 console.log(`🔊 Audio URL: ${audioUrl}`);
                 console.log(`🔊 Text length: ${text.length} characters`);
                 console.log(`🔊 Audio duration: ${audioDuration} seconds`);
@@ -696,28 +699,28 @@
                 // Set audio source
                 audioPlayer.src = audioUrl;
                 
-                // Wait for audio to be ready
+                // CRITICAL FIX: Wait for audio to be completely ready before starting typewriter
                 audioPlayer.oncanplaythrough = () => {
-                    console.log('🔊 Audio ready, starting synchronized playback');
+                    console.log('🔊 FIXED: Audio is ready, NOW starting synchronized playback');
                     
-                    // Start audio playback first
+                    // IMPORTANT: Start audio playback FIRST, then wait for it to actually start
                     audioPlayer.play().then(() => {
-                        console.log('🔊 Audio playing, starting synchronized typewriter');
+                        console.log('🔊 FIXED: Audio is NOW playing, starting typewriter in sync');
                         
-                        // Start synchronized typewriter that follows audio progress
+                        // CRITICAL: Only start typewriter AFTER audio is confirmed playing
                         if (window.TypewriterSync) {
                             window.TypewriterSync.createSynchronized(subtitleText, text, audioPlayer)
                                 .then(() => {
-                                    console.log('🖊️ Synchronized typewriter completed');
+                                    console.log('🖊️ FIXED: Synchronized typewriter completed');
                                 });
                         } else {
                             // Fallback to legacy synchronized typewriter
                             synchronizedTypewriter(subtitleText, text, audioPlayer, () => {
-                                console.log('🖊️ Legacy typewriter completed');
+                                console.log('🖊️ FIXED: Legacy typewriter completed');
                             });
                         }
                     }).catch(error => {
-                        console.error('Audio play failed:', error);
+                        console.error('FIXED: Audio play failed:', error);
                         // Fall back to natural typewriter with estimated duration
                         const estimatedDuration = audioDuration || (window.TypewriterSync ? window.TypewriterSync.estimateDuration(text) : 5);
                         if (window.TypewriterSync) {
@@ -732,12 +735,12 @@
                 };
                 
                 audioPlayer.onended = () => {
-                    console.log('🔊 AI audio finished playing');
+                    console.log('🔊 FIXED: AI audio finished playing');
                     handleAIFinishedSpeaking();
                 };
                 
                 audioPlayer.onerror = (error) => {
-                    console.error('Audio playback error:', error);
+                    console.error('FIXED: Audio playback error:', error);
                     // Fall back to natural typewriter with estimated duration
                     const estimatedDuration = audioDuration || (window.TypewriterSync ? window.TypewriterSync.estimateDuration(text) : 5);
                     if (window.TypewriterSync) {
@@ -750,10 +753,11 @@
                     }
                 };
                 
-                // Load the audio
+                // Load the audio - this triggers the oncanplaythrough event
                 audioPlayer.load();
                 
             } else {
+                console.log('🖊️ FIXED: No audio, using natural typewriter timing');
                 // No audio, use natural typewriter with estimated duration
                 const estimatedDuration = audioDuration || (window.TypewriterSync ? window.TypewriterSync.estimateDuration(text) : 5);
                 if (window.TypewriterSync) {

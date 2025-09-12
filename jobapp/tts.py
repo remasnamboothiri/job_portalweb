@@ -387,6 +387,20 @@ def cleanup_old_tts_files(days_old=1):
 # Alias for backwards compatibility
 generate_tts_audio = generate_tts
 
+# Export sync helper functions
+__all__ = [
+    'generate_tts',
+    'generate_runpod_tts', 
+    'generate_gtts_fallback',
+    'test_tts_generation',
+    'check_tts_system',
+    'estimate_audio_duration',
+    'get_audio_duration',
+    'create_typewriter_sync_data',
+    'ensure_audio_sync_data',
+    'test_typewriter_sync_system'
+]
+
 # Helper function to switch models easily
 def generate_tts_chatterbox(text):
     """Generate TTS using chatterbox model with female_default voice"""
@@ -601,6 +615,83 @@ def create_emergency_response():
     """
     return "TEXT_ONLY_RESPONSE"
 
+def get_audio_duration_with_fallback(audio_path, text):
+    """
+    Get audio duration with multiple fallback methods
+    """
+    # Try to get actual duration first
+    actual_duration = get_audio_duration(audio_path)
+    if actual_duration and actual_duration > 0:
+        logger.info(f"Using actual audio duration: {actual_duration} seconds")
+        return actual_duration
+    
+    # Fallback to estimation
+    estimated_duration = estimate_audio_duration(text)
+    logger.info(f"Using estimated audio duration: {estimated_duration} seconds")
+    return estimated_duration
+
+def ensure_audio_sync_data(audio_url, text):
+    """
+    Ensure we have proper duration data for audio synchronization
+    """
+    if not audio_url or not text:
+        return None
+    
+    try:
+        # Get full path
+        full_path = os.path.join(settings.BASE_DIR, audio_url.lstrip('/'))
+        
+        # Get duration with fallback
+        duration = get_audio_duration_with_fallback(full_path, text)
+        
+        return {
+            'audio_url': audio_url,
+            'duration': duration,
+            'text_length': len(text),
+            'word_count': len(text.split()),
+            'estimated_chars_per_second': len(text) / duration if duration > 0 else 20
+        }
+        
+    except Exception as e:
+        logger.error(f"Error ensuring audio sync data: {e}")
+        return {
+            'audio_url': audio_url,
+            'duration': estimate_audio_duration(text),
+            'text_length': len(text),
+            'word_count': len(text.split()),
+            'estimated_chars_per_second': 20
+        }
+
+def create_typewriter_sync_data(text, audio_url=None, audio_duration=None):
+    """
+    Create synchronization data for typewriter effects
+    """
+    sync_data = {
+        'text': text,
+        'text_length': len(text),
+        'word_count': len(text.split()),
+        'has_audio': bool(audio_url and audio_url.strip() and audio_url != 'None'),
+        'audio_url': audio_url if audio_url and audio_url != 'None' else None,
+    }
+    
+    if sync_data['has_audio']:
+        # Use provided duration or estimate
+        if audio_duration and audio_duration > 0:
+            sync_data['duration'] = audio_duration
+        else:
+            sync_data['duration'] = estimate_audio_duration(text)
+        
+        # Calculate typing speeds
+        sync_data['chars_per_second'] = sync_data['text_length'] / sync_data['duration']
+        sync_data['ms_per_char'] = (sync_data['duration'] * 1000) / sync_data['text_length']
+    else:
+        # Natural typing without audio
+        sync_data['duration'] = estimate_audio_duration(text)
+        sync_data['chars_per_second'] = 20  # Natural typing speed
+        sync_data['ms_per_char'] = 50  # 50ms per character
+    
+    return sync_data
+
 def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS system with chatterbox model and female_default voice."):
     """
     Test function specifically for RunPod TTS integration with chatterbox model
@@ -657,3 +748,41 @@ def test_runpod_integration(test_text="Hello, this is a test of the RunPod TTS s
         logger.info(f"{key}: {value}")
     
     return results
+
+def test_typewriter_sync_system(test_text="Hello! Welcome to your AI interview. I'm excited to learn more about you and understand what makes you a great candidate for this position."):
+    """
+    Test the typewriter synchronization system
+    """
+    logger.info("=== Typewriter Sync System Test ===")
+    
+    # Generate audio for testing
+    audio_url = generate_tts(test_text)
+    
+    if audio_url:
+        # Create sync data
+        sync_data = create_typewriter_sync_data(test_text, audio_url)
+        logger.info(f"Sync data created: {sync_data}")
+        
+        # Test duration estimation
+        estimated = estimate_audio_duration(test_text)
+        logger.info(f"Estimated duration: {estimated} seconds")
+        
+        # Test actual duration if possible
+        full_path = os.path.join(settings.BASE_DIR, audio_url.lstrip('/'))
+        actual = get_audio_duration(full_path)
+        if actual:
+            logger.info(f"Actual duration: {actual} seconds")
+        
+        return {
+            'success': True,
+            'audio_url': audio_url,
+            'sync_data': sync_data,
+            'estimated_duration': estimated,
+            'actual_duration': actual
+        }
+    else:
+        logger.error("Could not generate audio for typewriter sync test")
+        return {
+            'success': False,
+            'error': 'Audio generation failed'
+        }

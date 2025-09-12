@@ -359,6 +359,12 @@
                 };
                 
                 recognition.onresult = function(event) {
+                    // Ignore speech input while AI is speaking
+                    if (isProcessingResponse) {
+                        console.log('Ignoring speech input - AI is speaking');
+                        return;
+                    }
+                    
                     let interimTranscript = '';
                     let finalTranscript = '';
                     
@@ -530,38 +536,26 @@
                         audio.src = data.audio;
                         audio.volume = 0.7; // Reduce volume to prevent feedback
                         
-                        // Temporarily pause speech recognition during AI speech
+                        // Temporarily disable speech processing during AI speech (mic stays on)
                         if (recognition && isListening) {
                             isProcessingResponse = true;
-                            recognition.stop();
+                            
+                            // Don't stop recognition, just ignore results during AI speech
+                            console.log('AI speaking - ignoring speech input temporarily');
                             
                             audio.addEventListener('ended', () => {
                                 setTimeout(() => {
-                                    if (isListening) {
-                                        try {
-                                            isProcessingResponse = false;
-                                            recognition.start();
-                                            console.log('Ready for next candidate response');
-                                        } catch (e) {
-                                            console.log('Failed to restart recognition after audio:', e);
-                                        }
-                                    }
+                                    isProcessingResponse = false;
+                                    console.log('AI finished speaking - ready for candidate response');
                                 }, 100);
                             }, { once: true });
                         }
                         
                         audio.play().catch(e => console.log('Audio play failed:', e));
                     } else {
-                        // No audio, restart recognition immediately (no delay)
-                        if (isListening && !isProcessingResponse) {
-                            try {
-                                isProcessingResponse = false;
-                                recognition.start();
-                                console.log('Ready for next candidate response (no audio)');
-                            } catch (e) {
-                                console.log('Failed to restart recognition:', e);
-                            }
-                        }
+                        // No audio, ready for next response immediately
+                        isProcessingResponse = false;
+                        console.log('Ready for next candidate response (no audio)');
                     }
                     
                     // Check if complete

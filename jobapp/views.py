@@ -1076,11 +1076,11 @@ def start_interview_by_uuid(request, interview_uuid):
                 logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
                 
                 if question_count == 1:
-                    ai_response = f"I understand you're having audio issues. No problem! Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
+                    ai_response = f"I understand you're having audio issues. No problem! Your microphone is still working fine for me to hear you. Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
                 elif question_count <= 8:
-                    ai_response = "I understand you can't hear the audio. That's okay! Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
+                    ai_response = "I understand you can't hear the audio. That's okay! I can still hear you clearly through your microphone. Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
                 else:
-                    ai_response = "Thank you for letting me know about the audio issues. We can continue with text-based questions. What questions do you have about this role or our company?"
+                    ai_response = "Thank you for letting me know about the audio issues. Your microphone is working perfectly for our conversation. What questions do you have about this role or our company?"
                 
                 # Force text-only response (no audio generation)
                 response_data = {
@@ -1089,7 +1089,8 @@ def start_interview_by_uuid(request, interview_uuid):
                     'success': True,
                     'question_count': question_count,
                     'is_final': question_count >= 8,
-                    'text_only': True  # Flag for frontend
+                    'text_only': True,  # Flag for frontend
+                    'microphone_note': 'Your microphone is working fine - I can hear you clearly'
                 }
                 
                 return JsonResponse(response_data)

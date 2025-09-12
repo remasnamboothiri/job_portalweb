@@ -99,14 +99,12 @@ class ProfessionalInterviewAudio {
         console.log('🔇 AI audio isolation configured');
     }
 
-    // Handle AI audio start - reduce microphone sensitivity
+    // Handle AI audio start - block speech recognition but keep mic on
     handleAIAudioStart() {
-        if (this.gainNode) {
-            // Reduce microphone gain during AI speech
-            this.gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-        }
+        // Keep microphone at full sensitivity - don't reduce gain
+        // The microphone should always be on during interview
         
-        // Pause speech recognition temporarily
+        // Block speech recognition temporarily
         if (window.recognition && window.isListening) {
             try {
                 window.recognition.stop();
@@ -116,29 +114,48 @@ class ProfessionalInterviewAudio {
             }
         }
         
-        console.log('🔇 AI audio started - microphone sensitivity reduced');
+        // Set global flags to block speech recognition
+        if (typeof window.speechRecognitionBlocked !== 'undefined') {
+            window.speechRecognitionBlocked = true;
+        }
+        if (typeof window.isAISpeaking !== 'undefined') {
+            window.isAISpeaking = true;
+        }
+        
+        console.log('🔇 AI audio started - speech recognition blocked (microphone stays on)');
     }
 
-    // Handle AI audio end - restore microphone sensitivity
+    // Handle AI audio end - restore speech recognition
     handleAIAudioEnd() {
-        if (this.gainNode) {
-            // Restore microphone gain after AI speech
-            this.gainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
+        // Microphone gain stays at full level - no need to restore
+        
+        // Clear global blocking flags
+        if (typeof window.isAISpeaking !== 'undefined') {
+            window.isAISpeaking = false;
         }
         
         // Resume speech recognition after delay
         setTimeout(() => {
-            if (this.speechRecognitionActive && window.recognition && window.isListening) {
+            if (typeof window.speechRecognitionBlocked !== 'undefined') {
+                window.speechRecognitionBlocked = false;
+            }
+            
+            if (this.speechRecognitionActive && window.recognition) {
                 try {
-                    window.recognition.start();
+                    // Use the global start function if available
+                    if (typeof window.startSpeechRecognition === 'function') {
+                        window.startSpeechRecognition();
+                    } else {
+                        window.recognition.start();
+                    }
                     this.speechRecognitionActive = false;
                 } catch (e) {
                     console.log('Could not resume speech recognition:', e);
                 }
             }
-        }, 500);
+        }, 1000); // Increased delay to ensure AI audio has fully stopped
         
-        console.log('🎙️ AI audio ended - microphone sensitivity restored');
+        console.log('🎙️ AI audio ended - speech recognition restored (microphone was always on)');
     }
 
     // Apply noise suppression
@@ -296,19 +313,24 @@ class ProfessionalSpeechRecognition {
         }
     }
 
-    // Update microphone UI
+    // Update microphone UI (always show as active in interview mode)
     updateMicrophoneUI(active) {
-        const micBtn = document.getElementById('micBtn');
+        const micBtn = document.getElementById('micBtn') || document.getElementById('muteBtn');
         if (!micBtn) return;
 
+        // In interview mode, microphone should always appear active
+        // Only speech recognition state changes
         if (active) {
-            micBtn.classList.add('recording');
-            micBtn.innerHTML = '🔴';
-            micBtn.title = 'Microphone is ON (Professional Interview Mode)';
+            micBtn.classList.add('recording', 'mic-active');
+            micBtn.classList.remove('mic-muted');
+            micBtn.innerHTML = '🎤';
+            micBtn.title = 'Microphone is ON - Speech recognition active';
         } else {
             micBtn.classList.remove('recording');
+            micBtn.classList.add('mic-active'); // Keep mic visually active
+            micBtn.classList.remove('mic-muted');
             micBtn.innerHTML = '🎤';
-            micBtn.title = 'Click to turn microphone ON';
+            micBtn.title = 'Microphone is ON - Speech recognition paused';
         }
     }
 
@@ -371,3 +393,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('📁 Professional interview audio module loaded');
+console.log('🎙️ Interview mode: Microphone will stay ON throughout the interview');
+console.log('🔇 Speech recognition will be temporarily blocked when AI is speaking');

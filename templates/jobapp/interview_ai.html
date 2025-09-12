@@ -322,6 +322,9 @@
 
     <!-- Audio Elements -->
     <audio id="aiAudioPlayer" style="display: none;"></audio>
+    
+    <!-- Interview Microphone Always-On System -->
+    <script src="{% static 'js/interview-microphone-always-on.js' %}"></script>
 
     <!-- CSRF Token -->
     {% csrf_token %}
@@ -526,28 +529,43 @@
             interviewTimer = setInterval(updateTimer, 1000);
         }
 
-        // Toggle microphone
+        // Toggle microphone (but keep it always on for interview)
         function toggleMicrophone() {
-            isMicOn = !isMicOn;
-            const muteBtn = document.getElementById('muteBtn');
-            
+            // In interview mode, microphone should always stay on
+            // Only toggle speech recognition
             if (isMicOn) {
-                muteBtn.classList.add('mic-active');
-                muteBtn.classList.remove('mic-muted');
-                muteBtn.innerHTML = '🎤';
-            } else {
+                // Stop speech recognition but keep mic on
+                speechRecognitionBlocked = true;
+                stopSpeechRecognition();
+                
+                const muteBtn = document.getElementById('muteBtn');
                 muteBtn.classList.remove('mic-active');
                 muteBtn.classList.add('mic-muted');
                 muteBtn.innerHTML = '🔇';
+                muteBtn.title = 'Speech recognition disabled - Click to enable';
+                
+                console.log('🔇 Speech recognition disabled (mic hardware stays on)');
+            } else {
+                // Re-enable speech recognition
+                speechRecognitionBlocked = false;
+                
+                const muteBtn = document.getElementById('muteBtn');
+                muteBtn.classList.add('mic-active');
+                muteBtn.classList.remove('mic-muted');
+                muteBtn.innerHTML = '🎤';
+                muteBtn.title = 'Speech recognition enabled - Always listening';
+                
+                // Start speech recognition if not blocked by AI
+                if (!isAISpeaking) {
+                    startSpeechRecognition();
+                }
+                
+                console.log('🎤 Speech recognition enabled');
             }
             
-            // Also toggle audio tracks if available
-            if (window.userStream) {
-                const audioTracks = window.userStream.getAudioTracks();
-                audioTracks.forEach(track => {
-                    track.enabled = isMicOn;
-                });
-            }
+            // Note: We don't actually disable the microphone hardware
+            // The microphone stays on for the entire interview
+            // We only control speech recognition
         }
 
         // Show completion modal
@@ -560,7 +578,7 @@
             }, 1000);
         }
 
-        // Handle AI response
+        // Handle AI response with proper speech blocking
         function handleAIResponse(data) {
             // Update question counter
             currentQuestionCount = data.question_count || currentQuestionCount + 1;
@@ -577,6 +595,24 @@
             const subtitleOverlay = document.getElementById('subtitleOverlay');
             subtitleOverlay.classList.add('show');
             
+            // Block speech recognition while AI is speaking
+            isAISpeaking = true;
+            speechRecognitionBlocked = true;
+            stopSpeechRecognition();
+            
+            console.log('🤖 AI is speaking - speech recognition blocked');
+            
+            // Play audio if available
+            if (data.audio && data.audio.trim() !== '') {
+                playAIAudio(data.audio);
+            } else {
+                // No audio, simulate AI speaking time based on text length
+                const speakingTime = Math.max(3000, data.response.length * 50); // 50ms per character, min 3 seconds
+                setTimeout(() => {
+                    handleAIFinishedSpeaking();
+                }, speakingTime);
+            }
+            
             // Hide subtitles after 8 seconds
             setTimeout(() => {
                 subtitleOverlay.classList.remove('show');
@@ -585,6 +621,46 @@
             // Check if interview is complete
             if (data.is_final || currentQuestionCount >= 8) {
                 setTimeout(showCompletionModal, 2000);
+            }
+        }
+        
+        // Handle when AI finishes speaking
+        function handleAIFinishedSpeaking() {
+            isAISpeaking = false;
+            
+            // Wait a moment before re-enabling speech recognition
+            setTimeout(() => {
+                if (isMicOn && !speechRecognitionBlocked) {
+                    speechRecognitionBlocked = false;
+                    startSpeechRecognition();
+                    console.log('🎤 AI finished speaking - speech recognition re-enabled');
+                }
+            }, 1000); // 1 second delay to ensure AI audio has fully stopped
+        }
+        
+        // Play AI audio with proper speech blocking
+        function playAIAudio(audioUrl) {
+            const audioPlayer = document.getElementById('aiAudioPlayer');
+            
+            if (audioUrl && audioUrl.trim() !== '') {
+                audioPlayer.src = audioUrl;
+                
+                audioPlayer.onended = () => {
+                    console.log('🔊 AI audio finished playing');
+                    handleAIFinishedSpeaking();
+                };
+                
+                audioPlayer.onerror = (error) => {
+                    console.error('Audio playback error:', error);
+                    handleAIFinishedSpeaking();
+                };
+                
+                audioPlayer.play().catch(error => {
+                    console.error('Audio play failed:', error);
+                    handleAIFinishedSpeaking();
+                });
+            } else {
+                handleAIFinishedSpeaking();
             }
         }
 
@@ -610,40 +686,82 @@
             }
         }
 
+        // Speech recognition variables
+        let recognition = null;
+        let isListening = false;
+        let isAISpeaking = false;
+        let speechRecognitionBlocked = false;
+        
         // Initialize speech recognition
         function initializeSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                const recognition = new SpeechRecognition();
+                recognition = new SpeechRecognition();
                 
                 recognition.lang = 'en-US';
                 recognition.interimResults = false;
-                recognition.continuous = false;
+                recognition.continuous = true;
+                recognition.maxAlternatives = 1;
+                
+                recognition.onstart = function() {
+                    console.log('🎤 Speech recognition started');
+                    isListening = true;
+                };
+                
+                recognition.onend = function() {
+                    console.log('🎤 Speech recognition ended');
+                    isListening = false;
+                    
+                    // Auto-restart if not blocked and mic is on
+                    if (isMicOn && !speechRecognitionBlocked && !isAISpeaking) {
+                        setTimeout(() => {
+                            if (isMicOn && !speechRecognitionBlocked && !isAISpeaking) {
+                                startSpeechRecognition();
+                            }
+                        }, 500);
+                    }
+                };
                 
                 recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    sendResponse(transcript);
+                    // Only process if not blocked by AI speech
+                    if (!speechRecognitionBlocked && !isAISpeaking) {
+                        const transcript = event.results[event.results.length - 1][0].transcript;
+                        console.log('🗣️ User said:', transcript);
+                        sendResponse(transcript);
+                    } else {
+                        console.log('🚫 Speech recognition blocked - AI is speaking');
+                    }
                 };
                 
                 recognition.onerror = function(error) {
                     console.error('Speech recognition error:', error);
-                };
-                
-                // Auto-start recognition when mic is on
-                setInterval(() => {
-                    if (isMicOn && !recognition.isListening) {
-                        try {
-                            recognition.start();
-                            recognition.isListening = true;
-                        } catch (e) {
-                            // Recognition already started
-                        }
+                    if (error.error === 'not-allowed') {
+                        alert('Microphone permission denied. Please allow microphone access and refresh the page.');
                     }
-                }, 3000);
-                
-                recognition.onend = function() {
-                    recognition.isListening = false;
                 };
+                
+                // Start initial recognition
+                if (isMicOn) {
+                    startSpeechRecognition();
+                }
+            }
+        }
+        
+        // Start speech recognition
+        function startSpeechRecognition() {
+            if (recognition && !isListening && isMicOn && !speechRecognitionBlocked && !isAISpeaking) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition already started or failed to start:', e);
+                }
+            }
+        }
+        
+        // Stop speech recognition
+        function stopSpeechRecognition() {
+            if (recognition && isListening) {
+                recognition.stop();
             }
         }
         
@@ -655,6 +773,12 @@
             // Initialize speech recognition
             initializeSpeechRecognition();
             
+            // Ensure microphone button shows correct initial state
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.classList.add('mic-active');
+            muteBtn.innerHTML = '🎤';
+            muteBtn.title = 'Speech recognition enabled - Always listening';
+            
             // Start timer
             startTimer();
             
@@ -663,14 +787,20 @@
                 document.getElementById('subtitleOverlay').classList.add('show');
             }, 1000);
             
-            // Hide initial subtitle after 10 seconds
+            // Hide initial subtitle after 10 seconds and enable speech recognition
             setTimeout(() => {
                 document.getElementById('subtitleOverlay').classList.remove('show');
+                // Enable speech recognition after initial AI message
+                handleAIFinishedSpeaking();
             }, 11000);
         });
 
         // Button event listeners
-        document.getElementById('muteBtn').addEventListener('click', toggleMicrophone);
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            // Toggle speech recognition state (not actual microphone)
+            isMicOn = !isMicOn;
+            toggleMicrophone();
+        });
         
         document.getElementById('endBtn').addEventListener('click', () => {
             if (confirm('Are you sure you want to end the interview?')) {

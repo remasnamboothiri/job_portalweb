@@ -269,134 +269,57 @@
             }
         }
         
-        // Interactive conversation system - AI stops when candidate speaks
-        let currentTypewriterInterval = null;
-        let currentAudioElement = null;
-        let isAISpeaking = false;
-        
+        // Simple, reliable question display system
         function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
             const element = document.getElementById('conversationArea');
             element.innerHTML = '';
             
-            // Clear any previous typewriter
-            if (currentTypewriterInterval) {
-                clearInterval(currentTypewriterInterval);
-                currentTypewriterInterval = null;
-            }
-            
             if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
-                console.log('🗣️ INTERACTIVE: Starting AI question with interruption support');
+                console.log('🔊 Starting AI question with audio');
                 
                 const audio = document.getElementById('aiAudio');
                 audio.src = audioUrl;
-                audio.volume = 0.7;
-                currentAudioElement = audio;
+                audio.volume = 0.6;
                 
                 audio.oncanplaythrough = () => {
-                    console.log('🗣️ INTERACTIVE: Audio ready, starting interruptible conversation');
+                    console.log('🔊 Audio ready, starting playback');
                     
-                    // Start audio
+                    // Start audio first
                     audio.play().then(() => {
-                        isAISpeaking = true;
-                        console.log('🗣️ AI SPEAKING: Now listening for interruptions');
+                        console.log('🔊 Audio playing');
                         
-                        // Start interruptible typewriter
-                        startInterruptibleTypewriter(element, question, audioDuration || audio.duration || 5);
+                        // Start typewriter synchronized with audio
+                        let index = 0;
+                        const totalChars = question.length;
+                        const audioDurationMs = (audioDuration || audio.duration || 5) * 1000;
+                        const charDelay = audioDurationMs / totalChars;
                         
-                        // Setup interruption detection
-                        setupInterruptionDetection();
+                        const streamText = () => {
+                            if (index < question.length) {
+                                element.innerHTML += question.charAt(index);
+                                index++;
+                                setTimeout(streamText, charDelay);
+                            }
+                        };
+                        streamText();
                         
                     }).catch(error => {
-                        console.error('INTERACTIVE: Audio play failed:', error);
+                        console.error('Audio play failed:', error);
                         startNaturalTypewriter(element, question);
                     });
                 };
                 
-                audio.onended = () => {
-                    isAISpeaking = false;
-                    console.log('🗣️ AI FINISHED: Question complete, ready for response');
-                };
-                
                 audio.onerror = (error) => {
-                    console.error('INTERACTIVE: Audio error:', error);
+                    console.error('Audio error:', error);
                     startNaturalTypewriter(element, question);
                 };
                 
                 audio.load();
                 
             } else {
-                console.log('🖊️ INTERACTIVE: No audio, using natural typewriter');
+                console.log('🖊️ No audio, using natural typewriter');
                 startNaturalTypewriter(element, question);
             }
-        }
-        
-        // Interruptible typewriter that can be stopped mid-sentence
-        function startInterruptibleTypewriter(element, question, audioDuration) {
-            let index = 0;
-            const totalChars = question.length;
-            const charDelay = (audioDuration * 1000) / totalChars;
-            
-            const typeNextChar = () => {
-                if (index < question.length && isAISpeaking) {
-                    element.innerHTML += question.charAt(index);
-                    index++;
-                    currentTypewriterInterval = setTimeout(typeNextChar, charDelay);
-                } else if (!isAISpeaking) {
-                    console.log('🛑 INTERRUPTED: AI stopped speaking due to candidate interruption');
-                }
-            };
-            
-            typeNextChar();
-        }
-        
-        // Setup interruption detection system
-        function setupInterruptionDetection() {
-            // Enable speech recognition during AI speech for interruption detection
-            if (recognition && !isListening) {
-                try {
-                    isListening = true;
-                    recognition.start();
-                    console.log('🎤 INTERRUPTION DETECTION: Listening for candidate interruptions');
-                } catch (e) {
-                    console.log('Could not start interruption detection:', e);
-                }
-            }
-        }
-        
-        // Handle candidate interruption
-        function handleCandidateInterruption(spokenText) {
-            if (isAISpeaking && spokenText.trim().length > 3) {
-                console.log('🛑 CANDIDATE INTERRUPTED: Stopping AI immediately');
-                
-                // Stop AI audio immediately
-                if (currentAudioElement) {
-                    currentAudioElement.pause();
-                    currentAudioElement.currentTime = 0;
-                }
-                
-                // Stop typewriter
-                if (currentTypewriterInterval) {
-                    clearInterval(currentTypewriterInterval);
-                    currentTypewriterInterval = null;
-                }
-                
-                // Clear AI speaking flag
-                isAISpeaking = false;
-                isProcessingResponse = false;
-                
-                // Show interruption message briefly
-                const element = document.getElementById('conversationArea');
-                element.innerHTML = '<div style="color: #ffa500; font-style: italic;">💬 You interrupted - I\'m listening...</div>';
-                
-                // Clear the interruption message after 1 second and show candidate response
-                setTimeout(() => {
-                    showCandidateResponse(spokenText);
-                }, 1000);
-                
-                console.log('✅ INTERRUPTION HANDLED: AI stopped, now processing candidate response');
-                return true;
-            }
-            return false;
         }
         
         // Natural typewriter without audio sync
@@ -488,6 +411,12 @@
                 };
                 
                 recognition.onresult = function(event) {
+                    // Block speech recognition while AI is speaking
+                    if (isProcessingResponse) {
+                        console.log('🚫 AI is speaking - ignoring speech input');
+                        return;
+                    }
+                    
                     let interimTranscript = '';
                     let finalTranscript = '';
                     
@@ -499,56 +428,41 @@
                         }
                     }
                     
-                    const currentText = finalTranscript + interimTranscript;
+                    // Filter out AI voice patterns
+                    const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
+                    const textLower = (finalTranscript + interimTranscript).toLowerCase();
                     
-                    // INTERACTIVE CONVERSATION: Check for interruption during AI speech
-                    if (isAISpeaking && currentText.trim().length > 0) {
-                        // Check if this is a real interruption (not AI echo)
-                        const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
-                        const textLower = currentText.toLowerCase();
-                        
-                        // If it doesn't sound like AI echo, treat as interruption
-                        if (!aiPhrases.some(phrase => textLower.includes(phrase))) {
-                            if (handleCandidateInterruption(currentText)) {
-                                // Interruption handled, collect this text for response
-                                collectedText = currentText;
-                                return;
-                            }
-                        } else {
-                            console.log('🔇 FILTERED: AI echo detected, ignoring');
-                            return;
-                        }
+                    if (aiPhrases.some(phrase => textLower.includes(phrase))) {
+                        console.log('🚫 AI echo detected, ignoring');
+                        return;
                     }
                     
-                    // Normal processing when AI is not speaking
-                    if (!isAISpeaking && !isProcessingResponse) {
-                        // Collect all text
-                        if (finalTranscript) {
-                            collectedText += finalTranscript;
-                            lastSpeechTime = Date.now();
-                            
-                            // Clear any existing timeout
-                            if (speechTimeout) {
-                                clearTimeout(speechTimeout);
-                            }
-                            
-                            // Set timeout to auto-submit after 1 second of silence
-                            speechTimeout = setTimeout(() => {
-                                if (collectedText.trim() && !isProcessingResponse) {
-                                    autoSubmitResponse();
-                                }
-                            }, 1000);
+                    // Collect all text
+                    if (finalTranscript) {
+                        collectedText += finalTranscript;
+                        lastSpeechTime = Date.now();
+                        
+                        // Clear any existing timeout
+                        if (speechTimeout) {
+                            clearTimeout(speechTimeout);
                         }
                         
-                        // Show live text with interim results
-                        const displayText = collectedText + interimTranscript;
-                        if (displayText.trim()) {
-                            document.getElementById('conversationArea').innerHTML = displayText;
-                            
-                            // Update last speech time for interim results too
-                            if (interimTranscript.trim()) {
-                                lastSpeechTime = Date.now();
+                        // Set timeout to auto-submit after 1 second of silence
+                        speechTimeout = setTimeout(() => {
+                            if (collectedText.trim() && !isProcessingResponse) {
+                                autoSubmitResponse();
                             }
+                        }, 1000);
+                    }
+                    
+                    // Show live text with interim results
+                    const displayText = collectedText + interimTranscript;
+                    if (displayText.trim()) {
+                        document.getElementById('conversationArea').innerHTML = displayText;
+                        
+                        // Update last speech time for interim results too
+                        if (interimTranscript.trim()) {
+                            lastSpeechTime = Date.now();
                         }
                     }
                 };
@@ -677,34 +591,34 @@
                     questionCount = data.question_count || questionCount + 1;
                     document.getElementById('questionCount').textContent = questionCount + '/8';
                     
-                    // INTERACTIVE: Enable interruption during AI speech
+                    // Handle audio with proper blocking
                     if (data.audio && data.audio.trim() !== '' && data.audio !== 'None') {
-                        // Don't block speech recognition - enable interruption
-                        isProcessingResponse = false; // Allow interruptions
-                        console.log('🗣️ INTERACTIVE: AI will speak - interruptions ENABLED');
+                        // Block speech recognition during AI speech
+                        isProcessingResponse = true;
+                        console.log('🔒 AI will speak - blocking speech recognition');
                         
                         const audio = document.getElementById('aiAudio');
                         
-                        // Set up natural conversation flow
+                        // Unblock when audio ends
                         audio.addEventListener('ended', () => {
-                            isAISpeaking = false;
-                            isProcessingResponse = false;
-                            console.log('✅ AI finished speaking naturally - ready for response');
+                            setTimeout(() => {
+                                isProcessingResponse = false;
+                                console.log('✅ AI finished - ready for response');
+                            }, 1000);
                         }, { once: true });
                         
-                        // Fallback to ensure we don't get stuck
+                        // Fallback unblock
                         setTimeout(() => {
-                            if (isAISpeaking) {
-                                isAISpeaking = false;
-                                isProcessingResponse = false;
-                                console.log('⏰ FALLBACK: Ensuring conversation continues');
-                            }
-                        }, 15000);
+                            isProcessingResponse = false;
+                            console.log('⏰ Fallback unblock');
+                        }, 10000);
                         
                     } else {
-                        // No audio, ready immediately
-                        isProcessingResponse = false;
-                        console.log('✅ Ready for candidate response (no audio)');
+                        // No audio, ready after short delay
+                        setTimeout(() => {
+                            isProcessingResponse = false;
+                            console.log('✅ Ready for response (no audio)');
+                        }, 500);
                     }
                     
                     // Check if complete
@@ -742,33 +656,12 @@
             window.location.href = '{% url "jobseeker_dashboard" %}';
         }
         
-        // Enhanced audio isolation to prevent feedback
+        // Simple audio isolation
         function setupAudioIsolation() {
             const aiAudio = document.getElementById('aiAudio');
             if (aiAudio) {
-                // Lower volume to reduce feedback
                 aiAudio.volume = 0.6;
-                
-                // Block speech recognition during AI speech
-                aiAudio.addEventListener('play', function() {
-                    isProcessingResponse = true;
-                    console.log('🔇 AI AUDIO PLAYING - Speech recognition BLOCKED');
-                });
-                
-                aiAudio.addEventListener('ended', function() {
-                    // Keep blocking for 2 more seconds after audio ends
-                    setTimeout(() => {
-                        isProcessingResponse = false;
-                        console.log('🔊 AI AUDIO ENDED - Speech recognition UNBLOCKED');
-                    }, 2000);
-                });
-                
-                aiAudio.addEventListener('pause', function() {
-                    setTimeout(() => {
-                        isProcessingResponse = false;
-                        console.log('⏸️ AI AUDIO PAUSED - Speech recognition UNBLOCKED');
-                    }, 1000);
-                });
+                console.log('🔊 Audio isolation setup complete');
             }
         }
         
@@ -787,14 +680,19 @@
             const initialAudio = '{{ audio_url|safe }}';
             const initialDuration = {{ audio_duration|default:"null" }};
             
-            // Block speech recognition initially if there's audio
+            // Set initial processing state
+            isProcessingResponse = false;
+            console.log('✅ Interview system ready');
+            
+            // Show initial question
             if (initialAudio && initialAudio.trim() !== '' && initialAudio !== 'None') {
                 isProcessingResponse = true;
-                console.log('🔒 INITIAL BLOCK: AI will speak first');
+                setTimeout(() => {
+                    showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
+                }, 500);
+            } else {
+                showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
             }
-            
-            // Show question with proper audio sync
-            showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
             
             // Show professional interview notice
             showProfessionalNotice();

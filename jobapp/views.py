@@ -1258,8 +1258,11 @@ Respond as Alex would naturally speak:
             audio_duration = None
             audio_generation_error = None
             try:
-                # Try ElevenLabs with Bella voice first
-                audio_path = generate_tts(ai_response, model="female_friendly")
+                # Try RunPod TTS first, then ElevenLabs fallback
+                audio_path = generate_tts(ai_response, model="chatterbox", force_runpod=True)
+                if not audio_path:
+                    # Fallback to ElevenLabs
+                    audio_path = generate_tts(ai_response, model="female_friendly")
                 if not audio_path:
                     # Quick gTTS fallback if RunPod fails
                     audio_path = generate_gtts_fallback(ai_response)
@@ -1356,8 +1359,11 @@ Respond as Alex would naturally speak:
         audio_path = None
         audio_duration = None
         try:
-            # Try ElevenLabs with Bella voice for initial question
-            audio_path = generate_tts(ai_question, model="female_friendly")
+            # Try RunPod TTS first for initial question
+            audio_path = generate_tts(ai_question, model="chatterbox", force_runpod=True)
+            if not audio_path:
+                # Fallback to ElevenLabs
+                audio_path = generate_tts(ai_question, model="female_friendly")
             if not audio_path:
                 # Quick gTTS fallback
                 audio_path = generate_gtts_fallback(ai_question)

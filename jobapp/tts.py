@@ -234,11 +234,32 @@ def test_tts_generation(test_text=None):
 # Alias for backwards compatibility
 generate_tts_audio = generate_tts
 
+def check_tts_system():
+    """
+    Basic TTS system health check
+    """
+    try:
+        health_info = {
+            'media_root': settings.MEDIA_ROOT,
+            'elevenlabs_api_key': bool(ELEVENLABS_API_KEY),
+            'gtts_available': True,
+            'test_generation': False
+        }
+        
+        # Test basic TTS generation
+        test_result = generate_gtts_fallback("Hello world test")
+        health_info['test_generation'] = bool(test_result)
+        
+        return health_info
+    except Exception as e:
+        return {'error': str(e), 'test_generation': False}
+
 # Export main functions
 __all__ = [
     'generate_tts',
     'generate_gtts_fallback',
     'generate_elevenlabs_tts',
     'test_tts_generation',
+    'check_tts_system',
     'generate_tts_audio'
 ]

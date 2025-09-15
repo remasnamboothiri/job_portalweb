@@ -418,9 +418,9 @@
                 };
                 
                 recognition.onresult = function(event) {
-                    // Ignore speech input while AI is speaking
+                    // CRITICAL: Block ALL speech recognition while AI is speaking
                     if (isProcessingResponse) {
-                        console.log('Ignoring speech input - AI is speaking');
+                        console.log('🚫 BLOCKED: AI is speaking - ignoring all speech input');
                         return;
                     }
                     
@@ -435,6 +435,16 @@
                         }
                     }
                     
+                    // Filter out AI voice patterns (common interviewer phrases)
+                    const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
+                    const textLower = (finalTranscript + interimTranscript).toLowerCase();
+                    
+                    // Block if it sounds like AI interviewer speech
+                    if (aiPhrases.some(phrase => textLower.includes(phrase))) {
+                        console.log('🚫 FILTERED: Detected AI interviewer speech pattern, ignoring');
+                        return;
+                    }
+                    
                     // Collect all text
                     if (finalTranscript) {
                         collectedText += finalTranscript;
@@ -445,12 +455,12 @@
                             clearTimeout(speechTimeout);
                         }
                         
-                        // Set timeout to auto-submit after 0.5 seconds of silence (faster response)
+                        // Set timeout to auto-submit after 1 second of silence (increased delay)
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse) {
                                 autoSubmitResponse();
                             }
-                        }, 500);
+                        }, 1000);
                     }
                     
                     // Show live text with interim results
@@ -589,28 +599,40 @@
                     questionCount = data.question_count || questionCount + 1;
                     document.getElementById('questionCount').textContent = questionCount + '/8';
                     
-                    // Handle audio and speech processing
+                    // Handle audio and speech processing with STRICT blocking
                     if (data.audio && data.audio.trim() !== '' && data.audio !== 'None') {
-                        // Audio will be handled by showCurrentQuestion function
-                        // Temporarily disable speech processing during AI speech (mic stays on)
-                        if (recognition && isListening) {
-                            isProcessingResponse = true;
+                        // CRITICAL: Block speech recognition during AI speech
+                        isProcessingResponse = true;
+                        console.log('🔒 BLOCKING: AI will speak - speech recognition BLOCKED');
+                        
+                        const audio = document.getElementById('aiAudio');
+                        
+                        // Block for entire audio duration + buffer
+                        audio.addEventListener('loadedmetadata', () => {
+                            const audioDuration = audio.duration || data.audio_duration || 5;
+                            console.log(`🔒 BLOCKING for ${audioDuration + 2} seconds`);
                             
-                            // Don't stop recognition, just ignore results during AI speech
-                            console.log('FIXED: AI speaking - ignoring speech input temporarily');
-                            
-                            const audio = document.getElementById('aiAudio');
-                            audio.addEventListener('ended', () => {
-                                setTimeout(() => {
-                                    isProcessingResponse = false;
-                                    console.log('FIXED: AI finished speaking - ready for candidate response');
-                                }, 100);
-                            }, { once: true });
-                        }
+                            // Unblock after audio ends + 2 second buffer
+                            setTimeout(() => {
+                                isProcessingResponse = false;
+                                console.log('✅ UNBLOCKED: Ready for candidate response');
+                            }, (audioDuration + 2) * 1000);
+                        }, { once: true });
+                        
+                        // Fallback unblock after 10 seconds max
+                        setTimeout(() => {
+                            if (isProcessingResponse) {
+                                isProcessingResponse = false;
+                                console.log('⏰ FALLBACK UNBLOCK: After 10 seconds');
+                            }
+                        }, 10000);
+                        
                     } else {
-                        // No audio, ready for next response immediately
-                        isProcessingResponse = false;
-                        console.log('FIXED: Ready for next candidate response (no audio)');
+                        // No audio, ready for next response after short delay
+                        setTimeout(() => {
+                            isProcessingResponse = false;
+                            console.log('✅ Ready for next candidate response (no audio)');
+                        }, 1000);
                     }
                     
                     // Check if complete
@@ -648,24 +670,32 @@
             window.location.href = '{% url "jobseeker_dashboard" %}';
         }
         
-        // Mute AI audio to prevent feedback
-        function muteAIAudio() {
+        // Enhanced audio isolation to prevent feedback
+        function setupAudioIsolation() {
             const aiAudio = document.getElementById('aiAudio');
             if (aiAudio) {
+                // Lower volume to reduce feedback
+                aiAudio.volume = 0.6;
+                
+                // Block speech recognition during AI speech
                 aiAudio.addEventListener('play', function() {
-                    // Temporarily pause speech recognition during AI speech
-                    if (recognition && isListening) {
-                        try {
-                            recognition.stop();
-                            setTimeout(() => {
-                                if (isListening) {
-                                    recognition.start();
-                                }
-                            }, aiAudio.duration * 1000 + 500); // Resume after audio ends
-                        } catch (e) {
-                            console.log('Audio isolation error:', e);
-                        }
-                    }
+                    isProcessingResponse = true;
+                    console.log('🔇 AI AUDIO PLAYING - Speech recognition BLOCKED');
+                });
+                
+                aiAudio.addEventListener('ended', function() {
+                    // Keep blocking for 2 more seconds after audio ends
+                    setTimeout(() => {
+                        isProcessingResponse = false;
+                        console.log('🔊 AI AUDIO ENDED - Speech recognition UNBLOCKED');
+                    }, 2000);
+                });
+                
+                aiAudio.addEventListener('pause', function() {
+                    setTimeout(() => {
+                        isProcessingResponse = false;
+                        console.log('⏸️ AI AUDIO PAUSED - Speech recognition UNBLOCKED');
+                    }, 1000);
                 });
             }
         }
@@ -674,7 +704,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initCamera();
             initSpeech();
-            muteAIAudio();
+            setupAudioIsolation(); // Use new audio isolation function
             setInterval(updateTimer, 1000);
             
             // Clear conversation area initially
@@ -684,6 +714,12 @@
             const initialQuestion = '{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}';
             const initialAudio = '{{ audio_url|safe }}';
             const initialDuration = {{ audio_duration|default:"null" }};
+            
+            // Block speech recognition initially if there's audio
+            if (initialAudio && initialAudio.trim() !== '' && initialAudio !== 'None') {
+                isProcessingResponse = true;
+                console.log('🔒 INITIAL BLOCK: AI will speak first');
+            }
             
             // Show question with proper audio sync
             showCurrentQuestion(initialQuestion, initialAudio, initialDuration);

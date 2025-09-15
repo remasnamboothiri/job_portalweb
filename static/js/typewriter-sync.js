@@ -1,24 +1,25 @@
 /**
- * Typewriter Synchronization System
- * Synchronizes text typing with audio playback for natural interview experience
+ * Typewriter Synchronization System - INSTANT START VERSION
+ * Starts typing immediately while audio loads for natural interview experience
  */
 
 (function() {
     'use strict';
     
-    console.log('🔤 Typewriter Sync System Loading - SIMPLE DIRECT SYNC...');
+    console.log('🔤 Typewriter Sync System Loading - INSTANT START VERSION...');
     
-    // Configuration - SIMPLE AND DIRECT SYNC
+    // Configuration - OPTIMIZED FOR INSTANT START
     const CONFIG = {
+        instantTypingSpeed: 35,     // milliseconds per character for instant start
         naturalTypingSpeed: 50,     // milliseconds per character for natural feel
-        minDuration: 2000,          // minimum duration in milliseconds
-        maxDuration: 30000,         // maximum duration in milliseconds
-        syncCheckInterval: 100,     // how often to check sync (ms)
-        maxWaitForAudio: 3000       // maximum time to wait for audio to start (ms)
+        minDuration: 1500,          // minimum duration in milliseconds
+        maxDuration: 25000,         // maximum duration in milliseconds
+        syncAdjustmentInterval: 200, // how often to adjust sync (ms)
+        maxWaitForAudio: 1000       // maximum time to wait for audio metadata (ms)
     };
     
     /**
-     * SIMPLE DIRECT SYNC - Calculate exact timing from audio duration
+     * INSTANT START SYNC - Start typing immediately, adjust speed when audio loads
      */
     function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
         const config = { ...CONFIG, ...options };
@@ -27,18 +28,19 @@
             element.textContent = '';
             let index = 0;
             let isComplete = false;
-            let syncInterval = null;
+            let currentInterval = null;
+            let currentSpeed = config.instantTypingSpeed;
             
             const totalChars = text.length;
             
-            console.log(`🔤 SIMPLE SYNC: Starting typewriter: ${totalChars} chars`);
+            console.log(`🔤 INSTANT START: Starting typewriter immediately: ${totalChars} chars`);
             
             function typeNextCharacter() {
                 if (isComplete || index >= totalChars) {
                     if (!isComplete) {
                         isComplete = true;
-                        if (syncInterval) clearInterval(syncInterval);
-                        console.log('🔤 SIMPLE SYNC: Typewriter completed');
+                        if (currentInterval) clearInterval(currentInterval);
+                        console.log('🔤 INSTANT START: Typewriter completed');
                         resolve();
                     }
                     return;
@@ -48,59 +50,75 @@
                 index++;
             }
             
-            // Wait for audio to start, then calculate exact timing
-            const startSyncedTyping = () => {
-                if (!audioElement || audioElement.paused || audioElement.duration <= 0) {
-                    // No audio or not ready, use natural timing
-                    const charDelay = config.naturalTypingSpeed;
-                    const typeChar = () => {
-                        typeNextCharacter();
-                        if (index < totalChars) {
-                            setTimeout(typeChar, charDelay);
-                        }
-                    };
-                    typeChar();
-                    return;
-                }
+            function startTypingWithSpeed(speed) {
+                if (currentInterval) clearInterval(currentInterval);
+                currentSpeed = speed;
                 
-                // DIRECT CALCULATION: Divide audio duration by character count
-                const audioDurationMs = audioElement.duration * 1000;
-                const charDelay = audioDurationMs / totalChars;
-                
-                console.log(`🔤 SIMPLE SYNC: Audio duration: ${audioDurationMs}ms, chars: ${totalChars}, delay per char: ${charDelay.toFixed(1)}ms`);
-                
-                // Start typing at calculated intervals
-                syncInterval = setInterval(() => {
+                currentInterval = setInterval(() => {
                     typeNextCharacter();
-                }, charDelay);
-            };
+                }, speed);
+                
+                console.log(`🔤 INSTANT START: Typing at ${speed}ms per character`);
+            }
             
-            // Wait for audio to be ready and playing
-            const waitForAudio = () => {
-                if (audioElement && audioElement.currentTime > 0 && !audioElement.paused && audioElement.duration > 0) {
-                    console.log('🔤 SIMPLE SYNC: Audio ready, starting synchronized typing');
-                    startSyncedTyping();
-                } else if (!audioElement) {
-                    console.log('🔤 SIMPLE SYNC: No audio, using natural timing');
-                    startSyncedTyping();
-                } else {
-                    setTimeout(waitForAudio, 100);
+            function adjustSpeedForAudio() {
+                if (!audioElement || !audioElement.duration || audioElement.duration <= 0) {
+                    return; // Keep current speed
                 }
-            };
+                
+                const remainingChars = totalChars - index;
+                if (remainingChars <= 0) return;
+                
+                const audioDurationMs = audioElement.duration * 1000;
+                const elapsedTime = index * currentSpeed;
+                const remainingTime = Math.max(audioDurationMs - elapsedTime, remainingChars * 20); // minimum 20ms per char
+                const newSpeed = remainingTime / remainingChars;
+                
+                if (Math.abs(newSpeed - currentSpeed) > 10) { // Only adjust if significant difference
+                    console.log(`🔤 INSTANT START: Adjusting speed from ${currentSpeed}ms to ${newSpeed.toFixed(1)}ms per char`);
+                    startTypingWithSpeed(Math.max(20, Math.min(newSpeed, 200))); // Clamp between 20-200ms
+                }
+            }
             
-            // Start waiting
-            setTimeout(waitForAudio, 200);
+            // START TYPING IMMEDIATELY
+            startTypingWithSpeed(config.instantTypingSpeed);
             
-            // Fallback timer
+            // Monitor audio loading and adjust speed
+            if (audioElement) {
+                const checkAudioAndAdjust = () => {
+                    if (audioElement.duration > 0 && !isComplete) {
+                        adjustSpeedForAudio();
+                    }
+                };
+                
+                // Check for audio metadata
+                audioElement.addEventListener('loadedmetadata', checkAudioAndAdjust);
+                audioElement.addEventListener('canplay', checkAudioAndAdjust);
+                audioElement.addEventListener('play', checkAudioAndAdjust);
+                
+                // Periodic adjustment while typing
+                const adjustmentInterval = setInterval(() => {
+                    if (isComplete) {
+                        clearInterval(adjustmentInterval);
+                        return;
+                    }
+                    checkAudioAndAdjust();
+                }, config.syncAdjustmentInterval);
+                
+                // Initial check after short delay
+                setTimeout(checkAudioAndAdjust, 100);
+            }
+            
+            // Fallback completion
             setTimeout(() => {
                 if (!isComplete) {
-                    console.log('🔤 SIMPLE SYNC: Fallback completion');
+                    console.log('🔤 INSTANT START: Fallback completion');
                     isComplete = true;
-                    if (syncInterval) clearInterval(syncInterval);
+                    if (currentInterval) clearInterval(currentInterval);
                     element.textContent = text;
                     resolve();
                 }
-            }, config.maxWaitForAudio + (audioElement?.duration * 1000 || 5000));
+            }, config.maxDuration);
         });
     }
     
@@ -138,24 +156,26 @@
     }
     
     /**
-     * Main typewriter function with automatic sync detection - COMPLETELY FIXED VERSION
+     * Main typewriter function with instant start - OPTIMIZED VERSION
      */
     function startTypewriter(element, text, audioElement = null, duration = null, options = {}) {
         if (!element || !text) {
-            console.error('🔤 COMPLETELY FIXED: Typewriter: Invalid element or text');
+            console.error('🔤 INSTANT START: Typewriter: Invalid element or text');
             return Promise.resolve();
         }
         
-        // CRITICAL FIX: Clear element and ensure it stays empty
+        // Clear element immediately
         element.textContent = '';
         
-        // Choose typewriter method - COMPLETELY FIXED logic
+        // Always start typing immediately - adjust for audio if available
         if (audioElement && audioElement.src && audioElement.src.trim() !== '') {
-            console.log('🔤 COMPLETELY FIXED: Using synchronized typewriter with audio');
+            console.log('🔤 INSTANT START: Using synchronized typewriter with instant start');
             return createSynchronizedTypewriter(element, text, audioElement, options);
         } else {
-            console.log('🔤 COMPLETELY FIXED: Using natural typewriter (no audio sync)');
-            return createNaturalTypewriter(element, text, duration, options);
+            console.log('🔤 INSTANT START: Using fast natural typewriter');
+            // Use faster natural typing when no audio
+            const fastDuration = duration ? Math.min(duration, 3) : Math.min(text.length * 0.03, 3);
+            return createNaturalTypewriter(element, text, fastDuration, options);
         }
     }
     
@@ -183,12 +203,12 @@
         config: CONFIG
     };
     
-    console.log('✅ Typewriter Sync System Loaded - SIMPLE DIRECT SYNC');
+    console.log('✅ Typewriter Sync System Loaded - INSTANT START VERSION');
     console.log('📋 Available methods:');
     console.log('  - window.TypewriterSync.start(element, text, audioElement, duration)');
     console.log('  - window.TypewriterSync.createSynchronized(element, text, audioElement)');
     console.log('  - window.TypewriterSync.createNatural(element, text, duration)');
     console.log('  - window.TypewriterSync.estimateDuration(text)');
-    console.log('🔧 Simple direct calculation for perfect sync');
+    console.log('🚀 Instant start with dynamic speed adjustment for perfect sync');
     
 })();

@@ -581,20 +581,21 @@
             }, 1000);
         }
 
-        // Legacy typewriter function for compatibility
+        // Legacy typewriter function for compatibility - FAST VERSION
         function typewriterEffect(element, text, duration, callback) {
             if (window.TypewriterSync) {
-                window.TypewriterSync.createNatural(element, text, duration)
+                const fastDuration = duration ? Math.min(duration, 3) : Math.min(text.length * 0.03, 3);
+                window.TypewriterSync.createNatural(element, text, fastDuration)
                     .then(() => {
                         if (callback) callback();
                     });
             } else {
-                // Fallback implementation
+                // Fast fallback implementation
                 element.textContent = '';
                 let index = 0;
                 const totalChars = text.length;
-                const effectiveDuration = duration ? duration * 1000 : Math.max(text.length * 80, 2000);
-                const charDelay = effectiveDuration / totalChars;
+                const effectiveDuration = duration ? Math.min(duration * 1000, 3000) : Math.min(text.length * 30, 2000);
+                const charDelay = Math.max(20, effectiveDuration / totalChars); // Minimum 20ms per char
                 
                 function typeChar() {
                     if (index < totalChars) {
@@ -656,8 +657,8 @@
                 });
             }
             
-            // Hide subtitles after appropriate time
-            const hideDelay = data.audio_duration ? (data.audio_duration * 1000) + 3000 : 8000;
+            // Hide subtitles after appropriate time (faster due to instant typewriter)
+            const hideDelay = data.audio_duration ? Math.max((data.audio_duration * 1000) + 2000, 4000) : 5000;
             setTimeout(() => {
                 subtitleOverlay.classList.remove('show');
             }, hideDelay);
@@ -682,83 +683,81 @@
             }, 1000); // 1 second delay to ensure AI audio has fully stopped
         }
         
-        // SIMPLE DIRECT SYNC - Audio and typewriter start together
+        // INSTANT START SYNC - Typewriter starts immediately, audio follows
         function playAIAudioWithSyncedTypewriter(audioUrl, text, audioDuration) {
             const audioPlayer = document.getElementById('aiAudioPlayer');
             const subtitleText = document.getElementById('subtitleText');
             
             subtitleText.textContent = '';
             
-            if (audioUrl && audioUrl.trim() !== '') {
-                console.log(`🔊 SIMPLE SYNC: Starting audio and typewriter together`);
-                console.log(`🔊 Audio URL: ${audioUrl}`);
-                console.log(`🔊 Text: ${text.length} chars, Duration: ${audioDuration}s`);
-                
-                audioPlayer.src = audioUrl;
-                
-                // Simple approach: Start both audio and typewriter at the same time
-                audioPlayer.oncanplaythrough = () => {
-                    console.log('🔊 SIMPLE SYNC: Audio ready, starting both together');
+            console.log(`🚀 INSTANT START: Starting typewriter immediately`);
+            console.log(`🔊 Audio URL: ${audioUrl}`);
+            console.log(`🖊️ Text: ${text.length} chars, Duration: ${audioDuration}s`);
+            
+            // START TYPEWRITER IMMEDIATELY - Don't wait for audio
+            if (window.TypewriterSync) {
+                if (audioUrl && audioUrl.trim() !== '') {
+                    // Set up audio for synchronization
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.load();
                     
-                    // Start audio
-                    audioPlayer.play().then(() => {
-                        console.log('🔊 SIMPLE SYNC: Audio playing');
-                        
-                        // Start typewriter immediately with audio duration
-                        if (window.TypewriterSync) {
-                            window.TypewriterSync.createSynchronized(subtitleText, text, audioPlayer)
-                                .then(() => {
-                                    console.log('🖊️ SIMPLE SYNC: Typewriter completed');
-                                });
-                        } else {
-                            // Fallback: calculate timing directly
-                            const charDelay = (audioDuration * 1000) / text.length;
-                            let index = 0;
-                            const typeInterval = setInterval(() => {
-                                if (index < text.length) {
-                                    subtitleText.textContent += text.charAt(index);
-                                    index++;
-                                } else {
-                                    clearInterval(typeInterval);
-                                }
-                            }, charDelay);
-                        }
-                        
-                    }).catch(error => {
-                        console.error('SIMPLE SYNC: Audio play failed:', error);
-                        // Fallback to natural typewriter
-                        const estimatedDuration = audioDuration || 5;
-                        if (window.TypewriterSync) {
-                            window.TypewriterSync.createNatural(subtitleText, text, estimatedDuration)
-                                .then(() => handleAIFinishedSpeaking());
-                        }
-                    });
-                };
-                
-                audioPlayer.onended = () => {
-                    console.log('🔊 SIMPLE SYNC: Audio finished');
-                    handleAIFinishedSpeaking();
-                };
-                
-                audioPlayer.onerror = (error) => {
-                    console.error('SIMPLE SYNC: Audio error:', error);
-                    // Fallback to natural typewriter
-                    const estimatedDuration = audioDuration || 5;
-                    if (window.TypewriterSync) {
-                        window.TypewriterSync.createNatural(subtitleText, text, estimatedDuration)
-                            .then(() => handleAIFinishedSpeaking());
-                    }
-                };
-                
-                // Load and start
-                audioPlayer.load();
-                
+                    // Start typewriter immediately with audio sync
+                    window.TypewriterSync.createSynchronized(subtitleText, text, audioPlayer)
+                        .then(() => {
+                            console.log('🖊️ INSTANT START: Typewriter completed');
+                        });
+                    
+                    // Start audio playback (typewriter already started)
+                    audioPlayer.oncanplaythrough = () => {
+                        console.log('🔊 INSTANT START: Audio ready, starting playback');
+                        audioPlayer.play().catch(error => {
+                            console.error('INSTANT START: Audio play failed:', error);
+                        });
+                    };
+                    
+                    audioPlayer.onended = () => {
+                        console.log('🔊 INSTANT START: Audio finished');
+                        handleAIFinishedSpeaking();
+                    };
+                    
+                    audioPlayer.onerror = (error) => {
+                        console.error('INSTANT START: Audio error:', error);
+                        // Typewriter already started, just handle completion
+                        setTimeout(() => handleAIFinishedSpeaking(), 2000);
+                    };
+                    
+                } else {
+                    console.log('🖊️ INSTANT START: No audio, using fast natural timing');
+                    // Fast natural typewriter for no audio
+                    const fastDuration = Math.min(text.length * 0.03, 3); // Very fast, max 3 seconds
+                    window.TypewriterSync.createNatural(subtitleText, text, fastDuration)
+                        .then(() => {
+                            setTimeout(() => handleAIFinishedSpeaking(), 1000);
+                        });
+                }
             } else {
-                console.log('🖊️ SIMPLE SYNC: No audio, using natural timing');
-                const estimatedDuration = audioDuration || 5;
-                if (window.TypewriterSync) {
-                    window.TypewriterSync.createNatural(subtitleText, text, estimatedDuration)
-                        .then(() => handleAIFinishedSpeaking());
+                // Fallback: Very fast direct typing
+                console.log('🖊️ INSTANT START: Fallback fast typing');
+                const charDelay = Math.min(30, (audioDuration * 1000) / text.length || 30);
+                let index = 0;
+                const typeInterval = setInterval(() => {
+                    if (index < text.length) {
+                        subtitleText.textContent += text.charAt(index);
+                        index++;
+                    } else {
+                        clearInterval(typeInterval);
+                        setTimeout(() => handleAIFinishedSpeaking(), 1000);
+                    }
+                }, charDelay);
+                
+                // Still try to play audio if available
+                if (audioUrl && audioUrl.trim() !== '') {
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.load();
+                    audioPlayer.oncanplaythrough = () => {
+                        audioPlayer.play().catch(console.error);
+                    };
+                    audioPlayer.onended = () => handleAIFinishedSpeaking();
                 }
             }
         }
@@ -938,10 +937,10 @@
                     isAISpeaking = true;
                     speechRecognitionBlocked = true;
                     
-                    // No audio, use natural typewriter timing
+                    // No audio, use fast natural typewriter timing
                     if (window.TypewriterSync) {
-                        const estimatedDuration = window.TypewriterSync.estimateDuration(initialText);
-                        window.TypewriterSync.createNatural(subtitleText, initialText, estimatedDuration)
+                        const fastDuration = Math.min(initialText.length * 0.03, 3); // Very fast, max 3 seconds
+                        window.TypewriterSync.createNatural(subtitleText, initialText, fastDuration)
                             .then(() => {
                                 // Enable speech recognition after typewriter completes
                                 setTimeout(() => {
@@ -949,20 +948,28 @@
                                 }, 1000);
                             });
                     } else {
-                        typewriterEffect(subtitleText, initialText, null, () => {
-                            // Enable speech recognition after typewriter completes
-                            setTimeout(() => {
-                                handleAIFinishedSpeaking();
-                            }, 1000);
-                        });
+                        // Fast fallback typewriter
+                        const charDelay = Math.min(30, initialText.length * 2); // Very fast
+                        let index = 0;
+                        const typeInterval = setInterval(() => {
+                            if (index < initialText.length) {
+                                subtitleText.textContent += initialText.charAt(index);
+                                index++;
+                            } else {
+                                clearInterval(typeInterval);
+                                setTimeout(() => {
+                                    handleAIFinishedSpeaking();
+                                }, 1000);
+                            }
+                        }, charDelay);
                     }
                 }
             }, 1000);
             
-            // Hide initial subtitle after 10 seconds
+            // Hide initial subtitle after 6 seconds (faster due to quicker typing)
             setTimeout(() => {
                 document.getElementById('subtitleOverlay').classList.remove('show');
-            }, 11000);
+            }, 7000);
         });
 
         // Button event listeners

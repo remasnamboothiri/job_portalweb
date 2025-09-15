@@ -312,6 +312,9 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# RunPod TTS Configuration
-RUNPOD_API_KEY = config('RUNPOD_API_KEY', default='')
-JWT_SECRET = config('JWT_SECRET', default='')
+# ElevenLabs TTS Configuration
+ELEVENLABS_API_KEY = config('ELEVENLABS_API_KEY', default='')
+
+# COMMENTED OUT - RunPod TTS Configuration (replaced with ElevenLabs)
+# RUNPOD_API_KEY = config('RUNPOD_API_KEY', default='')
+# JWT_SECRET = config('JWT_SECRET', default='')

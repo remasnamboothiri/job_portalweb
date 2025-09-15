@@ -29,9 +29,9 @@ ELEVENLABS_VOICES = {
         "model": "eleven_multilingual_v2"
     },
     "female_natural": {
-        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Free ElevenLabs voice
+        "voice_id": "EaBs7G1VibMrNAuz2Na7",  # Your requested voice ID
         "name": "Natural Female",
-        "description": "Natural, conversational female voice (Rachel)",
+        "description": "Natural, conversational female voice",
         "type": "elevenlabs",
         "model": "eleven_multilingual_v2"
     }

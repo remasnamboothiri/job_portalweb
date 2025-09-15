@@ -980,7 +980,7 @@ def start_interview_by_uuid(request, interview_uuid):
             job_title = interview.job.title if interview.job else "Software Developer"
             
             # Handle resume file for unregistered candidates
-            if interview.candidate_resume:
+            if hasattr(interview, 'candidate_resume') and interview.candidate_resume:
                 try:
                     resume_text = extract_resume_text(interview.candidate_resume)
                 except Exception as e:

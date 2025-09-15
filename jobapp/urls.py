@@ -93,6 +93,10 @@ urlpatterns = [
     # Test typewriter synchronization
     path('test-typewriter/', lambda request: render(request, 'jobapp/test_typewriter.html'), name='test_typewriter'),
     
+    # Health check endpoints
+    path('health/', views.health_check, name='health_check'),
+    path('ready/', views.readiness_check, name='readiness_check'),
+    
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),
     

@@ -78,13 +78,15 @@ AUTH_USER_MODEL='jobapp.CustomUser'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'jobapp.middleware.RequestLoggingMiddleware',  # Log slow requests
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # ✅ ADD THIS HERE
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'jobapp.middleware.TimeoutHandlingMiddleware',  # Handle timeouts gracefully
 ]
 
 ROOT_URLCONF = 'job_platform.urls'

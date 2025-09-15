@@ -1,133 +1,124 @@
 import os
 from openai import OpenAI
 from decouple import config
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None):
-        try:
-            api_key = config('NVIDIA_API_KEY')
-        except:
-            raise Exception("NVIDIA_API_KEY not found in environment variables")
-            
-        if not api_key:
-            raise Exception("NVIDIA_API_KEY is empty")
-            
-        try:
-            client = OpenAI(
-                base_url = "https://integrate.api.nvidia.com/v1",
-                api_key = api_key
-            )
-        except Exception as e:
-            raise Exception(f"Failed to initialize OpenAI client: {str(e)}")
-            
-        candidate_name = candidate_name or "the candidate"
-        job_title = job_title or "Software Developer" 
-        company_name = company_name or "Our Company"
-            
-        if not prompt or not prompt.strip():
-            raise Exception("Empty prompt provided to AI function")
-                
-        # Simplified system prompt focused on natural conversation
-        system_prompt = f"""
-    You are Alex, an experienced and friendly HR professional conducting a job interview for a {job_title} position at {company_name}.
-
-    CRITICAL INSTRUCTIONS:
-    - Output ONLY the exact words you would speak
-    - NO quotation marks, labels, or descriptions
-    - NO stage directions or narrations like "Waiting for response" or "AI Interviewer says"
-    - NO formatting or explanations
-    - Just speak naturally as Alex would speak
-
-
-
-    COMMUNICATION STYLE:
-    - Be natural, warm, and conversational like a real human interviewer
-    - Use simple, clear language - avoid corporate jargon
-    - Keep responses concise (2-3 sentences maximum)
-    - Show genuine interest in the candidate's responses
-    - Ask one question at a time
-    - Use natural transitions like "That's interesting," "I see," "Tell me more about..."
-
-    INTERVIEW APPROACH:
-    - Focus on having a natural conversation, not interrogation
-    - Ask follow-up questions based on what the candidate says
-    - Be encouraging and supportive
-    - Keep the flow smooth and engaging
-    
-    
-    RESPONSE PATTERN:
-    - Briefly acknowledge what they just said (optional, 1 sentence max)
-    - Ask ONE specific, relevant follow-up question
-    - Keep the conversation flowing naturally
-
-    Remember: You're having a friendly professional conversation, not giving speeches.
-    """
-                    
-        try:
-            import signal
-            
-            def timeout_handler(signum, frame):
-                raise TimeoutError("AI API call timed out")
-            
-            # Set timeout for 15 seconds
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(15)
-            
-            try:
-                completion = client.chat.completions.create(
-                    model = "nvidia/llama-3.3-nemotron-super-49b-v1",
-                    messages = [
-                        {
-                            "role": "system",
-                            "content": system_prompt
-                        },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    temperature=0.7,
-                    max_tokens=1000,
-                    stream=False,
-                    stop=["\n\n", "Candidate:", "You:"]
-                )
-            finally:
-                signal.alarm(0)  # Cancel the alarm
-                
-        except (TimeoutError, Exception) as e:
-            # Fallback to default questions if AI fails
-            if "tell me about yourself" in prompt.lower():
-                return f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
-            elif "technical" in prompt.lower():
-                return "That's great! Can you tell me about your technical experience and the technologies you've worked with?"
-            elif "project" in prompt.lower():
-                return "Interesting! Can you describe a challenging project you've worked on and how you approached it?"
-            else:
-                return f"Thank you for that response. Can you tell me more about your experience relevant to this {job_title} role?"
+    """Ask AI question with proper timeout and error handling"""
+    try:
+        api_key = config('NVIDIA_API_KEY')
+    except:
+        logger.error("NVIDIA_API_KEY not found in environment variables")
+        return get_fallback_response(prompt, candidate_name, job_title, company_name)
         
-        try:
-            def clean_text(text):
-                import re
-                # Remove markdown and excessive formatting
-                text = re.sub(r'[*#`_>\\-]+', '', text)
-                # Remove extra whitespace and newlines
-                text = re.sub(r'\s+', ' ', text).strip()
-                # Remove bullet points or numbered lists
-                text = re.sub(r'^\d+\.\s*', '', text)
-                text = re.sub(r'^[-•]\s*', '', text)
-                return text
-                
-            raw_response = completion.choices[0].message.content
-            cleaned_response = clean_text(raw_response)
+    if not api_key:
+        logger.error("NVIDIA_API_KEY is empty")
+        return get_fallback_response(prompt, candidate_name, job_title, company_name)
+        
+    candidate_name = candidate_name or "the candidate"
+    job_title = job_title or "Software Developer" 
+    company_name = company_name or "Our Company"
+        
+    if not prompt or not prompt.strip():
+        logger.error("Empty prompt provided to AI function")
+        return f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself?"
             
-            # Additional check to ensure response isn't too long
-            sentences = cleaned_response.split('. ')
-            if len(sentences) > 3:
-                cleaned_response = '. '.join(sentences[:3]) + '.'
+    # Simplified system prompt focused on natural conversation
+    system_prompt = f"""
+You are Alex, an experienced and friendly HR professional conducting a job interview for a {job_title} position at {company_name}.
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the exact words you would speak
+- NO quotation marks, labels, or descriptions
+- NO stage directions or narrations
+- Just speak naturally as Alex would speak
+- Keep responses concise (2-3 sentences maximum)
+- Be warm, professional, and conversational
+- Ask one question at a time
+
+Remember: You're having a friendly professional conversation.
+"""
                 
-            return cleaned_response
-        except Exception as e:
-            raise Exception(f"Failed to process AI response: {str(e)}")
+    try:
+        # Initialize client with timeout
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=api_key,
+            timeout=20.0  # 20 second timeout
+        )
+        
+        logger.info(f"Making AI API call with timeout=20s")
+        
+        completion = client.chat.completions.create(
+            model="nvidia/llama-3.3-nemotron-super-49b-v1",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.7,
+            max_tokens=200,  # Reduced for faster response
+            stream=False,
+            stop=["\n\n", "Candidate:", "You:"]
+        )
+        
+        raw_response = completion.choices[0].message.content
+        cleaned_response = clean_text(raw_response)
+        
+        logger.info(f"AI API call successful, response length: {len(cleaned_response)}")
+        return cleaned_response
+        
+    except Exception as e:
+        logger.error(f"AI API Error: {type(e).__name__}: {str(e)}")
+        return get_fallback_response(prompt, candidate_name, job_title, company_name)
 
+def clean_text(text):
+    """Clean AI response text"""
+    import re
+    # Remove markdown and excessive formatting
+    text = re.sub(r'[*#`_>\\-]+', '', text)
+    # Remove extra whitespace and newlines
+    text = re.sub(r'\s+', ' ', text).strip()
+    # Remove bullet points or numbered lists
+    text = re.sub(r'^\d+\.\s*', '', text)
+    text = re.sub(r'^[-•]\s*', '', text)
+    
+    # Additional check to ensure response isn't too long
+    sentences = text.split('. ')
+    if len(sentences) > 3:
+        text = '. '.join(sentences[:3]) + '.'
+        
+    return text
 
-
-
+def get_fallback_response(prompt, candidate_name, job_title, company_name):
+    """Generate fallback responses when AI fails"""
+    candidate_name = candidate_name or "the candidate"
+    job_title = job_title or "Software Developer"
+    company_name = company_name or "Our Company"
+    
+    prompt_lower = prompt.lower()
+    
+    # Fallback responses based on prompt content
+    if any(phrase in prompt_lower for phrase in ['tell me about yourself', 'introduce', 'start']):
+        return f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+    elif any(phrase in prompt_lower for phrase in ['technical', 'experience', 'skills']):
+        return "That's great! Can you tell me about your technical experience and the technologies you've worked with?"
+    elif any(phrase in prompt_lower for phrase in ['project', 'challenging', 'problem']):
+        return "Interesting! Can you describe a challenging project you've worked on and how you approached it?"
+    elif any(phrase in prompt_lower for phrase in ['team', 'collaboration', 'work with others']):
+        return "How do you handle working in a team environment, especially when collaborating on complex projects?"
+    elif any(phrase in prompt_lower for phrase in ['goals', 'future', 'career']):
+        return "What are your career goals and where do you see yourself in the next few years?"
+    elif any(phrase in prompt_lower for phrase in ['questions', 'ask', 'company']):
+        return "Do you have any questions about this role or our company that I can answer for you?"
+    elif any(phrase in prompt_lower for phrase in ['thank', 'final', 'wrap']):
+        return f"Thank you for your time today, {candidate_name}. We'll be in touch soon with next steps. Have a great day!"
+    else:
+        return f"Thank you for that response. Can you tell me more about your experience relevant to this {job_title} role?"

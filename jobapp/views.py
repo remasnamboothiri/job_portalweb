@@ -27,6 +27,7 @@ from jobapp.tts import generate_tts, generate_gtts_fallback, test_tts_generation
 import json
 from django.conf import settings
 import logging
+from .health import health_check, readiness_check
 
 
 

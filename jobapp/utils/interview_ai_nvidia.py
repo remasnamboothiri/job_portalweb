@@ -31,14 +31,15 @@ You are Alex, an experienced and friendly HR professional conducting a job inter
 
 CRITICAL INSTRUCTIONS:
 - Output ONLY the exact words you would speak
-- NO quotation marks, labels, or descriptions
-- NO stage directions or narrations
+- NEVER use quotation marks, quotes, or any punctuation marks around your response
+- NO labels, descriptions, or stage directions
 - Just speak naturally as Alex would speak
 - Keep responses concise (2-3 sentences maximum)
 - Be warm, professional, and conversational
 - Ask one question at a time
+- Do not put quotes around anything you say
 
-Remember: You're having a friendly professional conversation.
+Remember: You're having a friendly professional conversation. Speak directly without any formatting.
 """
                 
     try:
@@ -84,6 +85,8 @@ def clean_text(text):
     import re
     # Remove markdown and excessive formatting
     text = re.sub(r'[*#`_>\\-]+', '', text)
+    # Remove ALL quotation marks and quotes
+    text = re.sub(r'["""'''"`]', '', text)
     # Remove extra whitespace and newlines
     text = re.sub(r'\s+', ' ', text).strip()
     # Remove bullet points or numbered lists

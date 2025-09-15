@@ -172,7 +172,7 @@ def generate_gtts_fallback(text):
     
     return None
 
-def generate_tts(text, model="female_professional", force_gtts=True, force_elevenlabs=False):
+def generate_tts(text, model="female_professional", force_gtts=True, force_elevenlabs=False, force_runpod=False):
     """
     Generate TTS audio using gTTS as primary with ElevenLabs as future option
     Models available: female_professional, female_friendly (currently using gTTS)
@@ -234,6 +234,31 @@ def test_tts_generation(test_text=None):
 # Alias for backwards compatibility
 generate_tts_audio = generate_tts
 
+def estimate_audio_duration(text, words_per_minute=140):
+    """
+    Estimate audio duration based on text length
+    """
+    if not text or not text.strip():
+        return 2.0
+    
+    word_count = len(text.split())
+    duration_seconds = (word_count / words_per_minute) * 60
+    duration_seconds *= 1.15  # Add padding
+    return max(2.0, min(duration_seconds, 30.0))
+
+def get_audio_duration(audio_path):
+    """
+    Get audio duration from file
+    """
+    try:
+        if os.path.exists(audio_path):
+            file_size = os.path.getsize(audio_path)
+            estimated_duration = file_size / 1024
+            return max(2.0, min(estimated_duration, 30.0))
+    except Exception as e:
+        logger.error(f"Error getting audio duration: {e}")
+    return None
+
 def check_tts_system():
     """
     Basic TTS system health check
@@ -261,5 +286,7 @@ __all__ = [
     'generate_elevenlabs_tts',
     'test_tts_generation',
     'check_tts_system',
+    'estimate_audio_duration',
+    'get_audio_duration',
     'generate_tts_audio'
 ]

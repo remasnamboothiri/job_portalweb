@@ -27,6 +27,13 @@ ELEVENLABS_VOICES = {
         "description": "Warm, friendly female voice",
         "type": "elevenlabs",
         "model": "eleven_multilingual_v2"
+    },
+    "female_natural": {
+        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Free ElevenLabs voice
+        "name": "Natural Female",
+        "description": "Natural, conversational female voice (Rachel)",
+        "type": "elevenlabs",
+        "model": "eleven_multilingual_v2"
     }
 }
 
@@ -172,10 +179,10 @@ def generate_gtts_fallback(text):
     
     return None
 
-def generate_tts(text, model="female_professional", force_gtts=True, force_elevenlabs=False, force_runpod=False):
+def generate_tts(text, model="female_professional", force_gtts=False, force_elevenlabs=False, force_runpod=False):
     """
-    Generate TTS audio using gTTS as primary with ElevenLabs as future option
-    Models available: female_professional, female_friendly (currently using gTTS)
+    Generate TTS audio using ElevenLabs as primary with gTTS fallback
+    Models available: female_professional, female_friendly, female_natural
     """
     
     # Clean and validate text
@@ -188,15 +195,14 @@ def generate_tts(text, model="female_professional", force_gtts=True, force_eleve
         clean_text = clean_text[:5000]
         logger.warning("Text truncated to 5000 characters for TTS")
     
-    # Use gTTS as primary method (since ElevenLabs API key needs permissions)
-    if force_gtts or not force_elevenlabs:
-        logger.info("Using gTTS for female voice generation")
+    # Force gTTS if explicitly requested
+    if force_gtts:
+        logger.info("Force gTTS requested")
         return generate_gtts_fallback(clean_text)
     
-    # ElevenLabs option (currently disabled due to API key permissions)
-    if force_elevenlabs and ELEVENLABS_API_KEY:
+    # Try ElevenLabs first (primary method)
+    if ELEVENLABS_API_KEY and not force_gtts:
         logger.info(f"Attempting ElevenLabs TTS with voice: {model}")
-        logger.info(f"API Key present: {bool(ELEVENLABS_API_KEY)}")
         
         elevenlabs_result = generate_elevenlabs_tts(clean_text, model)
         
@@ -205,10 +211,9 @@ def generate_tts(text, model="female_professional", force_gtts=True, force_eleve
             return elevenlabs_result
         else:
             logger.warning("ElevenLabs TTS failed, falling back to gTTS")
-            return generate_gtts_fallback(clean_text)
     
-    # Default fallback to gTTS
-    logger.info("Using gTTS as default TTS method")
+    # Fallback to gTTS
+    logger.info("Using gTTS fallback")
     return generate_gtts_fallback(clean_text)
 
 def test_tts_generation(test_text=None):
@@ -272,7 +277,7 @@ def check_tts_system():
         }
         
         # Test basic TTS generation
-        test_result = generate_gtts_fallback("Hello world test")
+        test_result = generate_tts("Hello world test")
         health_info['test_generation'] = bool(test_result)
         
         return health_info

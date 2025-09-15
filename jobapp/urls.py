@@ -97,6 +97,9 @@ urlpatterns = [
     path('health/', views.health_check, name='health_check'),
     path('ready/', views.readiness_check, name='readiness_check'),
     
+    # ElevenLabs TTS test
+    path('test-elevenlabs/', lambda request: render(request, 'jobapp/test_elevenlabs.html'), name='test_elevenlabs'),
+    
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),
     

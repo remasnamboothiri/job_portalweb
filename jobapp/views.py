@@ -1778,33 +1778,45 @@ def get_csrf_token(request):
 # TTS test endpoint
 @csrf_exempt
 def test_tts(request):
-    """Test TTS generation system"""
+    """Test TTS generation system with ElevenLabs voice support"""
     if request.method == 'POST':
         try:
             if request.content_type == 'application/json':
                 data = json.loads(request.body)
                 text = data.get('text', 'This is a test of the text to speech system')
+                voice = data.get('voice', 'female_professional')
             else:
                 text = request.POST.get('text', 'This is a test of the text to speech system')
+                voice = request.POST.get('voice', 'female_professional')
             
-            logger.info(f"TTS test requested with text: '{text}'")
+            logger.info(f"TTS test requested with text: '{text}' and voice: '{voice}'")
             
-            # Test TTS generation
-            from jobapp.tts import test_tts_generation, check_tts_system
+            # Test TTS generation with specified voice
+            from jobapp.tts import generate_tts, check_tts_system
             
             # Run system health check
             health_info = check_tts_system()
             logger.info(f"TTS system health: {health_info}")
             
-            # Test generation
-            audio_path = test_tts_generation(text)
+            # Test generation with voice model
+            audio_path = generate_tts(text, model=voice)
+            
+            # Determine which service was used
+            service_used = 'Unknown'
+            if audio_path:
+                if 'elevenlabs' in audio_path:
+                    service_used = 'ElevenLabs'
+                elif 'gtts' in audio_path:
+                    service_used = 'gTTS (Fallback)'
             
             response_data = {
                 'success': bool(audio_path),
                 'audio_url': audio_path if audio_path else None,
                 'text': text,
+                'voice': voice,
+                'service_used': service_used,
                 'health_check': health_info,
-                'message': 'TTS test completed successfully' if audio_path else 'TTS test failed'
+                'message': f'TTS test completed successfully using {service_used}' if audio_path else 'TTS test failed'
             }
             
             logger.info(f"TTS test result: {response_data}")

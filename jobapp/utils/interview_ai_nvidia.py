@@ -86,7 +86,7 @@ def clean_text(text):
     # Remove markdown and excessive formatting
     text = re.sub(r'[*#`_>\\-]+', '', text)
     # Remove ALL quotation marks and quotes
-    text = re.sub(r'["""'''"`]', '', text)
+    text = re.sub(r'["“”‘’′`]', '', text)
     # Remove extra whitespace and newlines
     text = re.sub(r'\s+', ' ', text).strip()
     # Remove bullet points or numbered lists

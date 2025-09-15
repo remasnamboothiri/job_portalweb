@@ -44,8 +44,10 @@ AVAILABLE_MODELS = list(AVAILABLE_VOICES.keys())
 # Validate environment variables
 if not ELEVENLABS_API_KEY:
     logger.warning("ELEVENLABS_API_KEY not found in Django settings")
+    logger.warning(f"API key value: '{ELEVENLABS_API_KEY}' (length: {len(ELEVENLABS_API_KEY)})")
 else:
     logger.info("ElevenLabs API key configured successfully")
+    logger.info(f"API key length: {len(ELEVENLABS_API_KEY)} characters")
 
 def generate_elevenlabs_tts(text, voice="female_professional"):
     """

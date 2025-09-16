@@ -22,7 +22,7 @@ ELEVENLABS_VOICES = {
         "model": "eleven_multilingual_v2"
     },
     "female_friendly": {
-        "voice_id": "EXAVITQu4vr4xnSDxMaL",  # Bella - Friendly female voice
+        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Alternative female voice
         "name": "Friendly Female", 
         "description": "Warm, friendly female voice",
         "type": "elevenlabs",
@@ -49,7 +49,7 @@ else:
     logger.info("ElevenLabs API key configured successfully")
     logger.info(f"API key length: {len(ELEVENLABS_API_KEY)} characters")
 
-def generate_elevenlabs_tts(text, voice="female_professional"):
+def generate_elevenlabs_tts(text, voice="female_natural"):
     """
     Generate TTS audio using ElevenLabs API with female voice (direct API calls)
     """
@@ -194,7 +194,7 @@ def generate_gtts_fallback(text):
 #         logger.error(f"RunPod TTS generation failed: {e}")
 #         return None
 
-def generate_tts(text, model="female_professional", force_gtts=False, force_elevenlabs=False, force_runpod=False):
+def generate_tts(text, model="female_natural", force_gtts=False, force_elevenlabs=False, force_runpod=False):
     """
     Generate TTS audio using ElevenLabs as primary with gTTS fallback
     Models: female_professional, female_friendly, female_natural (ElevenLabs only)

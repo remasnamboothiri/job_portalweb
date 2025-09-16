@@ -2432,145 +2432,17 @@ def get_candidate_email(request, candidate_id):
             'error': str(e)
         })
 
-def debug_tts_system(request):
-    """Debug TTS system to identify RunPod issues with chatterbox model"""
-    from jobapp.tts import check_tts_system, test_runpod_integration, generate_tts, generate_runpod_tts
-    import requests
-    
-    debug_info = {
-        'timestamp': timezone.now().isoformat(),
-        'runpod_api_key_present': bool(getattr(settings, 'RUNPOD_API_KEY', '')),
-        'jwt_secret_present': bool(getattr(settings, 'JWT_SECRET', '')),
-        'model': 'chatterbox',
-        'voice': 'female_default'
-    }
-    
-    try:
-        # Direct API test
-        RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
-        JWT_SECRET = getattr(settings, 'JWT_SECRET', '')
-        RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
-        
-        headers = {
-            "Authorization": f"Bearer {RUNPOD_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "input": {
-                "text": "Hello, this is a direct API test.",
-                "model": "chatterbox",
-                "voice_id": "female_default",
-                "jwt_token": JWT_SECRET
-            }
-        }
-        
-        logger.info(f"Testing direct API call with payload: {payload}")
-        
-        response = requests.post(
-            RUNPOD_ENDPOINT,
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        
-        debug_info['direct_api_test'] = {
-            'status_code': response.status_code,
-            'response_text': response.text[:500],  # First 500 chars
-            'headers': dict(response.headers)
-        }
-        
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                debug_info['direct_api_test']['response_json'] = result
-            except:
-                debug_info['direct_api_test']['json_parse_error'] = True
-        
-        # Test system health
-        health_check = check_tts_system()
-        debug_info['health_check'] = health_check
-        
-        # Test RunPod function directly
-        direct_runpod_test = generate_runpod_tts("Testing direct RunPod function", "chatterbox")
-        debug_info['direct_runpod_function'] = direct_runpod_test
-        
-        # Test actual TTS generation with chatterbox model
-        test_audio = generate_tts("Testing chatterbox model with female_default voice generation", model="chatterbox")
-        debug_info['test_audio_result'] = test_audio
-        
-        if test_audio:
-            debug_info['audio_file_path'] = test_audio
-            full_path = os.path.join(settings.BASE_DIR, test_audio.lstrip('/'))
-            debug_info['file_exists'] = os.path.exists(full_path)
-            if os.path.exists(full_path):
-                debug_info['file_size'] = os.path.getsize(full_path)
-        
-    except Exception as e:
-        debug_info['error'] = str(e)
-        import traceback
-        debug_info['traceback'] = traceback.format_exc()
-    
-    return JsonResponse(debug_info, indent=2)
+# COMMENTED OUT - RunPod debug function (using ElevenLabs only)
+# def debug_tts_system(request):
+#     """Debug TTS system to identify RunPod issues with chatterbox model"""
+#     # RunPod debugging code commented out
+#     return JsonResponse({'message': 'RunPod debugging disabled - using ElevenLabs only'}, indent=2)
 
-def test_chatterbox_voice(request):
-    """Test chatterbox voice with female_default specifically"""
-    from jobapp.tts import test_chatterbox_voice as test_chatterbox, generate_tts, generate_runpod_tts
-    
-    test_text = request.GET.get('text', "Hello! I'm your AI interviewer using the female default voice. Welcome to your interview today!")
-    force_runpod = request.GET.get('force_runpod', 'false').lower() == 'true'
-    
-    result = {
-        'timestamp': timezone.now().isoformat(),
-        'test_text': test_text,
-        'force_runpod': force_runpod,
-        'runpod_direct_test': None,
-        'regular_tts_test': None,
-        'runpod_only_test': None,
-        'success': False
-    }
-    
-    try:
-        # Test RunPod directly first
-        runpod_direct = generate_runpod_tts(test_text, "chatterbox")
-        result['runpod_direct_test'] = runpod_direct
-        
-        # Test regular TTS with chatterbox model
-        regular_result = generate_tts(test_text, model="chatterbox")
-        result['regular_tts_test'] = regular_result
-        
-        # Test RunPod only (no fallback)
-        if force_runpod:
-            runpod_only_result = generate_tts(test_text, model="chatterbox", force_runpod=True)
-            result['runpod_only_test'] = runpod_only_result
-        
-        # Determine success and source
-        audio_url = runpod_direct or regular_result
-        if audio_url:
-            result['success'] = True
-            result['audio_url'] = audio_url
-            
-            # Check if file exists
-            full_path = os.path.join(settings.BASE_DIR, audio_url.lstrip('/'))
-            result['file_exists'] = os.path.exists(full_path)
-            if os.path.exists(full_path):
-                result['file_size'] = os.path.getsize(full_path)
-                result['file_path'] = full_path
-                
-                # Check if it's from RunPod or gTTS
-                if 'runpod' in audio_url or 'chatterbox' in audio_url:
-                    result['source'] = 'RunPod'
-                elif 'gtts' in audio_url:
-                    result['source'] = 'gTTS'
-                else:
-                    result['source'] = 'Unknown'
-        
-    except Exception as e:
-        result['error'] = str(e)
-        import traceback
-        result['traceback'] = traceback.format_exc()
-    
-    return JsonResponse(result, indent=2)
+# COMMENTED OUT - Chatterbox test function (using ElevenLabs only)
+# def test_chatterbox_voice(request):
+#     """Test chatterbox voice with female_default specifically"""
+#     # Chatterbox testing code commented out
+#     return JsonResponse({'message': 'Chatterbox testing disabled - using ElevenLabs only'}, indent=2)
 
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)

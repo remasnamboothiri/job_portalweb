@@ -181,10 +181,71 @@ def generate_gtts_fallback(text):
     
     return None
 
+def generate_runpod_tts(text, model="chatterbox"):
+    """Generate TTS using RunPod API"""
+    try:
+        RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
+        if not RUNPOD_API_KEY:
+            logger.error("RunPod API key not configured")
+            return None
+            
+        logger.info(f"RunPod TTS generation with model '{model}' for: '{text[:50]}...'")
+        
+        # Create filename for caching
+        text_hash = hashlib.md5(f"{text}_runpod_{model}".encode()).hexdigest()[:8]
+        filename = f"runpod_{model}_{text_hash}.mp3"
+        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
+        os.makedirs(tts_dir, exist_ok=True)
+        filepath = os.path.join(tts_dir, filename)
+        
+        # Check cache
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+            media_url = f"/media/tts/{filename}"
+            logger.info(f"Using cached RunPod TTS: {media_url}")
+            return media_url
+        
+        # RunPod API call
+        import requests
+        url = "https://api.runpod.ai/v2/p3eso571qdfug9/runsync"
+        headers = {
+            "Authorization": f"Bearer {RUNPOD_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "input": {
+                "text": text,
+                "model": model,
+                "voice_id": "female_default"
+            }
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 'COMPLETED' and 'output' in result:
+                audio_data = result['output'].get('audio_data')
+                if audio_data:
+                    import base64
+                    with open(filepath, 'wb') as f:
+                        f.write(base64.b64decode(audio_data))
+                    
+                    if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+                        media_url = f"/media/tts/{filename}"
+                        logger.info(f"RunPod TTS complete: {media_url}")
+                        return media_url
+        
+        logger.error(f"RunPod TTS failed: {response.status_code} - {response.text}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"RunPod TTS generation failed: {e}")
+        return None
+
 def generate_tts(text, model="female_professional", force_gtts=False, force_elevenlabs=False, force_runpod=False):
     """
-    Generate TTS audio using ElevenLabs as primary with gTTS fallback
-    Models available: female_professional, female_friendly, female_natural
+    Generate TTS audio using RunPod as primary, ElevenLabs secondary, gTTS fallback
+    Models: chatterbox (RunPod), female_professional/female_friendly (ElevenLabs)
     """
     
     # Clean and validate text
@@ -202,12 +263,20 @@ def generate_tts(text, model="female_professional", force_gtts=False, force_elev
         logger.info("Force gTTS requested")
         return generate_gtts_fallback(clean_text)
     
-    # Try ElevenLabs first (primary method)
-    if ELEVENLABS_API_KEY and not force_gtts:
+    # Try RunPod first for chatterbox model
+    if model == "chatterbox" or force_runpod:
+        logger.info(f"Attempting RunPod TTS with model: {model}")
+        runpod_result = generate_runpod_tts(clean_text, model)
+        if runpod_result:
+            logger.info(f"RunPod TTS successful: {runpod_result}")
+            return runpod_result
+        else:
+            logger.warning("RunPod TTS failed, trying ElevenLabs")
+    
+    # Try ElevenLabs for female voices
+    if ELEVENLABS_API_KEY and model in ELEVENLABS_VOICES:
         logger.info(f"Attempting ElevenLabs TTS with voice: {model}")
-        
         elevenlabs_result = generate_elevenlabs_tts(clean_text, model)
-        
         if elevenlabs_result:
             logger.info(f"ElevenLabs TTS successful: {elevenlabs_result}")
             return elevenlabs_result

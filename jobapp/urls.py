@@ -86,9 +86,9 @@ urlpatterns = [
     # Test interview results
     path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
     
-    # Debug TTS endpoint
-    path('debug-tts/', views.debug_tts_system, name='debug_tts_system'),
-    path('test-chatterbox/', views.test_chatterbox_voice, name='test_chatterbox_voice'),
+    # COMMENTED OUT - Debug TTS endpoints (using ElevenLabs only)
+    # path('debug-tts/', views.debug_tts_system, name='debug_tts_system'),
+    # path('test-chatterbox/', views.test_chatterbox_voice, name='test_chatterbox_voice'),
     
     # Test typewriter synchronization
     path('test-typewriter/', lambda request: render(request, 'jobapp/test_typewriter.html'), name='test_typewriter'),

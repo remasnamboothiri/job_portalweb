@@ -315,3 +315,16 @@ __all__ = [
     'get_audio_duration',
     'generate_tts_audio'
 ]
+
+# Placeholder functions for commented out RunPod functionality
+def generate_runpod_tts(text, model="chatterbox"):
+    """Placeholder - RunPod TTS disabled"""
+    return None
+
+def test_runpod_integration():
+    """Placeholder - RunPod integration disabled"""
+    return {'status': 'disabled', 'message': 'RunPod TTS disabled - using ElevenLabs only'}
+
+def test_chatterbox_voice():
+    """Placeholder - Chatterbox testing disabled"""
+    return {'status': 'disabled', 'message': 'Chatterbox testing disabled - using ElevenLabs only'}

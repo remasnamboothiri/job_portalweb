@@ -189,22 +189,13 @@
     <!-- Professional Interview Audio System -->
     <!-- Load TypewriterSync for better synchronization -->
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
-    <script src="{% static 'js/integrated-interview-system.js' %}"></script>
+    <script src="{% static 'js/professional-interview-audio.js' %}"></script>
 
 
     <!-- Pass Django variables to JavaScript -->
-    <script>
-        window.INTERVIEW_DATA = {
-        initialQuestion: `{{ ai_question|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?"|escapejs }}`,
-        initialAudio: `{{ audio_url|safe|default:"" }}`,
-        initialDuration: {{ audio_duration|default:"null" }},
-        candidateName: `{{ candidate_name|default:"Candidate"|escapejs }}`,
-        csrfToken: `{{ csrf_token }}`,
-        dashboardUrl: `{% url "jobseeker_dashboard" %}`
-    };
-    </script>
+   
 
-    {% comment %} <script>
+    <script>
         let recognition = null;
         let isListening = false;
         let questionCount = 1;
@@ -792,6 +783,6 @@
         
         // Make handleSpeechResult globally available
         window.handleSpeechResult = handleSpeechResult;
-    </script> {% endcomment %}
+    </script> 
 </body>
 </html>

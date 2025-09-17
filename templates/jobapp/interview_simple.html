@@ -413,7 +413,7 @@
                 recognition.onresult = function(event) {
                     // Block speech recognition while AI is speaking
                     if (isProcessingResponse) {
-                        console.log('🚫 AI is speaking - ignoring speech input');
+                        console.log('AI is speaking - ignoring speech input');
                         return;
                     }
                     
@@ -433,7 +433,7 @@
                     const textLower = (finalTranscript + interimTranscript).toLowerCase();
                     
                     if (aiPhrases.some(phrase => textLower.includes(phrase))) {
-                        console.log('🚫 AI echo detected, ignoring');
+                        console.log('AI echo detected, ignoring');
                         return;
                     }
                     
@@ -595,7 +595,7 @@
                     if (data.audio && data.audio.trim() !== '' && data.audio !== 'None') {
                         // Block speech recognition during AI speech
                         isProcessingResponse = true;
-                        console.log('🔒 AI will speak - blocking speech recognition');
+                        console.log('AI will speak - blocking speech recognition');
                         
                         const audio = document.getElementById('aiAudio');
                         

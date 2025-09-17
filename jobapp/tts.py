@@ -12,26 +12,12 @@ logger = logging.getLogger(__name__)
 ELEVENLABS_API_KEY = getattr(settings, 'ELEVENLABS_API_KEY', '')
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
 
-# ElevenLabs Female Voices Configuration
+# ElevenLabs Female Voice Configuration - Your Selected Voice
 ELEVENLABS_VOICES = {
-    "female_professional": {
-        "voice_id": "JBFqnCBsd6RMkjVDRZzb",  # George - Professional female voice
-        "name": "Professional Female",
-        "description": "Clean, professional female voice perfect for interviews",
-        "type": "elevenlabs",
-        "model": "eleven_multilingual_v2"
-    },
-    "female_friendly": {
-        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Alternative female voice
-        "name": "Friendly Female", 
-        "description": "Warm, friendly female voice",
-        "type": "elevenlabs",
-        "model": "eleven_multilingual_v2"
-    },
-    "female_natural": {
-        "voice_id": "Gyqu9jCJup6lkiLgiu0l",  # Voice from ElevenLabs library
-        "name": "Natural Female",
-        "description": "Natural, conversational female voice from library",
+    "female_interview": {
+        "voice_id": "i4CzbCVWoqvD0P1QJCUL",  # Your selected female voice for interviews
+        "name": "Interview Female Voice",
+        "description": "Selected female voice perfect for job interviews",
         "type": "elevenlabs",
         "model": "eleven_multilingual_v2"
     }
@@ -49,7 +35,7 @@ else:
     logger.info("ElevenLabs API key configured successfully")
     logger.info(f"API key length: {len(ELEVENLABS_API_KEY)} characters")
 
-def generate_elevenlabs_tts(text, voice="female_natural"):
+def generate_elevenlabs_tts(text, voice="female_interview"):
     """
     Generate TTS audio using ElevenLabs API with female voice (direct API calls)
     """
@@ -60,8 +46,8 @@ def generate_elevenlabs_tts(text, voice="female_natural"):
             
         # Validate voice
         if voice not in ELEVENLABS_VOICES:
-            logger.warning(f"Invalid voice '{voice}', using 'female_professional'")
-            voice = "female_professional"
+            logger.warning(f"Invalid voice '{voice}', using 'female_interview'")
+            voice = "female_interview"
         
         voice_config = ELEVENLABS_VOICES[voice]
         voice_id = voice_config["voice_id"]
@@ -124,6 +110,18 @@ def generate_elevenlabs_tts(text, voice="female_natural"):
         else:
             logger.error(f"ElevenLabs API error: {response.status_code}")
             logger.error(f"Response: {response.text}")
+            
+            # Specific handling for common errors
+            if response.status_code == 401:
+                if "unusual_activity" in response.text:
+                    logger.error("ElevenLabs account flagged for unusual activity - need new API key or paid plan")
+                else:
+                    logger.error("ElevenLabs API key invalid or expired")
+            elif response.status_code == 429:
+                logger.error("ElevenLabs rate limit exceeded")
+            elif response.status_code == 422:
+                logger.error("ElevenLabs request validation failed")
+            
             return None
             
     except Exception as e:
@@ -160,8 +158,8 @@ def generate_gtts_fallback(text):
             logger.info(f"Using cached gTTS: {media_url}")
             return media_url
         
-        # Generate gTTS
-        tts = gTTS(text=clean_text, lang='en', slow=False)
+        # Generate gTTS with better settings for female voice
+        tts = gTTS(text=clean_text, lang='en', slow=False, tld='com')  # Use .com for more natural voice
         tts.save(filepath)
         
         # Verify file was created
@@ -181,23 +179,12 @@ def generate_gtts_fallback(text):
     
     return None
 
-# COMMENTED OUT - RunPod TTS (using ElevenLabs only)
-# def generate_runpod_tts(text, model="chatterbox"):
-#     """Generate TTS using RunPod API"""
-#     try:
-#         RUNPOD_API_KEY = getattr(settings, 'RUNPOD_API_KEY', '')
-#         if not RUNPOD_API_KEY:
-#             logger.error("RunPod API key not configured")
-#             return None
-#         # ... RunPod code commented out
-#     except Exception as e:
-#         logger.error(f"RunPod TTS generation failed: {e}")
-#         return None
+# RunPod TTS removed - using ElevenLabs only
 
-def generate_tts(text, model="female_natural", force_gtts=False, force_elevenlabs=False, force_runpod=False):
+def generate_tts(text, model="female_interview", force_gtts=False):
     """
     Generate TTS audio using ElevenLabs as primary with gTTS fallback
-    Models: female_professional, female_friendly, female_natural (ElevenLabs only)
+    Models: female_interview (Your selected ElevenLabs voice)
     """
     
     # Clean and validate text
@@ -215,14 +202,9 @@ def generate_tts(text, model="female_natural", force_gtts=False, force_elevenlab
         logger.info("Force gTTS requested")
         return generate_gtts_fallback(clean_text)
     
-    # COMMENTED OUT - RunPod support (using ElevenLabs only)
-    # if model == "chatterbox" or force_runpod:
-    #     logger.info(f"Attempting RunPod TTS with model: {model}")
-    #     runpod_result = generate_runpod_tts(clean_text, model)
-    #     if runpod_result:
-    #         return runpod_result
+    # RunPod/Chatterbox support removed - using ElevenLabs only
     
-    # Try ElevenLabs first (primary method)
+    # Try ElevenLabs first (primary method) - RE-ENABLED with new API key
     if ELEVENLABS_API_KEY and model in ELEVENLABS_VOICES:
         logger.info(f"Attempting ElevenLabs TTS with voice: {model}")
         elevenlabs_result = generate_elevenlabs_tts(clean_text, model)
@@ -256,8 +238,7 @@ def test_tts_generation(test_text=None):
         logger.error("TTS test failed")
         return None
 
-# Alias for backwards compatibility
-generate_tts_audio = generate_tts
+# Removed backwards compatibility alias - not needed
 
 def estimate_audio_duration(text, words_per_minute=140):
     """
@@ -304,27 +285,15 @@ def check_tts_system():
     except Exception as e:
         return {'error': str(e), 'test_generation': False}
 
-# Export main functions
+# Export main functions - cleaned up
 __all__ = [
-    'generate_tts',
-    'generate_gtts_fallback',
-    'generate_elevenlabs_tts',
-    'test_tts_generation',
-    'check_tts_system',
-    'estimate_audio_duration',
-    'get_audio_duration',
-    'generate_tts_audio'
+    'generate_tts',              # Main TTS function (ElevenLabs + gTTS fallback)
+    'generate_gtts_fallback',    # Essential backup system
+    'generate_elevenlabs_tts',   # Your primary ElevenLabs voice
+    'test_tts_generation',       # Testing function
+    'check_tts_system',          # Health check
+    'estimate_audio_duration',   # Duration calculation
+    'get_audio_duration'         # Audio file duration
 ]
 
-# Placeholder functions for commented out RunPod functionality
-def generate_runpod_tts(text, model="chatterbox"):
-    """Placeholder - RunPod TTS disabled"""
-    return None
-
-def test_runpod_integration():
-    """Placeholder - RunPod integration disabled"""
-    return {'status': 'disabled', 'message': 'RunPod TTS disabled - using ElevenLabs only'}
-
-def test_chatterbox_voice():
-    """Placeholder - Chatterbox testing disabled"""
-    return {'status': 'disabled', 'message': 'Chatterbox testing disabled - using ElevenLabs only'}
+# Removed unnecessary RunPod/Chatterbox functions - using ElevenLabs only

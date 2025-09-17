@@ -1,6 +1,6 @@
 /**
- * Professional AI Interview Audio Management
- * Ensures microphone is always on with proper audio isolation
+ * Professional AI Interview Audio Management - INTEGRATED VERSION
+ * Works seamlessly with existing HTML template
  */
 
 class ProfessionalInterviewAudio {
@@ -13,23 +13,17 @@ class ProfessionalInterviewAudio {
         this.isAudioIsolationActive = false;
         this.speechRecognitionActive = false;
         this.aiAudioPlaying = false;
-        this.userStream = null; // Add this property
+        this.userStream = null;
     }
 
-    
-
-    // Initialize professional audio setup
     async initialize(userStream) {
         try {
             console.log('🎙️ Initializing professional interview audio...');
             
-            // Create audio context
+            this.userStream = userStream;
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
-            // Setup audio processing chain
             await this.setupAudioProcessing(userStream);
-            
-            // Setup AI audio isolation
             this.setupAIAudioIsolation();
             
             this.isAudioIsolationActive = true;
@@ -40,17 +34,13 @@ class ProfessionalInterviewAudio {
         }
     }
 
-     // Setup audio processing chain for better quality
     async setupAudioProcessing(userStream) {
         try {
-            // Create microphone source
             this.microphoneSource = this.audioContext.createMediaStreamSource(userStream);
             
-            // Create gain node for volume control
             this.gainNode = this.audioContext.createGain();
-            this.gainNode.gain.value = 1.0;
+            this.gainNode.gain.value = 1.2; // Boosted for better pickup
             
-            // Create compressor for consistent audio levels
             this.compressor = this.audioContext.createDynamicsCompressor();
             this.compressor.threshold.value = -24;
             this.compressor.knee.value = 30;
@@ -58,11 +48,9 @@ class ProfessionalInterviewAudio {
             this.compressor.attack.value = 0.003;
             this.compressor.release.value = 0.25;
             
-            // Create noise gate (simple implementation)
             this.noiseGate = this.audioContext.createGain();
             this.noiseGate.gain.value = 1.0;
             
-            // Connect audio processing chain
             this.microphoneSource
                 .connect(this.gainNode)
                 .connect(this.compressor)
@@ -75,12 +63,13 @@ class ProfessionalInterviewAudio {
         }
     }
 
-    // Setup AI audio isolation to prevent feedback
     setupAIAudioIsolation() {
         const aiAudio = document.getElementById('aiAudio');
-        if (!aiAudio) return;
+        if (!aiAudio) {
+            console.warn('⚠️ AI audio element not found');
+            return;
+        }
 
-        // Monitor AI audio playback
         aiAudio.addEventListener('play', () => {
             this.aiAudioPlaying = true;
             this.handleAIAudioStart();
@@ -96,93 +85,42 @@ class ProfessionalInterviewAudio {
             this.handleAIAudioEnd();
         });
 
-        // Set optimal volume to prevent feedback
         aiAudio.volume = 0.6;
-        
         console.log('🔇 AI audio isolation configured');
     }
 
-    // Handle AI audio start - block speech recognition but keep mic on
     handleAIAudioStart() {
-        // Keep microphone at full sensitivity - don't reduce gain
-        // The microphone should always be on during interview
+        console.log('🔇 AI audio starting - pausing speech recognition');
         
-        // Block speech recognition temporarily
-        if (window.recognition && window.isListening) {
-            try {
-                window.recognition.stop();
-                this.speechRecognitionActive = true;
-            } catch (e) {
-                console.log('Could not pause speech recognition:', e);
-            }
+        // Pause the professional speech recognition
+        if (window.professionalSpeech && window.professionalSpeech.isActive) {
+            window.professionalSpeech.pauseForAI();
         }
         
-        // Set global flags to block speech recognition
-        if (typeof window.speechRecognitionBlocked !== 'undefined') {
-            window.speechRecognitionBlocked = true;
-        }
-        if (typeof window.isAISpeaking !== 'undefined') {
-            window.isAISpeaking = true;
-        }
-        
-        console.log('🔇 AI audio started - speech recognition blocked (microphone stays on)');
+        // Set global blocking flags for HTML template compatibility
+        window.isProcessingResponse = true;
+        window.speechRecognitionBlocked = true;
+        window.isAISpeaking = true;
     }
 
-    // Handle AI audio end - restore speech recognition
     handleAIAudioEnd() {
-        // Microphone gain stays at full level - no need to restore
+        console.log('🎙️ AI audio ending - restoring speech recognition');
         
-        // Clear global blocking flags
-        if (typeof window.isAISpeaking !== 'undefined') {
-            window.isAISpeaking = false;
-        }
-        
-        // Resume speech recognition after delay
         setTimeout(() => {
-            if (typeof window.speechRecognitionBlocked !== 'undefined') {
-                window.speechRecognitionBlocked = false;
+            window.isAISpeaking = false;
+            window.speechRecognitionBlocked = false;
+            
+            if (window.professionalSpeech) {
+                window.professionalSpeech.resumeFromAI();
             }
             
-            if (this.speechRecognitionActive && window.recognition) {
-                try {
-                    // Use the global start function if available
-                    if (typeof window.startSpeechRecognition === 'function') {
-                        window.startSpeechRecognition();
-                    } else {
-                        window.recognition.start();
-                    }
-                    this.speechRecognitionActive = false;
-                } catch (e) {
-                    console.log('Could not resume speech recognition:', e);
-                }
-            }
-        }, 1000); // Increased delay to ensure AI audio has fully stopped
-        
-        console.log('🎙️ AI audio ended - speech recognition restored (microphone was always on)');
+            // Clear processing flag after delay
+            setTimeout(() => {
+                window.isProcessingResponse = false;
+            }, 500);
+        }, 1000);
     }
 
-    // Apply noise suppression
-    applyNoiseSuppression(level = 0.5) {
-        if (this.noiseGate) {
-            this.noiseGate.gain.value = Math.max(0.1, 1.0 - level);
-        }
-    }
-
-    // Adjust microphone sensitivity
-    adjustMicrophoneSensitivity(level = 1.0) {
-        if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(level, this.audioContext.currentTime);
-        }
-    }
-
-    // Get audio levels for monitoring
-    getAudioLevel() {
-        // This would require an analyser node for real-time monitoring
-        // Implementation depends on specific requirements
-        return 0;
-    }
-
-    // Cleanup audio resources
     cleanup() {
         try {
             if (this.microphoneSource) {
@@ -198,7 +136,6 @@ class ProfessionalInterviewAudio {
     }
 }
 
-// Enhanced Speech Recognition Manager
 class ProfessionalSpeechRecognition {
     constructor() {
         this.recognition = null;
@@ -206,32 +143,45 @@ class ProfessionalSpeechRecognition {
         this.autoRestart = true;
         this.restartAttempts = 0;
         this.maxRestartAttempts = 5;
+        this.finalTranscript = '';
+        this.interimTranscript = '';
+        this.isPausedForAI = false;
     }
 
-    // Initialize speech recognition with professional settings
     initialize() {
-        if (!('webkitSpeechRecognition' in window)) {
-            console.error('Speech recognition not supported');
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.error('❌ Speech recognition not supported in this browser');
+            this.showBrowserCompatibilityWarning();
             return false;
         }
 
-        this.recognition = new webkitSpeechRecognition();
-        this.recognition.continuous = true;
-        this.recognition.interimResults = true;
-        this.recognition.lang = 'en-US';
-        this.recognition.maxAlternatives = 1;
+        try {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            this.recognition.lang = 'en-US';
+            this.recognition.maxAlternatives = 1;
 
-        this.setupEventHandlers();
-        this.startRecognition();
-        
-        return true;
+            this.setupEventHandlers();
+            this.startRecognition();
+            
+            // Make globally available for HTML template compatibility
+            window.recognition = this.recognition;
+            window.isListening = false;
+            
+            console.log('✅ Professional speech recognition initialized');
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to initialize speech recognition:', error);
+            return false;
+        }
     }
 
-
-    // Setup event handlers for robust operation
     setupEventHandlers() {
         this.recognition.onstart = () => {
             this.isActive = true;
+            window.isListening = true;
             this.restartAttempts = 0;
             console.log('🎙️ Speech recognition started');
             this.updateMicrophoneUI(true);
@@ -239,12 +189,13 @@ class ProfessionalSpeechRecognition {
 
         this.recognition.onend = () => {
             this.isActive = false;
+            window.isListening = false;
             console.log('🎙️ Speech recognition ended');
             
-            // Auto-restart if enabled and not manually stopped
-            if (this.autoRestart && this.restartAttempts < this.maxRestartAttempts) {
+            if (this.autoRestart && !this.isPausedForAI && this.restartAttempts < this.maxRestartAttempts) {
                 setTimeout(() => {
-                    if (this.autoRestart) {
+                    if (this.autoRestart && !this.isPausedForAI && !window.speechRecognitionBlocked) {
+                        console.log('🔄 Auto-restarting speech recognition');
                         this.startRecognition();
                     }
                 }, 100);
@@ -252,69 +203,175 @@ class ProfessionalSpeechRecognition {
         };
 
         this.recognition.onerror = (event) => {
-            console.log('🎙️ Speech recognition error:', event.error);
-            console.error('❌ Speech recognition error details:', event.errorDetails);
+            console.log('⚠️ Speech recognition error:', event.error);
             
-            // Handle specific errors
             switch (event.error) {
                 case 'no-speech':
+                    console.log('📢 No speech detected, continuing to listen...');
+                    break;
                 case 'audio-capture':
+                    console.error('🎤 Audio capture failed - check microphone permissions');
+                    this.showMicrophoneError();
+                    break;
                 case 'network':
-                    // Restart on recoverable errors
+                    console.error('🌐 Network error in speech recognition');
                     this.restartAttempts++;
                     if (this.restartAttempts < this.maxRestartAttempts) {
                         setTimeout(() => {
-                            if (this.autoRestart) {
+                            if (this.autoRestart && !this.isPausedForAI) {
                                 this.startRecognition();
                             }
-                        }, 1000);
+                        }, 2000);
                     }
                     break;
                 case 'not-allowed':
                 case 'service-not-allowed':
-                    // Don't restart on permission errors
+                    console.error('🚫 Microphone permission denied');
                     this.autoRestart = false;
                     this.showPermissionError();
                     break;
                 default:
-                    console.error('Speech recognition error:', event.error);
+                    console.error('❌ Speech recognition error:', event.error);
                     break;
-
             }
         };
 
         this.recognition.onresult = (event) => {
-            // Handle speech recognition results
-            if (window.handleSpeechResult) {
-                window.handleSpeechResult(event);
-            }
+            this.handleSpeechResult(event);
         };
     }
 
-    // Start speech recognition
-    startRecognition() {
-        if (!this.recognition || this.isActive) return;
+    handleSpeechResult(event) {
+        // Block speech recognition while AI is speaking
+        if (window.isProcessingResponse) {
+            console.log('🚫 AI is speaking - ignoring speech input');
+            return;
+        }
 
-        try {
-            this.recognition.start();
-        } catch (error) {
-            console.error('Failed to start speech recognition:', error);
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript + ' ';
+                console.log('✅ Final transcript:', transcript);
+            } else {
+                interimTranscript += transcript;
+                console.log('⏳ Interim transcript:', transcript);
+            }
+        }
+
+        // Filter out AI voice patterns (from HTML template)
+        const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
+        const textLower = (finalTranscript + interimTranscript).toLowerCase();
+        
+        if (aiPhrases.some(phrase => textLower.includes(phrase))) {
+            console.log('🚫 AI echo detected, ignoring');
+            return;
+        }
+
+        // Update HTML template variables
+        if (finalTranscript) {
+            this.finalTranscript += finalTranscript;
+            
+            // Integration with HTML template's collectedText system
+            window.collectedText += finalTranscript;
+            window.lastSpeechTime = Date.now();
+            
+            // Clear existing timeout and set new one
+            if (window.speechTimeout) {
+                clearTimeout(window.speechTimeout);
+            }
+            
+            window.speechTimeout = setTimeout(() => {
+                if (window.collectedText.trim() && !window.isProcessingResponse && typeof window.autoSubmitResponse === 'function') {
+                    window.autoSubmitResponse();
+                }
+            }, 1000);
+        }
+        
+        if (interimTranscript) {
+            this.interimTranscript = interimTranscript;
+            window.lastSpeechTime = Date.now();
+        }
+
+        // Display the text in the conversation area
+        const displayText = window.collectedText + (interimTranscript ? ' ' + interimTranscript : '');
+        this.updateConversationArea(displayText, interimTranscript ? true : false);
+
+        // Update audio level indicator
+        if (typeof window.updateAudioLevelIndicator === 'function') {
+            window.updateAudioLevelIndicator(interimTranscript ? 60 : 20);
         }
     }
 
-    // Stop speech recognition
+    updateConversationArea(text, isInterim = false) {
+        const conversationArea = document.getElementById('conversationArea');
+        if (!conversationArea) {
+            console.warn('⚠️ Conversation area not found');
+            return;
+        }
+
+        conversationArea.innerHTML = text;
+        
+        if (isInterim) {
+            conversationArea.className = 'conversation-text live-transcription';
+        } else {
+            conversationArea.className = 'conversation-text candidate-response';
+        }
+        
+        console.log('📝 Updated conversation area:', text.substring(0, 50) + '...');
+    }
+
+    pauseForAI() {
+        if (this.isActive) {
+            console.log('⏸️ Pausing speech recognition for AI audio');
+            this.isPausedForAI = true;
+            this.recognition.stop();
+        }
+    }
+
+    resumeFromAI() {
+        console.log('▶️ Resuming speech recognition after AI audio');
+        this.isPausedForAI = false;
+        if (this.autoRestart) {
+            setTimeout(() => {
+                this.startRecognition();
+            }, 500);
+        }
+    }
+
+    startRecognition() {
+        if (!this.recognition || this.isActive || window.speechRecognitionBlocked) {
+            console.log('🚫 Cannot start recognition - blocked or already active');
+            return;
+        }
+
+        try {
+            console.log('🎯 Starting speech recognition...');
+            this.recognition.start();
+        } catch (error) {
+            console.error('❌ Failed to start speech recognition:', error);
+        }
+    }
+
     stopRecognition() {
         if (this.recognition && this.isActive) {
+            console.log('🛑 Stopping speech recognition');
             this.autoRestart = false;
             this.recognition.stop();
             this.updateMicrophoneUI(false);
         }
     }
 
-    // Manually restart recognition
     restartRecognition() {
+        console.log('🔄 Manually restarting speech recognition');
         this.autoRestart = true;
         this.restartAttempts = 0;
+        this.clearTranscripts();
+        
         if (this.isActive) {
             this.recognition.stop();
         } else {
@@ -322,48 +379,92 @@ class ProfessionalSpeechRecognition {
         }
     }
 
-    // Update microphone UI (always show as active in interview mode)
-    updateMicrophoneUI(active) {
-        const micBtn = document.getElementById('micBtn') || document.getElementById('muteBtn');
-        if (!micBtn) return;
+    clearTranscripts() {
+        this.finalTranscript = '';
+        this.interimTranscript = '';
+        
+        // Also clear HTML template variables
+        window.collectedText = '';
+        
+        // Clear conversation area
+        const conversationArea = document.getElementById('conversationArea');
+        if (conversationArea) {
+            conversationArea.innerHTML = '';
+            conversationArea.className = 'conversation-text';
+        }
+    }
 
-        // In interview mode, microphone should always appear active
-        // Only speech recognition state changes
+    updateMicrophoneUI(active) {
+        const micBtn = document.getElementById('micBtn');
+        if (!micBtn) {
+            console.warn('⚠️ Microphone button not found');
+            return;
+        }
+
         if (active) {
-            micBtn.classList.add('recording', 'mic-active');
-            micBtn.classList.remove('mic-muted');
-            micBtn.innerHTML = '🎤';
+            micBtn.classList.add('recording');
+            micBtn.innerHTML = '🔴 ';
             micBtn.title = 'Microphone is ON - Speech recognition active';
         } else {
             micBtn.classList.remove('recording');
-            micBtn.classList.add('mic-active'); // Keep mic visually active
-            micBtn.classList.remove('mic-muted');
             micBtn.innerHTML = '🎤';
             micBtn.title = 'Microphone is ON - Speech recognition paused';
         }
     }
 
-    // Show permission error
     showPermissionError() {
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #f44336;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-weight: bold;
-            text-align: center;
-        `;
+        this.showError(
+            '🎙️ Microphone permission required for interview',
+            'Please allow microphone access and refresh the page'
+        );
+    }
+
+    showMicrophoneError() {
+        this.showError(
+            '🎤 Microphone access failed',
+            'Please check your microphone connection and try again'
+        );
+    }
+
+    showBrowserCompatibilityWarning() {
+        this.showError(
+            '🌐 Browser not supported',
+            'Please use Chrome, Edge, or Safari for speech recognition'
+        );
+    }
+
+    showError(title, message) {
+        let errorDiv = document.getElementById('speechRecognitionError');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'speechRecognitionError';
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #f44336;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-weight: bold;
+                text-align: center;
+                max-width: 400px;
+            `;
+            document.body.appendChild(errorDiv);
+        }
+        
         errorDiv.innerHTML = `
-            🎙️ Microphone permission required for interview<br>
-            <small>Please allow microphone access and refresh the page</small>
+            ${title}<br>
+            <small>${message}</small>
         `;
-        document.body.appendChild(errorDiv);
+
+        setTimeout(() => {
+            if (errorDiv && errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 10000);
     }
 }
 
@@ -371,24 +472,51 @@ class ProfessionalSpeechRecognition {
 window.professionalAudio = new ProfessionalInterviewAudio();
 window.professionalSpeech = new ProfessionalSpeechRecognition();
 
-// Initialize when DOM is ready
+// Global variables for HTML template compatibility
+window.speechRecognitionBlocked = false;
+window.isAISpeaking = false;
+window.isListening = false;
+
+// Override HTML template functions to use professional system
+window.startMicrophone = function() {
+    if (window.professionalSpeech) {
+        window.professionalSpeech.startRecognition();
+    }
+};
+
+// Enhanced DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Professional interview audio system loading...');
     
-    // Wait for user media to be available
-    const checkUserMedia = setInterval(() => {
+    // Wait a bit for HTML template to initialize its variables
+    setTimeout(() => {
+        initializeProfessionalSystem();
+    }, 500);
+    
+    function initializeProfessionalSystem() {
+        // Initialize professional audio if stream is available
         if (window.userStream) {
-            clearInterval(checkUserMedia);
-            
-            // Initialize professional audio
             window.professionalAudio.initialize(window.userStream);
+        } else {
+            // Check periodically for user stream
+            const checkUserMedia = setInterval(() => {
+                if (window.userStream) {
+                    clearInterval(checkUserMedia);
+                    window.professionalAudio.initialize(window.userStream);
+                }
+            }, 200);
             
-            // Initialize professional speech recognition
-            window.professionalSpeech.initialize();
-            
-            console.log('✅ Professional interview audio system ready');
+            // Stop checking after 10 seconds
+            setTimeout(() => clearInterval(checkUserMedia), 10000);
         }
-    }, 100);
+        
+        // Initialize professional speech recognition
+        setTimeout(() => {
+            window.professionalSpeech.initialize();
+        }, 1000); // Delay to ensure HTML template is ready
+        
+        console.log('✅ Professional interview audio system integration complete');
+    }
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
@@ -401,6 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('📁 Professional interview audio module loaded');
+console.log('📁 Professional interview audio module loaded - INTEGRATED VERSION');
 console.log('🎙️ Interview mode: Microphone will stay ON throughout the interview');
 console.log('🔇 Speech recognition will be temporarily blocked when AI is speaking');
+console.log('🔗 Integrated with HTML template speech recognition system');

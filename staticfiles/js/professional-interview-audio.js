@@ -252,6 +252,7 @@ class ProfessionalSpeechRecognition {
 
         this.recognition.onerror = (event) => {
             console.log('🎙️ Speech recognition error:', event.error);
+            console.error('❌ Speech recognition error details:', event.errorDetails);
             
             // Handle specific errors
             switch (event.error) {

@@ -227,6 +227,7 @@ class ProfessionalSpeechRecognition {
         return true;
     }
 
+
     // Setup event handlers for robust operation
     setupEventHandlers() {
         this.recognition.onstart = () => {
@@ -275,6 +276,10 @@ class ProfessionalSpeechRecognition {
                     this.autoRestart = false;
                     this.showPermissionError();
                     break;
+                default:
+                    console.error('Speech recognition error:', event.error);
+                    break;
+
             }
         };
 

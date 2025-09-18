@@ -947,6 +947,535 @@ def interview_ready(request, interview_uuid):
             
             
             
+# @csrf_exempt
+# def start_interview_by_uuid(request, interview_uuid):
+#     try:
+#         # Get the interview record
+#         interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+#         # Handle both registered and unregistered candidates
+#         if interview.is_registered_candidate:
+#             # For registered candidates, use the User model
+#             candidate_name = interview.candidate.get_full_name() or interview.candidate.username
+#             job_title = interview.job.title or "Software Developer"
+            
+#             # Get resume file from candidate's profile with error handling
+#             profile = getattr(interview.candidate, 'profile', None)
+#             resume_file = profile.resume if profile and profile.resume else None
+#             resume_text = ""
+            
+#             if resume_file:
+#                 try:
+#                     resume_text = extract_resume_text(resume_file)
+#                 except Exception as e:
+#                     resume_text = "Resume could not be processed."
+#                     logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
+#             else:
+#                 # For registered users without resume, use basic info
+#                 resume_text = f"Candidate: {candidate_name}, applying for {job_title} position."
+                
+#         else:
+#             # For unregistered candidates, use the stored candidate information
+#             candidate_name = interview.candidate_name or "the candidate"
+#             job_title = interview.job.title if interview.job else "Software Developer"
+            
+#             # Handle resume file for unregistered candidates
+#             if hasattr(interview, 'candidate_resume') and interview.candidate_resume:
+#                 try:
+#                     resume_text = extract_resume_text(interview.candidate_resume)
+#                 except Exception as e:
+#                     resume_text = f"Resume could not be processed for {candidate_name}."
+#                     logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")
+#             else:
+#                 # Create basic resume text from available information
+#                 resume_text = f"Candidate: {candidate_name}"
+#                 if hasattr(interview, 'candidate_email') and interview.candidate_email:
+#                     resume_text += f", Email: {interview.candidate_email}"
+#                 if hasattr(interview, 'candidate_phone') and interview.candidate_phone:
+#                     resume_text += f", Phone: {interview.candidate_phone}"
+#                 resume_text += f", applying for {job_title} position."
+        
+#         # Handle company name safely (works for both registered and unregistered)
+#         try:
+#             company_name = interview.job.company if interview.job else "Our Company"
+#         except AttributeError:
+#             company_name = "Our Company"
+
+#         # Validate that we have minimum required information
+#         if not resume_text.strip():
+#             return HttpResponse(
+#                 "Resume information not found. Please ensure your resume is uploaded or contact support.", 
+#                 status=400
+#             )
+        
+#         # Store interview context in session for consistency
+#         request.session['interview_context'] = {
+#             'candidate_name': candidate_name,
+#             'job_title': job_title,
+#             'company_name': company_name,
+#             'resume_text': resume_text,
+#             'job_description': interview.job.description if interview.job else "",
+#             'job_location': interview.job.location if interview.job else "",
+#             'question_count': 0,
+#             'is_registered_candidate': interview.is_registered_candidate
+#         }
+        
+#         # Initialize conversation history
+#         request.session['conversation_history'] = []
+        
+#         if request.method == "POST":
+#             # Handle both AJAX and regular form submissions
+#             try:
+#                 if request.content_type == 'application/json':
+#                     data = json.loads(request.body)
+#                     user_text = data.get("text") or data.get("message")
+#                 else:
+#                     user_text = request.POST.get("text", "")
+#             except json.JSONDecodeError as e:
+#                 logger.error(f"JSON decode error in interview {interview_uuid}: {e}")
+#                 user_text = request.POST.get("text", "")
+#             except Exception as e:
+#                 logger.error(f"Unexpected error parsing request data in interview {interview_uuid}: {e}")
+#                 user_text = request.POST.get("text", "")
+            
+#             if not user_text.strip():
+#                 return JsonResponse({
+#                     'error': 'Please provide a response.',
+#                     'response': 'I didn\'t receive your answer. Could you please respond?',
+#                     'audio': '',
+#                     'success': False
+#                 })
+            
+#             logger.info(f"User input for interview {interview_uuid}: {user_text}")
+            
+#             # Check for duplicate requests (prevent double processing)
+#             last_processed = request.session.get('last_processed_input', '')
+#             if last_processed == user_text:
+#                 logger.warning(f"Duplicate request detected for interview {interview_uuid}, ignoring")
+#                 return JsonResponse({
+#                     'error': 'Duplicate request detected',
+#                     'response': 'Please wait for the previous response to complete.',
+#                     'success': False
+#                 })
+            
+#             # Store current input to prevent duplicates
+#             request.session['last_processed_input'] = user_text
+            
+#             # Get context from session
+#             context = request.session.get('interview_context', {})
+#             question_count = context.get('question_count', 0) + 1
+            
+#             # Update question count
+#             context['question_count'] = question_count
+#             request.session['interview_context'] = context
+            
+#             logger.info(f"Question count for interview {interview_uuid}: {question_count}")
+            
+#             # Handle "I can't hear" responses specifically
+#             user_text_lower = user_text.lower().strip()
+#             if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
+#                 logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
+                
+#                 if question_count == 1:
+#                     ai_response = f"I understand you're having audio issues. No problem! Your microphone is still working fine for me to hear you. Let me ask you in text: Could you please tell me about yourself and why you're interested in this {job_title} position at {company_name}?"
+#                 elif question_count <= 8:
+#                     ai_response = "I understand you can't hear the audio. That's okay! I can still hear you clearly through your microphone. Here's my next question: Can you describe a challenging project you've worked on and how you overcame the obstacles?"
+#                 else:
+#                     ai_response = "Thank you for letting me know about the audio issues. Your microphone is working perfectly for our conversation. What questions do you have about this role or our company?"
+                
+#                 # Force text-only response (no audio generation)
+#                 response_data = {
+#                     'response': ai_response,
+#                     'audio': '',  # No audio
+#                     'success': True,
+#                     'question_count': question_count,
+#                     'is_final': question_count >= 8,
+#                     'text_only': True,  # Flag for frontend
+#                     'microphone_note': 'Your microphone is working fine - I can hear you clearly'
+#                 }
+                
+#                 return JsonResponse(response_data)
+            
+           
+
+            
+#             # Create contextual prompt based on conversation flow
+#             if question_count < 8:
+#                 # Build conversation context from session
+#                 conversation_history = request.session.get('conversation_history', [])
+                
+#                 # Add current response to history
+#                 conversation_history.append({
+#                     'speaker': 'candidate',
+#                     'message': user_text,
+#                     'question_number': question_count
+#                 })
+                
+#                 # Keep only last 4 exchanges to avoid token limits
+#                 if len(conversation_history) > 8:  # 4 exchanges = 8 messages
+#                     conversation_history = conversation_history[-8:]
+                
+#                 # Update session
+#                 request.session['conversation_history'] = conversation_history
+                
+#                 # Build context string
+#                 context_str = ""
+#                 for entry in conversation_history[-6:]:  # Last 3 exchanges
+#                     speaker = "Interviewer" if entry['speaker'] == 'interviewer' else "Candidate"
+#                     context_str += f"{speaker}: {entry['message']}\n"
+                
+#                 # Create different prompts based on question number for variety
+#                 if question_count == 1:
+#                     prompt = f"""
+# You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
+
+# Candidate's response: "{user_text}"
+
+# Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
+# """
+#                 elif question_count == 2:
+#                     prompt = f"""
+# You are Alex continuing the interview. Based on their previous responses:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max).
+# """
+#                 elif question_count == 3:
+#                     prompt = f"""
+# You are Alex. Previous conversation:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max).
+# """
+#                 elif question_count == 4:
+#                     prompt = f"""
+# You are Alex. Previous conversation:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max).
+# """
+#                 elif question_count == 5:
+#                     prompt = f"""
+# You are Alex. Previous conversation:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max).
+# """
+#                 elif question_count == 6:
+#                     prompt = f"""
+# You are Alex. Previous conversation:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max).
+# """
+#                 else:  # question_count == 7
+#                     prompt = f"""
+# You are Alex. Previous conversation:
+
+# {context_str}
+
+# Candidate just said: "{user_text}"
+
+# This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
+# """
+#             else:
+#                 # This is the final question - generate results
+#                 prompt = f"""
+# You are Alex wrapping up the interview with {candidate_name}.
+
+# The candidate just said: "{user_text}"
+
+# INSTRUCTIONS:
+# - Briefly acknowledge their final response
+# - Thank them for their time
+# - Mention next steps will be communicated soon
+# - Keep it warm and professional (2-3 sentences max)
+
+# Respond as Alex would naturally speak:
+# """
+                
+#                 # Generate interview results after final response
+#                 try:
+#                     conversation_history = request.session.get('conversation_history', [])
+#                     # Add the final candidate response to history before generating results
+#                     conversation_history.append({
+#                         'speaker': 'candidate',
+#                         'message': user_text,
+#                         'question_number': question_count
+#                     })
+                    
+#                     logger.info(f"Generating final interview results for {interview_uuid} with {len(conversation_history)} conversation entries")
+#                     generate_interview_results(interview, conversation_history)
+#                     logger.info(f"Interview results generation completed for {interview_uuid}")
+#                 except Exception as e:
+#                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
+#                     import traceback
+#                     logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+#             try:
+#                 # Use shorter, faster AI prompts for immediate responses
+#                 if question_count <= 3:
+#                     ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+#                 else:
+#                     # Use pre-generated quick responses for later questions to speed up
+#                     quick_responses = [
+#                         "That's interesting! Tell me about your experience with teamwork and collaboration.",
+#                         "Great! What are your career goals and where do you see yourself in 3-5 years?",
+#                         "Excellent! How do you stay updated with new technologies in your field?",
+#                         "Perfect! What questions do you have about this role or our company?",
+#                         "Thank you for sharing that. Do you have any final questions for me?"
+#                     ]
+#                     ai_response = quick_responses[min(question_count - 4, len(quick_responses) - 1)]
+#             except Exception as e:
+#                 logger.error(f"AI API Error for interview {interview_uuid}: {e}")
+#                 ai_response = "Thank you for that response. Can you tell me more about your experience?"
+            
+#             logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
+            
+#             # Add AI response to conversation history (for all questions including final)
+#             conversation_history = request.session.get('conversation_history', [])
+#             conversation_history.append({
+#                 'speaker': 'interviewer',
+#                 'message': ai_response,
+#                 'question_number': question_count
+#             })
+#             request.session['conversation_history'] = conversation_history
+            
+#             # Generate TTS instantly - Force RunPod first, then gTTS fallback
+#             audio_path = None
+#             audio_duration = None
+#             audio_generation_error = None
+#             try:
+#                 # Try ElevenLabs with your preferred voice first
+#                 audio_path = generate_tts(ai_response, model="female_natural")
+#                 if not audio_path:
+#                     # Quick gTTS fallback if RunPod fails
+#                     audio_path = generate_gtts_fallback(ai_response)
+                
+#                 # Get audio duration for typewriter sync
+#                 if audio_path:
+#                     from jobapp.tts import estimate_audio_duration, get_audio_duration
+                    
+#                     # Try to get actual duration first
+#                     full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+#                     actual_duration = get_audio_duration(full_audio_path)
+                    
+#                     if actual_duration and actual_duration > 0:
+#                         audio_duration = actual_duration
+#                         logger.info(f"Using actual audio duration: {audio_duration} seconds")
+#                     else:
+#                         # Fallback to estimation
+#                         audio_duration = estimate_audio_duration(ai_response)
+#                         logger.info(f"Using estimated audio duration: {audio_duration} seconds")
+#                 else:
+#                     # No audio, estimate duration for typewriter effect
+#                     from jobapp.tts import estimate_audio_duration
+#                     audio_duration = estimate_audio_duration(ai_response)
+#                     logger.info(f"No audio - using estimated duration for typewriter: {audio_duration} seconds")
+                    
+#             except Exception as e:
+#                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
+#                 audio_generation_error = str(e)
+#                 audio_path = None
+                
+#                 # Still estimate duration for typewriter effect
+#                 from jobapp.tts import estimate_audio_duration
+#                 audio_duration = estimate_audio_duration(ai_response)
+            
+#             # Return JSON response for AJAX requests
+#             response_data = {
+#                 'response': ai_response,
+#                 'audio': audio_path if audio_path else '',
+#                 'audio_duration': audio_duration,  # Duration in seconds for typewriter sync
+#                 'success': True,
+#                 'question_count': question_count,
+#                 'is_final': question_count >= 8,
+#                 'audio_error': audio_generation_error if audio_generation_error else None
+#             }
+            
+#             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
+#             logger.info(f"Response data: {response_data}")
+            
+#             # Clear duplicate prevention after successful processing
+#             if 'last_processed_input' in request.session:
+#                 del request.session['last_processed_input']
+            
+#             # Add CORS headers for better compatibility
+#             response = JsonResponse(response_data)
+#             response['Access-Control-Allow-Origin'] = '*'
+#             response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+#             response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
+#             return response
+
+#         # GET: Show interview UI with first question
+#         first_prompt = f"""
+# You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
+
+# Resume highlights: {resume_text[:300]}
+
+# INSTRUCTIONS:
+# - Give a warm, professional greeting
+# - Ask them to tell you about themselves and what drew them to this role
+# - Keep it natural and conversational (2-3 sentences max)
+# - Sound like a real human interviewer, not a robot
+# - Be welcoming and put them at ease
+
+# Respond as Alex would naturally speak:
+# """        
+        
+#         try:
+#             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
+#         except Exception as e:
+#             logger.error(f"AI API Error on initial question for interview {interview_uuid}: {e}")
+#             ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position?"
+        
+#         logger.info(f"Initial AI Question for interview {interview_uuid}: {ai_question}")
+        
+#         # Add initial question to conversation history
+#         conversation_history = request.session.get('conversation_history', [])
+#         conversation_history.append({
+#             'speaker': 'interviewer',
+#             'message': ai_question,
+#             'question_number': 0
+#         })
+#         request.session['conversation_history'] = conversation_history
+        
+#         # Generate initial TTS - Force RunPod first
+#         audio_path = None
+#         audio_duration = None
+#         try:
+#             # Try ElevenLabs with your preferred voice for initial question
+#             audio_path = generate_tts(ai_question, model="female_natural")
+#             if not audio_path:
+#                 # Quick gTTS fallback
+#                 audio_path = generate_gtts_fallback(ai_question)
+            
+#             # Get audio duration for typewriter sync
+#             if audio_path:
+#                 from jobapp.tts import estimate_audio_duration, get_audio_duration
+                
+#                 # Try to get actual duration first
+#                 full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+#                 actual_duration = get_audio_duration(full_audio_path)
+                
+#                 if actual_duration and actual_duration > 0:
+#                     audio_duration = actual_duration
+#                     logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
+#                 else:
+#                     # Fallback to estimation
+#                     audio_duration = estimate_audio_duration(ai_question)
+#                     logger.info(f"Initial question - using estimated audio duration: {audio_duration} seconds")
+#             else:
+#                 # No audio, estimate duration for typewriter effect
+#                 from jobapp.tts import estimate_audio_duration
+#                 audio_duration = estimate_audio_duration(ai_question)
+#                 logger.info(f"Initial question - no audio, using estimated duration: {audio_duration} seconds")
+                
+#         except Exception as e:
+#             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
+#             audio_path = None
+            
+#             # Still estimate duration for typewriter effect
+#             from jobapp.tts import estimate_audio_duration
+#             audio_duration = estimate_audio_duration(ai_question)
+
+#         # Template context with proper audio handling
+#         context_data = {
+#             'interview': interview,
+#             'ai_question': ai_question,
+#             'audio_url': audio_path if audio_path else '',
+#             'audio_duration': audio_duration,  # Duration for typewriter sync
+#             'candidate_name': candidate_name,
+#             'job_title': job_title,
+#             'company_name': company_name,
+#             'has_audio': bool(audio_path),  # Helper flag for template
+#             'csrf_token': get_token(request),  # Ensure fresh CSRF token
+#             'is_registered_candidate': interview.is_registered_candidate,  # Add this for template logic
+#         }
+        
+#         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")
+        
+#         return render(request, 'jobapp/interview_simple.html', context_data)
+        
+#     # Improved error handling with specific exception types
+#     except Http404:
+#         logger.error(f"Interview not found: {interview_uuid}")
+#         return HttpResponse('Interview not found.', status=404)
+    
+#     except PermissionDenied as e:
+#         if 'CSRF' in str(e) or 'csrf' in str(e).lower():
+#             logger.error(f"CSRF error for interview {interview_uuid}: {e}")
+#             return JsonResponse({
+#                 'error': 'Session expired. Please refresh the page.',
+#                 'response': 'Your session has expired. Please refresh the page to continue.',
+#                 'success': False,
+#                 'csrf_error': True,
+#                 'refresh_required': True
+#             }, status=403)
+#         else:
+#             logger.error(f"Permission denied for interview: {interview_uuid}")
+#             return HttpResponse('You do not have permission to access this interview.', status=403)
+    
+#     except ValidationError as e:
+#         logger.error(f"Validation error for interview {interview_uuid}: {e}")
+#         return HttpResponse(f'Invalid data: {str(e)}', status=400)
+    
+#     except ConnectionError as e:
+#         logger.error(f"Connection error for interview {interview_uuid}: {e}")
+#         return HttpResponse('Unable to connect to required services. Please try again later.', status=503)
+    
+#     except TimeoutError as e:
+#         logger.error(f"Timeout error for interview {interview_uuid}: {e}")
+#         return HttpResponse('Request timed out. Please try again.', status=504)
+    
+#     except Exception as e:
+#         # Enhanced error logging with more context
+#         import traceback
+#         error_details = {
+#             'interview_uuid': interview_uuid,
+#             'error_type': type(e).__name__,
+#             'error_message': str(e),
+#             'traceback': traceback.format_exc(),
+#             'request_method': request.method,
+#             'user': getattr(request.user, 'id', 'Anonymous') if hasattr(request, 'user') else 'Unknown',
+#             'session_key': request.session.session_key if hasattr(request, 'session') else 'Unknown'
+#         }
+        
+#         logger.error(f"Interview Error Details: {error_details}")
+        
+#         # For development, show detailed error
+#         if settings.DEBUG:
+#             return HttpResponse(
+#                 f'Interview could not be started.<br>'
+#                 f'Error Type: {error_details["error_type"]}<br>'
+#                 f'Error: {error_details["error_message"]}<br>'
+#                 f'UUID: {interview_uuid}<br>'
+#                 f'<pre>{error_details["traceback"]}</pre>',
+#                 status=500
+#             )
+#         else:
+#             # For production, show generic error
+#             return HttpResponse(
+#                 'Interview could not be started. Our team has been notified and is working to resolve the issue.',
+#                 status=500
+#             )            
+
+
 @csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
@@ -1024,7 +1553,7 @@ def start_interview_by_uuid(request, interview_uuid):
         request.session['conversation_history'] = []
         
         if request.method == "POST":
-            # Handle both AJAX and regular form submissions
+            # 🔧 UPDATED: Better request parsing with error handling
             try:
                 if request.content_type == 'application/json':
                     data = json.loads(request.body)
@@ -1048,7 +1577,7 @@ def start_interview_by_uuid(request, interview_uuid):
             
             logger.info(f"User input for interview {interview_uuid}: {user_text}")
             
-            # Check for duplicate requests (prevent double processing)
+            # 🔧 UPDATED: Prevent duplicate processing
             last_processed = request.session.get('last_processed_input', '')
             if last_processed == user_text:
                 logger.warning(f"Duplicate request detected for interview {interview_uuid}, ignoring")
@@ -1071,7 +1600,7 @@ def start_interview_by_uuid(request, interview_uuid):
             
             logger.info(f"Question count for interview {interview_uuid}: {question_count}")
             
-            # Handle "I can't hear" responses specifically
+            # 🔧 NEW: Handle audio issues specifically
             user_text_lower = user_text.lower().strip()
             if any(phrase in user_text_lower for phrase in ['cant hear', "can't hear", 'cannot hear', 'cant listen', "can't listen", 'no audio', 'no sound']):
                 logger.info(f"User reported audio issues in interview {interview_uuid}, providing text-based response")
@@ -1096,104 +1625,126 @@ def start_interview_by_uuid(request, interview_uuid):
                 
                 return JsonResponse(response_data)
             
-            # Create contextual prompt based on conversation flow
+            # 🔧 UPDATED: Build conversation history first
+            conversation_history = request.session.get('conversation_history', [])
+            
+            # Add current response to history
+            conversation_history.append({
+                'speaker': 'candidate',
+                'message': user_text,
+                'question_number': question_count
+            })
+            
+            # Keep only last 4 exchanges to avoid token limits
+            if len(conversation_history) > 8:  # 4 exchanges = 8 messages
+                conversation_history = conversation_history[-8:]
+            
+            # Update session
+            request.session['conversation_history'] = conversation_history
+            
+            # 🔧 NEW: Define fallback responses for each question
+            fallback_responses = {
+                1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
+                2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
+                3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
+                4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
+                5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
+                6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
+                7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
+                8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
+            }
+            
+            # 🔧 UPDATED: AI generation with robust fallbacks
+            ai_response = None
+            
             if question_count < 8:
-                # Build conversation context from session
-                conversation_history = request.session.get('conversation_history', [])
-                
-                # Add current response to history
-                conversation_history.append({
-                    'speaker': 'candidate',
-                    'message': user_text,
-                    'question_number': question_count
-                })
-                
-                # Keep only last 4 exchanges to avoid token limits
-                if len(conversation_history) > 8:  # 4 exchanges = 8 messages
-                    conversation_history = conversation_history[-8:]
-                
-                # Update session
-                request.session['conversation_history'] = conversation_history
-                
-                # Build context string
+                # Build context string for AI
                 context_str = ""
                 for entry in conversation_history[-6:]:  # Last 3 exchanges
                     speaker = "Interviewer" if entry['speaker'] == 'interviewer' else "Candidate"
                     context_str += f"{speaker}: {entry['message']}\n"
                 
-                # Create different prompts based on question number for variety
+                # Create contextual prompt
                 if question_count == 1:
-                    prompt = f"""
-You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
+                    prompt = f"""You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
 
 Candidate's response: "{user_text}"
 
-Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
-"""
+Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max)."""
+                    
                 elif question_count == 2:
-                    prompt = f"""
-You are Alex continuing the interview. Based on their previous responses:
+                    prompt = f"""You are Alex continuing the interview. Based on their previous responses:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max).
-"""
+Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max)."""
+                    
                 elif question_count == 3:
-                    prompt = f"""
-You are Alex. Previous conversation:
+                    prompt = f"""You are Alex. Previous conversation:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max).
-"""
+Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max)."""
+                    
                 elif question_count == 4:
-                    prompt = f"""
-You are Alex. Previous conversation:
+                    prompt = f"""You are Alex. Previous conversation:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max).
-"""
+Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max)."""
+                    
                 elif question_count == 5:
-                    prompt = f"""
-You are Alex. Previous conversation:
+                    prompt = f"""You are Alex. Previous conversation:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max).
-"""
+Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max)."""
+                    
                 elif question_count == 6:
-                    prompt = f"""
-You are Alex. Previous conversation:
+                    prompt = f"""You are Alex. Previous conversation:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max).
-"""
+Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max)."""
+                    
                 else:  # question_count == 7
-                    prompt = f"""
-You are Alex. Previous conversation:
+                    prompt = f"""You are Alex. Previous conversation:
 
 {context_str}
 
 Candidate just said: "{user_text}"
 
-This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
-"""
+This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max)."""
+                
+                # 🔧 UPDATED: Try AI with robust error handling
+                try:
+                    logger.info(f"Attempting AI response generation for interview {interview_uuid}, question {question_count}")
+                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                    
+                    # Validate AI response
+                    if not ai_response or len(ai_response.strip()) < 10:
+                        raise ValueError("AI response too short or empty")
+                        
+                    logger.info(f"AI response generated successfully for interview {interview_uuid}")
+                    
+                except Exception as e:
+                    logger.error(f"AI API Error for interview {interview_uuid}: {e}")
+                    logger.info(f"Using fallback response for question {question_count}")
+                    ai_response = fallback_responses.get(question_count, "Can you tell me more about that?")
+                    
             else:
-                # This is the final question - generate results
-                prompt = f"""
-You are Alex wrapping up the interview with {candidate_name}.
+                # This is the final question (question 8 or more)
+                prompt = f"""You are Alex wrapping up the interview with {candidate_name}.
 
 The candidate just said: "{user_text}"
 
@@ -1201,21 +1752,18 @@ INSTRUCTIONS:
 - Briefly acknowledge their final response
 - Thank them for their time
 - Mention next steps will be communicated soon
-- Keep it warm and professional (2-3 sentences max)
-
-Respond as Alex would naturally speak:
-"""
+- Keep it warm and professional (2-3 sentences max)"""
                 
-                # Generate interview results after final response
                 try:
-                    conversation_history = request.session.get('conversation_history', [])
-                    # Add the final candidate response to history before generating results
-                    conversation_history.append({
-                        'speaker': 'candidate',
-                        'message': user_text,
-                        'question_number': question_count
-                    })
-                    
+                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                    if not ai_response or len(ai_response.strip()) < 10:
+                        raise ValueError("AI response too short")
+                except Exception as e:
+                    logger.error(f"Final AI response failed for interview {interview_uuid}: {e}")
+                    ai_response = fallback_responses.get(8, f"Thank you so much, {candidate_name}! This has been a great conversation. We'll be in touch with next steps soon.")
+                
+                # 🔧 UPDATED: Generate interview results after final response
+                try:
                     logger.info(f"Generating final interview results for {interview_uuid} with {len(conversation_history)} conversation entries")
                     generate_interview_results(interview, conversation_history)
                     logger.info(f"Interview results generation completed for {interview_uuid}")
@@ -1224,28 +1772,9 @@ Respond as Alex would naturally speak:
                     import traceback
                     logger.error(f"Full traceback: {traceback.format_exc()}")
             
-            try:
-                # Use shorter, faster AI prompts for immediate responses
-                if question_count <= 3:
-                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
-                else:
-                    # Use pre-generated quick responses for later questions to speed up
-                    quick_responses = [
-                        "That's interesting! Tell me about your experience with teamwork and collaboration.",
-                        "Great! What are your career goals and where do you see yourself in 3-5 years?",
-                        "Excellent! How do you stay updated with new technologies in your field?",
-                        "Perfect! What questions do you have about this role or our company?",
-                        "Thank you for sharing that. Do you have any final questions for me?"
-                    ]
-                    ai_response = quick_responses[min(question_count - 4, len(quick_responses) - 1)]
-            except Exception as e:
-                logger.error(f"AI API Error for interview {interview_uuid}: {e}")
-                ai_response = "Thank you for that response. Can you tell me more about your experience?"
+            logger.info(f"Final AI Response for interview {interview_uuid}: {ai_response}")
             
-            logger.info(f"AI Response for interview {interview_uuid}: {ai_response}")
-            
-            # Add AI response to conversation history (for all questions including final)
-            conversation_history = request.session.get('conversation_history', [])
+            # Add AI response to conversation history
             conversation_history.append({
                 'speaker': 'interviewer',
                 'message': ai_response,
@@ -1253,15 +1782,17 @@ Respond as Alex would naturally speak:
             })
             request.session['conversation_history'] = conversation_history
             
-            # Generate TTS instantly - Force RunPod first, then gTTS fallback
+            # 🔧 UPDATED: Generate TTS with better error handling
             audio_path = None
             audio_duration = None
             audio_generation_error = None
+            
             try:
-                # Try ElevenLabs with your preferred voice first
+                logger.info(f"Starting TTS generation for interview {interview_uuid}")
+                # Try ElevenLabs first, then gTTS fallback
                 audio_path = generate_tts(ai_response, model="female_natural")
                 if not audio_path:
-                    # Quick gTTS fallback if RunPod fails
+                    logger.info(f"ElevenLabs failed, trying gTTS fallback for interview {interview_uuid}")
                     audio_path = generate_gtts_fallback(ai_response)
                 
                 # Get audio duration for typewriter sync
@@ -1285,16 +1816,21 @@ Respond as Alex would naturally speak:
                     audio_duration = estimate_audio_duration(ai_response)
                     logger.info(f"No audio - using estimated duration for typewriter: {audio_duration} seconds")
                     
+                logger.info(f"TTS generation completed for interview {interview_uuid}")
+                
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
                 audio_generation_error = str(e)
                 audio_path = None
                 
                 # Still estimate duration for typewriter effect
-                from jobapp.tts import estimate_audio_duration
-                audio_duration = estimate_audio_duration(ai_response)
+                try:
+                    from jobapp.tts import estimate_audio_duration
+                    audio_duration = estimate_audio_duration(ai_response)
+                except:
+                    audio_duration = len(ai_response.split()) * 0.5  # Rough estimation: 0.5 seconds per word
             
-            # Return JSON response for AJAX requests
+            # 🔧 UPDATED: Return comprehensive JSON response
             response_data = {
                 'response': ai_response,
                 'audio': audio_path if audio_path else '',
@@ -1305,8 +1841,7 @@ Respond as Alex would naturally speak:
                 'audio_error': audio_generation_error if audio_generation_error else None
             }
             
-            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
-            logger.info(f"Response data: {response_data}")
+            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}, audio={'Yes' if audio_path else 'No'}")
             
             # Clear duplicate prevention after successful processing
             if 'last_processed_input' in request.session:
@@ -1319,7 +1854,7 @@ Respond as Alex would naturally speak:
             response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
             return response
 
-        # GET: Show interview UI with first question
+        # 🔧 UNCHANGED: GET request handling (show interview UI with first question)
         first_prompt = f"""
 You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
 
@@ -1409,7 +1944,7 @@ Respond as Alex would naturally speak:
         
         return render(request, 'jobapp/interview_simple.html', context_data)
         
-    # Improved error handling with specific exception types
+    # 🔧 UNCHANGED: Error handling
     except Http404:
         logger.error(f"Interview not found: {interview_uuid}")
         return HttpResponse('Interview not found.', status=404)
@@ -1470,8 +2005,7 @@ Respond as Alex would naturally speak:
             return HttpResponse(
                 'Interview could not be started. Our team has been notified and is working to resolve the issue.',
                 status=500
-            )            
-
+            )
 
 # Additional helper function for better error context
 def log_interview_error(interview_uuid, error, context=None):

@@ -1,29 +1,37 @@
 /**
- * Typewriter Synchronization System - INSTANT START VERSION
- * Starts typing immediately while audio loads for natural interview experience
+ * Typewriter Synchronization System - INTERVIEW OPTIMIZED
+ * Fast, reliable typewriter without audio sync issues
  */
 
 (function() {
     'use strict';
     
-    console.log('⚡ Typewriter Sync System Loading - ULTRA FAST VERSION...');
+    console.log('⚡ Typewriter Sync System Loading - INTERVIEW OPTIMIZED...');
     
-    // Configuration - ULTRA FAST
+    // Configuration for natural interview flow
     const CONFIG = {
-        ultraFastSpeed: 25,         // milliseconds per character - ultra fast
-        minDuration: 500,           // minimum duration in milliseconds
-        maxDuration: 5000,          // maximum duration in milliseconds
+        interviewerSpeed: 40,       // 40ms per character for interviewer questions
+        candidateSpeed: 20,         // 20ms per character for candidate responses (faster)
+        minDuration: 1000,          // minimum 1 second
+        maxDuration: 8000,          // maximum 8 seconds
     };
     
     /**
-     * ULTRA FAST TYPEWRITER - No sync, just speed
+     * Natural interview typewriter - no complex sync, just smooth typing
      */
-    function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
+    function createInterviewTypewriter(element, text, isInterviewer = false) {
         return new Promise((resolve) => {
+            if (!element || !text) {
+                console.warn('⚠️ Invalid element or text for typewriter');
+                resolve();
+                return;
+            }
+            
             element.textContent = '';
             let index = 0;
+            const speed = isInterviewer ? CONFIG.interviewerSpeed : CONFIG.candidateSpeed;
             
-            console.log(`⚡ ULTRA FAST: Starting typewriter: ${text.length} chars`);
+            console.log(`⚡ Starting ${isInterviewer ? 'interviewer' : 'candidate'} typewriter: ${text.length} chars at ${speed}ms/char`);
             
             const typeInterval = setInterval(() => {
                 if (index < text.length) {
@@ -31,22 +39,25 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST: Typewriter completed');
+                    console.log(`✅ ${isInterviewer ? 'Interviewer' : 'Candidate'} typewriter completed`);
                     resolve();
                 }
-            }, 25); // 25ms per character = ultra fast
+            }, speed);
         });
     }
     
     /**
-     * Ultra fast natural typewriter
+     * Simple natural typewriter for any text
      */
-    function createNaturalTypewriter(element, text, duration = null, options = {}) {
+    function createNaturalTypewriter(element, text, speed = 30) {
         return new Promise((resolve) => {
+            if (!element || !text) {
+                resolve();
+                return;
+            }
+            
             element.textContent = '';
             let index = 0;
-            
-            console.log(`⚡ ULTRA FAST Natural: ${text.length} chars`);
             
             const typeInterval = setInterval(() => {
                 if (index < text.length) {
@@ -54,29 +65,31 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST Natural completed');
                     resolve();
                 }
-            }, 25); // 25ms per character = ultra fast
+            }, speed);
         });
     }
     
     /**
-     * Ultra fast typewriter - always 25ms per character
+     * Main typewriter function for interview
      */
-    function startTypewriter(element, text, audioElement = null, duration = null, options = {}) {
+    function startInterviewTypewriter(element, text, options = {}) {
         if (!element || !text) {
-            console.error('⚡ ULTRA FAST: Invalid element or text');
+            console.error('⚠️ Invalid parameters for interview typewriter');
             return Promise.resolve();
         }
         
-        element.textContent = '';
-        console.log('⚡ ULTRA FAST: Starting ultra fast typewriter');
-        return createNaturalTypewriter(element, text, null, options);
+        const isInterviewer = options.isInterviewer || false;
+        const speed = options.speed || (isInterviewer ? CONFIG.interviewerSpeed : CONFIG.candidateSpeed);
+        
+        console.log(`🎯 Starting interview typewriter - ${isInterviewer ? 'Interviewer' : 'Candidate'} mode`);
+        
+        return createNaturalTypewriter(element, text, speed);
     }
     
     /**
-     * Estimate natural speaking duration
+     * Estimate natural speaking duration (for reference only)
      */
     function estimateSpeechDuration(text, wordsPerMinute = 140) {
         if (!text || !text.trim()) {
@@ -85,26 +98,37 @@
         
         const wordCount = text.split(/\s+/).length;
         const baseDuration = (wordCount / wordsPerMinute) * 60;
-        const withPauses = baseDuration * 1.15; // Add 15% for natural pauses
+        const withPauses = baseDuration * 1.2; // Add 20% for natural pauses
         
-        return Math.max(2.0, Math.min(withPauses, 30.0));
+        return Math.max(2.0, Math.min(withPauses, 12.0)); // 2-12 seconds range
+    }
+    
+    /**
+     * Clear typewriter and reset element
+     */
+    function clearTypewriter(element) {
+        if (element) {
+            element.textContent = '';
+            element.className = element.className.replace(/typewriter-\w+/g, '').trim();
+        }
     }
     
     // Export to global scope
     window.TypewriterSync = {
-        start: startTypewriter,
-        createSynchronized: createSynchronizedTypewriter,
+        start: startInterviewTypewriter,
+        createInterview: createInterviewTypewriter,
         createNatural: createNaturalTypewriter,
+        clear: clearTypewriter,
         estimateDuration: estimateSpeechDuration,
         config: CONFIG
     };
     
-    console.log('✅ Typewriter Sync System Loaded - ULTRA FAST VERSION');
+    console.log('✅ Typewriter Sync System Ready - INTERVIEW OPTIMIZED');
     console.log('📋 Available methods:');
-    console.log('  - window.TypewriterSync.start(element, text, audioElement, duration)');
-    console.log('  - window.TypewriterSync.createSynchronized(element, text, audioElement)');
-    console.log('  - window.TypewriterSync.createNatural(element, text, duration)');
-    console.log('  - window.TypewriterSync.estimateDuration(text)');
-    console.log('⚡ Ultra fast 25ms per character - no delays, no waiting');
+    console.log('  - window.TypewriterSync.start(element, text, {isInterviewer: boolean})');
+    console.log('  - window.TypewriterSync.createInterview(element, text, isInterviewer)');
+    console.log('  - window.TypewriterSync.createNatural(element, text, speed)');
+    console.log('  - window.TypewriterSync.clear(element)');
+    console.log(`⚡ Interviewer: ${CONFIG.interviewerSpeed}ms/char, Candidate: ${CONFIG.candidateSpeed}ms/char`);
     
 })();

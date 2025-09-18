@@ -1,6 +1,6 @@
 /**
- * Professional AI Interview Audio Management - INTEGRATED VERSION
- * Works seamlessly with existing HTML template
+ * Professional AI Interview Audio Management - FIXED ECHO ISSUE
+ * Prevents speech recognition from hearing interviewer's voice
  */
 
 class ProfessionalInterviewAudio {
@@ -70,55 +70,85 @@ class ProfessionalInterviewAudio {
             return;
         }
 
-        aiAudio.addEventListener('play', () => {
-            this.aiAudioPlaying = true;
+        // CRITICAL: Pause speech recognition BEFORE audio starts
+        aiAudio.addEventListener('loadstart', () => {
+            console.log('🔇 AI audio loading - pausing speech recognition immediately');
             this.handleAIAudioStart();
         });
 
+        aiAudio.addEventListener('play', () => {
+            console.log('🔊 AI audio playing - ensuring speech recognition is paused');
+            this.aiAudioPlaying = true;
+            this.handleAIAudioStart(); // Double-ensure it's paused
+        });
+
         aiAudio.addEventListener('ended', () => {
+            console.log('🔇 AI audio ended - will resume speech recognition');
             this.aiAudioPlaying = false;
             this.handleAIAudioEnd();
         });
 
         aiAudio.addEventListener('pause', () => {
+            console.log('⏸️ AI audio paused - will resume speech recognition');
             this.aiAudioPlaying = false;
             this.handleAIAudioEnd();
         });
 
-        aiAudio.volume = 0.6;
-        console.log('🔇 AI audio isolation configured');
+        // Reduce volume to prevent feedback
+        aiAudio.volume = 0.4; // Lower volume to reduce echo
+
+        console.log('🔇 AI audio isolation configured with echo prevention');
     }
 
     handleAIAudioStart() {
-        console.log('🔇 AI audio starting - pausing speech recognition');
+        console.log('🚫 BLOCKING speech recognition - AI is about to speak');
         
-        // Pause the professional speech recognition
+        // IMMEDIATE blocking - don't wait
+        window.speechRecognitionBlocked = true;
+        window.isProcessingResponse = true;
+        window.isAISpeaking = true;
+        
+        // Pause the professional speech recognition IMMEDIATELY
         if (window.professionalSpeech && window.professionalSpeech.isActive) {
             window.professionalSpeech.pauseForAI();
         }
         
-        // Set global blocking flags for HTML template compatibility
-        window.isProcessingResponse = true;
-        window.speechRecognitionBlocked = true;
-        window.isAISpeaking = true;
+        // Clear any pending speech timeout
+        if (window.speechTimeout) {
+            clearTimeout(window.speechTimeout);
+            window.speechTimeout = null;
+        }
+        
+        // Clear collected text to prevent contamination
+        window.collectedText = '';
+        
+        console.log('✅ Speech recognition BLOCKED - AI can speak safely');
     }
 
     handleAIAudioEnd() {
-        console.log('🎙️ AI audio ending - restoring speech recognition');
+        console.log('⏰ AI audio finished - preparing to resume speech recognition');
         
+        // IMPORTANT: Wait longer before resuming to ensure complete silence
         setTimeout(() => {
+            console.log('🎙️ Resuming speech recognition after AI silence period');
+            
             window.isAISpeaking = false;
             window.speechRecognitionBlocked = false;
+            
+            // Clear any collected AI echo
+            window.collectedText = '';
             
             if (window.professionalSpeech) {
                 window.professionalSpeech.resumeFromAI();
             }
             
-            // Clear processing flag after delay
+            // Clear processing flag after additional delay
             setTimeout(() => {
                 window.isProcessingResponse = false;
-            }, 500);
-        }, 1000);
+                console.log('✅ Ready for candidate response');
+            }, 1000);
+            
+        }, 2000); // Longer delay to ensure AI audio is completely finished
     }
 
     cleanup() {
@@ -146,6 +176,7 @@ class ProfessionalSpeechRecognition {
         this.finalTranscript = '';
         this.interimTranscript = '';
         this.isPausedForAI = false;
+        this.lastProcessedText = '';
     }
 
     initialize() {
@@ -164,7 +195,11 @@ class ProfessionalSpeechRecognition {
             this.recognition.maxAlternatives = 1;
 
             this.setupEventHandlers();
-            this.startRecognition();
+            
+            // Don't start immediately - wait for proper initialization
+            setTimeout(() => {
+                this.startRecognition();
+            }, 1000);
             
             // Make globally available for HTML template compatibility
             window.recognition = this.recognition;
@@ -183,7 +218,7 @@ class ProfessionalSpeechRecognition {
             this.isActive = true;
             window.isListening = true;
             this.restartAttempts = 0;
-            console.log('🎙️ Speech recognition started');
+            console.log('🎙️ Speech recognition started and listening');
             this.updateMicrophoneUI(true);
         };
 
@@ -192,13 +227,14 @@ class ProfessionalSpeechRecognition {
             window.isListening = false;
             console.log('🎙️ Speech recognition ended');
             
+            // Only auto-restart if not paused for AI and not manually stopped
             if (this.autoRestart && !this.isPausedForAI && this.restartAttempts < this.maxRestartAttempts) {
                 setTimeout(() => {
-                    if (this.autoRestart && !this.isPausedForAI && !window.speechRecognitionBlocked) {
+                    if (this.autoRestart && !this.isPausedForAI && !window.speechRecognitionBlocked && !window.isAISpeaking) {
                         console.log('🔄 Auto-restarting speech recognition');
                         this.startRecognition();
                     }
-                }, 100);
+                }, 500); // Longer delay for stability
             }
         };
 
@@ -221,7 +257,7 @@ class ProfessionalSpeechRecognition {
                             if (this.autoRestart && !this.isPausedForAI) {
                                 this.startRecognition();
                             }
-                        }, 2000);
+                        }, 3000);
                     }
                     break;
                 case 'not-allowed':
@@ -242,9 +278,9 @@ class ProfessionalSpeechRecognition {
     }
 
     handleSpeechResult(event) {
-        // Block speech recognition while AI is speaking
-        if (window.isProcessingResponse) {
-            console.log('🚫 AI is speaking - ignoring speech input');
+        // CRITICAL: Block ALL speech recognition when AI is speaking
+        if (window.isProcessingResponse || window.speechRecognitionBlocked || window.isAISpeaking) {
+            console.log('🚫 BLOCKED: AI is speaking - ignoring speech input completely');
             return;
         }
 
@@ -256,25 +292,42 @@ class ProfessionalSpeechRecognition {
             
             if (event.results[i].isFinal) {
                 finalTranscript += transcript + ' ';
-                console.log('✅ Final transcript:', transcript);
+                console.log('✅ Candidate final transcript:', transcript);
             } else {
                 interimTranscript += transcript;
-                console.log('⏳ Interim transcript:', transcript);
+                console.log('⏳ Candidate interim transcript:', transcript);
             }
         }
 
-        // Filter out AI voice patterns (from HTML template)
-        const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
-        const textLower = (finalTranscript + interimTranscript).toLowerCase();
+        // ENHANCED: Filter out AI voice patterns and common interviewer phrases
+        const aiPhrases = [
+            'tell me about', 'can you describe', 'what are your', 'how do you', 
+            'thank you for', 'that sounds great', 'excellent', 'interesting',
+            'hello', 'hi there', 'welcome', 'thanks for joining', 'could you start',
+            'wonderful to meet', 'pleasure to meet', 'great to have you',
+            'next question', 'moving on', 'let me ask', 'i would like to know',
+            'can you walk me through', 'tell us about', 'describe your experience',
+            'what interests you about', 'why are you interested', 'what drew you to'
+        ];
         
-        if (aiPhrases.some(phrase => textLower.includes(phrase))) {
-            console.log('🚫 AI echo detected, ignoring');
+        const fullText = (finalTranscript + interimTranscript).toLowerCase().trim();
+        
+        // Check if this sounds like AI interviewer speech
+        if (aiPhrases.some(phrase => fullText.includes(phrase))) {
+            console.log('🚫 FILTERED: AI interviewer speech detected, ignoring:', fullText.substring(0, 50));
+            return;
+        }
+
+        // Check for duplicate processing
+        if (finalTranscript && finalTranscript.trim() === this.lastProcessedText.trim()) {
+            console.log('🚫 DUPLICATE: Same text already processed, ignoring');
             return;
         }
 
         // Update HTML template variables
         if (finalTranscript) {
             this.finalTranscript += finalTranscript;
+            this.lastProcessedText = finalTranscript.trim();
             
             // Integration with HTML template's collectedText system
             window.collectedText += finalTranscript;
@@ -286,10 +339,11 @@ class ProfessionalSpeechRecognition {
             }
             
             window.speechTimeout = setTimeout(() => {
-                if (window.collectedText.trim() && !window.isProcessingResponse && typeof window.autoSubmitResponse === 'function') {
+                if (window.collectedText.trim() && !window.isProcessingResponse && !window.isAISpeaking && typeof window.autoSubmitResponse === 'function') {
+                    console.log('📤 Auto-submitting candidate response:', window.collectedText.trim());
                     window.autoSubmitResponse();
                 }
-            }, 1000);
+            }, 1500); // Longer delay for complete sentences
         }
         
         if (interimTranscript) {
@@ -297,13 +351,15 @@ class ProfessionalSpeechRecognition {
             window.lastSpeechTime = Date.now();
         }
 
-        // Display the text in the conversation area
+        // Display the text in the conversation area (only candidate speech)
         const displayText = window.collectedText + (interimTranscript ? ' ' + interimTranscript : '');
-        this.updateConversationArea(displayText, interimTranscript ? true : false);
+        if (displayText.trim()) {
+            this.updateConversationArea(displayText, interimTranscript ? true : false);
+        }
 
         // Update audio level indicator
         if (typeof window.updateAudioLevelIndicator === 'function') {
-            window.updateAudioLevelIndicator(interimTranscript ? 60 : 20);
+            window.updateAudioLevelIndicator(interimTranscript ? 70 : 30);
         }
     }
 
@@ -314,6 +370,7 @@ class ProfessionalSpeechRecognition {
             return;
         }
 
+        // Only update with candidate speech - never show AI speech here
         conversationArea.innerHTML = text;
         
         if (isInterim) {
@@ -322,35 +379,50 @@ class ProfessionalSpeechRecognition {
             conversationArea.className = 'conversation-text candidate-response';
         }
         
-        console.log('📝 Updated conversation area:', text.substring(0, 50) + '...');
+        console.log('📝 Candidate speaking - updated conversation area:', text.substring(0, 50) + '...');
     }
 
     pauseForAI() {
         if (this.isActive) {
-            console.log('⏸️ Pausing speech recognition for AI audio');
+            console.log('⏸️ PAUSING speech recognition for AI audio');
             this.isPausedForAI = true;
-            this.recognition.stop();
+            try {
+                this.recognition.stop();
+            } catch (e) {
+                console.log('Speech recognition already stopped');
+            }
         }
+        this.isPausedForAI = true; // Set flag even if not active
     }
 
     resumeFromAI() {
-        console.log('▶️ Resuming speech recognition after AI audio');
+        console.log('▶️ RESUMING speech recognition after AI audio');
         this.isPausedForAI = false;
+        
+        // Clear any AI contamination
+        window.collectedText = '';
+        this.finalTranscript = '';
+        this.interimTranscript = '';
+        this.lastProcessedText = '';
+        
         if (this.autoRestart) {
             setTimeout(() => {
-                this.startRecognition();
-            }, 500);
+                if (!window.speechRecognitionBlocked && !window.isAISpeaking) {
+                    this.startRecognition();
+                }
+            }, 1000);
         }
     }
 
     startRecognition() {
-        if (!this.recognition || this.isActive || window.speechRecognitionBlocked) {
-            console.log('🚫 Cannot start recognition - blocked or already active');
+        // CRITICAL: Don't start if AI is speaking
+        if (!this.recognition || this.isActive || window.speechRecognitionBlocked || window.isAISpeaking) {
+            console.log('🚫 Cannot start recognition - AI is speaking or blocked');
             return;
         }
 
         try {
-            console.log('🎯 Starting speech recognition...');
+            console.log('🎯 Starting speech recognition for candidate...');
             this.recognition.start();
         } catch (error) {
             console.error('❌ Failed to start speech recognition:', error);
@@ -382,6 +454,7 @@ class ProfessionalSpeechRecognition {
     clearTranscripts() {
         this.finalTranscript = '';
         this.interimTranscript = '';
+        this.lastProcessedText = '';
         
         // Also clear HTML template variables
         window.collectedText = '';
@@ -403,32 +476,32 @@ class ProfessionalSpeechRecognition {
 
         if (active) {
             micBtn.classList.add('recording');
-            micBtn.innerHTML = '🔴 ';
-            micBtn.title = 'Microphone is ON - Speech recognition active';
+            micBtn.innerHTML = '🔴';
+            micBtn.title = 'Microphone ON - Listening for your response';
         } else {
             micBtn.classList.remove('recording');
             micBtn.innerHTML = '🎤';
-            micBtn.title = 'Microphone is ON - Speech recognition paused';
+            micBtn.title = 'Microphone ON - Speech recognition paused';
         }
     }
 
     showPermissionError() {
         this.showError(
-            '🎙️ Microphone permission required for interview',
+            'Microphone permission required for interview',
             'Please allow microphone access and refresh the page'
         );
     }
 
     showMicrophoneError() {
         this.showError(
-            '🎤 Microphone access failed',
+            'Microphone access failed',
             'Please check your microphone connection and try again'
         );
     }
 
     showBrowserCompatibilityWarning() {
         this.showError(
-            '🌐 Browser not supported',
+            'Browser not supported',
             'Please use Chrome, Edge, or Safari for speech recognition'
         );
     }
@@ -455,10 +528,7 @@ class ProfessionalSpeechRecognition {
             document.body.appendChild(errorDiv);
         }
         
-        errorDiv.innerHTML = `
-            ${title}<br>
-            <small>${message}</small>
-        `;
+        errorDiv.innerHTML = `${title}<br><small>${message}</small>`;
 
         setTimeout(() => {
             if (errorDiv && errorDiv.parentNode) {
@@ -479,19 +549,19 @@ window.isListening = false;
 
 // Override HTML template functions to use professional system
 window.startMicrophone = function() {
-    if (window.professionalSpeech) {
+    if (window.professionalSpeech && !window.isAISpeaking) {
         window.professionalSpeech.startRecognition();
     }
 };
 
 // Enhanced DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Professional interview audio system loading...');
+    console.log('🚀 Professional interview audio system loading - ECHO FIXED VERSION...');
     
-    // Wait a bit for HTML template to initialize its variables
+    // Wait for HTML template to initialize its variables
     setTimeout(() => {
         initializeProfessionalSystem();
-    }, 500);
+    }, 1000);
     
     function initializeProfessionalSystem() {
         // Initialize professional audio if stream is available
@@ -510,12 +580,12 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => clearInterval(checkUserMedia), 10000);
         }
         
-        // Initialize professional speech recognition
+        // Initialize professional speech recognition with delay
         setTimeout(() => {
             window.professionalSpeech.initialize();
-        }, 1000); // Delay to ensure HTML template is ready
+        }, 2000); // Longer delay to ensure everything is ready
         
-        console.log('✅ Professional interview audio system integration complete');
+        console.log('✅ Professional interview audio system - ECHO PROTECTION ACTIVE');
     }
     
     // Cleanup on page unload
@@ -529,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('📁 Professional interview audio module loaded - INTEGRATED VERSION');
-console.log('🎙️ Interview mode: Microphone will stay ON throughout the interview');
-console.log('🔇 Speech recognition will be temporarily blocked when AI is speaking');
-console.log('🔗 Integrated with HTML template speech recognition system');
+console.log('📁 Professional interview audio module loaded - ECHO FIXED VERSION');
+console.log('🎙️ Interview mode: Microphone stays ON, but speech recognition pauses during AI speech');
+console.log('🔇 Enhanced echo prevention - AI voice will NOT be transcribed as candidate response');
+console.log('🛡️ AI phrase filtering active to prevent interviewer speech contamination');

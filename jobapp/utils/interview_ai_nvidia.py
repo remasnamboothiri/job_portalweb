@@ -5,7 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None):
+def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None,  timeout=None):
     """Ask AI question with proper timeout and error handling"""
     try:
         api_key = config('NVIDIA_API_KEY')
@@ -47,7 +47,7 @@ Remember: You're having a friendly professional conversation. Speak directly wit
         client = OpenAI(
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=api_key,
-            timeout=20.0  # 20 second timeout
+            timeout= timeout or 20.0 # 20 second timeout
         )
         
         logger.info(f"Making AI API call with timeout=20s")

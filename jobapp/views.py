@@ -68,7 +68,7 @@ try:
     from jobapp.utils.resume_reader import extract_resume_text
 except ImportError as e:
     print(f"Import error: {e}")
-    def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None):
+    def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None , timeout=None):
         return "AI service is currently unavailable. Please try again later."
     def extract_resume_text(resume_file):
         return "Resume processing is currently unavailable."

@@ -207,8 +207,43 @@
         let microphoneSource = null;
         let echoCancellation = null;
         
-        // Initialize camera with audio isolation
+
+
+        // FIXED VERSION - REPLACE THE EXISTING initCamera() FUNCTION
         async function initCamera() {
+            try {
+                console.log('Requesting microphone and camera permissions...');
+                userStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100
+                    }
+                });
+                const videoElement = document.getElementById('userVideo');
+                videoElement.srcObject = userStream;
+                setupAudioIsolation();
+                console.log('Camera and microphone access granted');
+            } catch (error) {
+                console.error('Camera/Microphone error:', error);
+                // SHOW CLEAR ERROR MESSAGE TO USER
+                let message = '';
+                if (error.name === 'NotAllowedError') {
+                    message = 'Please allow microphone and camera access in your browser, then refresh this page.';
+                } else if (error.name === 'NotFoundError') {
+                    message = 'No microphone found. Please connect a microphone and refresh this page.';
+                } else {
+                    message = 'Cannot access microphone. Please check your browser permissions and refresh this page.';
+                }
+        
+                // Show error to user
+                alert('Microphone Error: ' + message);
+            }
+        }
+        // Initialize camera with audio isolation
+        {% comment %} async function initCamera() {
             try {
                 // Request media with echo cancellation and noise suppression
                 userStream = await navigator.mediaDevices.getUserMedia({ 
@@ -230,7 +265,7 @@
             } catch (error) {
                 console.error('Camera error:', error);
             }
-        }
+        } {% endcomment %}
         
         // Setup audio isolation to prevent speaker feedback
         function setupAudioIsolation() {

@@ -2033,7 +2033,7 @@ This is the second-to-last question. Ask if they have any questions about the ro
 """
                     
                     # Try to get AI response
-                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name)
+                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name, timeout=2)
                     logger.info(f"Generated AI response for interview {interview_uuid}, question {question_count}")
                     
                 except Exception as e:
@@ -3127,3 +3127,7 @@ def generate_interview_results(interview, conversation_history):
         logger.error(f"Error generating interview results: {e}")
         return False        
         
+        
+        
+        
+      

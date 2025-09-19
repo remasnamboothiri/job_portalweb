@@ -1872,6 +1872,7 @@ def start_interview_by_uuid(request, interview_uuid):
         
         # Initialize conversation history
         request.session['conversation_history'] = []
+        #method =POST
         
         if request.method == "POST":
             # Handle candidate response
@@ -1881,13 +1882,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     user_text = data.get("text") or data.get("message")
                 else:
                     user_text = request.POST.get("text", "")
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON decode error in interview {interview_uuid}: {e}")
+            except:
                 user_text = request.POST.get("text", "")
-            except Exception as e:
-                logger.error(f"Unexpected error parsing request data in interview {interview_uuid}: {e}")
-                user_text = request.POST.get("text", "")
-            
+    
             if not user_text.strip():
                 return JsonResponse({
                     'error': 'Please provide a response.',
@@ -1895,9 +1892,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     'audio': '',
                     'success': False
                 })
-            
+    
             logger.info(f"User input for interview {interview_uuid}: {user_text}")
-            
+    
             # Prevent duplicate processing
             last_processed = request.session.get('last_processed_input', '')
             if last_processed == user_text:
@@ -1907,164 +1904,61 @@ def start_interview_by_uuid(request, interview_uuid):
                     'response': 'Please wait for the previous response to complete.',
                     'success': False
                 })
-            
+    
             request.session['last_processed_input'] = user_text
-            
-            # Get context from session
+    
+            # FIXED: Get and increment question count properly
             context = request.session.get('interview_context', {})
             question_count = context.get('question_count', 0) + 1
-            
-            # Update question count
+    
+            # FIXED: Save incremented count immediately
             context['question_count'] = question_count
             request.session['interview_context'] = context
-            
-            logger.info(f"Question count for interview {interview_uuid}: {question_count}")
-            
-            # Build conversation history first
+    
+            logger.info(f"FIXED: Question count incremented to {question_count} for interview {interview_uuid}")
+    
+            # Build conversation history
             conversation_history = request.session.get('conversation_history', [])
-            
-            # Add current response to history
             conversation_history.append({
                 'speaker': 'candidate',
                 'message': user_text,
                 'question_number': question_count
             })
-            
-            
+    
+            # FIXED: Use ONLY predefined questions for reliability
             predefined_questions = {
-                    1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
-                    2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
-                    3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
-                    4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
-                    5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
-                    6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
-                    7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
-                    8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
-                }
-            
-            
-            
-            
-            
-            # IMPROVED QUESTION GENERATION LOGIC
-            ai_response = None
-            
-            # Try AI-generated contextual questions first (preferred)
-            if question_count < 8:
-                try:
-                    # Keep only last 6 exchanges to avoid token limits
-                    if len(conversation_history) > 12:
-                        conversation_history = conversation_history[-12:]
-                    
-                    # Build context string
-                    context_str = ""
-                    for entry in conversation_history[-8:]:  # Last 4 exchanges
-                        speaker = "Interviewer" if entry['speaker'] == 'interviewer' else "Candidate"
-                        context_str += f"{speaker}: {entry['message']}\n"
-                    
-                    # Generate contextual AI prompt based on question number
-                    if question_count == 1:
-                        prompt = f"""
-You are Alex, a friendly HR interviewer at {company_name}. The candidate just responded to your opening question.
-
-Candidate's response: "{user_text}"
-
-Now ask about their technical experience or a specific skill relevant to {job_title}. Keep it natural and conversational (2-3 sentences max).
-"""
-                    elif question_count == 2:
-                        prompt = f"""
-You are Alex continuing the interview. Based on their previous responses:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-Now ask about a challenging project they've worked on or a problem they've solved. Keep it conversational (2-3 sentences max).
-"""
-                    elif question_count == 3:
-                        prompt = f"""
-You are Alex. Previous conversation:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-Now ask about their teamwork experience or how they handle collaboration. Keep it natural (2-3 sentences max).
-"""
-                    elif question_count == 4:
-                        prompt = f"""
-You are Alex. Previous conversation:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-Now ask about their career goals or where they see themselves in the future. Keep it conversational (2-3 sentences max).
-"""
-                    elif question_count == 5:
-                        prompt = f"""
-You are Alex. Previous conversation:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-Now ask about how they stay updated with technology or handle learning new skills. Keep it natural (2-3 sentences max).
-"""
-                    elif question_count == 6:
-                        prompt = f"""
-You are Alex. Previous conversation:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-Now ask about their experience with specific technologies relevant to {job_title} or ask about a time they had to learn something quickly. Keep it conversational (2-3 sentences max).
-"""
-                    else:  # question_count == 7
-                        prompt = f"""
-You are Alex. Previous conversation:
-
-{context_str}
-
-Candidate just said: "{user_text}"
-
-This is the second-to-last question. Ask if they have any questions about the role, company, or team. Keep it welcoming (2-3 sentences max).
-"""
-                    
-                    # Try to get AI response
-                    ai_response = ask_ai_question(prompt, candidate_name, job_title, company_name, timeout=2)
-                    logger.info(f"Generated AI response for interview {interview_uuid}, question {question_count}")
-                    
-                except Exception as e:
-                    logger.warning(f"AI generation failed for interview {interview_uuid}, question {question_count}: {e}")
-                    ai_response = None
-            
-            # Fallback to predefined questions if AI fails or for final question
-            if ai_response is None or question_count >= 8:
-                
-                
-                if question_count <= 8:
-                    ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
-                    logger.info(f"Using predefined question {question_count} for interview {interview_uuid}")
-                else:
-                    ai_response = predefined_questions[8]  # Final question
-                    logger.info(f"Using final predefined question for interview {interview_uuid}")
-            
+                1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
+                2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
+                3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
+                4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
+                5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
+                6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
+                7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
+                8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
+            }
+    
+            # Get AI response based on question count
+            if question_count <= 8:
+                ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
+                logger.info(f"Using predefined question {question_count}: {ai_response[:50]}...")
+            else:
+                ai_response = f"Thank you for the interview, {candidate_name}! We'll be in touch soon."
+                logger.info(f"Interview complete for {interview_uuid}")
+    
             # Add AI response to history
             conversation_history.append({
                 'speaker': 'interviewer',
                 'message': ai_response,
                 'question_number': question_count
             })
-            
-            # Keep only last 16 entries (8 exchanges)
+    
+            # Keep conversation history manageable
             if len(conversation_history) > 16:
                 conversation_history = conversation_history[-16:]
-            
+    
             request.session['conversation_history'] = conversation_history
-            
-            # Generate final results if this is the last question
+    
+            # Generate final results if interview is complete
             if question_count >= 8:
                 try:
                     logger.info(f"Generating final interview results for {interview_uuid}")
@@ -2072,22 +1966,18 @@ This is the second-to-last question. Ask if they have any questions about the ro
                     logger.info(f"Interview results generation completed for {interview_uuid}")
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
-            
+        
             # Generate TTS audio
             audio_path = None
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
-                audio_path = generate_tts(ai_response, model="female_natural")
-                if not audio_path:
-                    logger.info(f"ElevenLabs failed, trying gTTS fallback for interview {interview_uuid}")
-                    audio_path = generate_gtts_fallback(ai_response)
-                
+                audio_path = generate_gtts_fallback(ai_response)  # Use reliable gTTS directly
                 if audio_path:
                     from jobapp.tts import estimate_audio_duration, get_audio_duration
                     full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     actual_duration = get_audio_duration(full_audio_path)
-                    
+            
                     if actual_duration and actual_duration > 0:
                         audio_duration = actual_duration
                         logger.info(f"Using actual audio duration: {audio_duration} seconds")
@@ -2098,57 +1988,52 @@ This is the second-to-last question. Ask if they have any questions about the ro
                     from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
                     logger.info(f"No audio - using estimated duration: {audio_duration} seconds")
-                    
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
                 audio_path = None
-                try:
-                    from jobapp.tts import estimate_audio_duration
-                    audio_duration = estimate_audio_duration(ai_response)
-                except:
-                    audio_duration = len(ai_response.split()) * 0.5
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_response)
+    
+                # Return response data
+                response_data = {
+                    'response': ai_response,
+                    'audio': audio_path if audio_path else '',
+                    'audio_duration': audio_duration,
+                    'success': True,
+                    'question_count': question_count,
+                    'is_final': question_count >= 8
+                }
+    
+                logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
+    
+                # Clear duplicate prevention
+                if 'last_processed_input' in request.session:
+                    del request.session['last_processed_input']
+                return JsonResponse(response_data)
             
-            # Return response
-            response_data = {
-                'response': ai_response,
-                'audio': audio_path if audio_path else '',
-                'audio_duration': audio_duration,
-                'success': True,
-                'question_count': question_count,
-                'is_final': question_count >= 8,
-                'ai_generated': ai_response != predefined_questions.get(question_count, '')  # Flag to show if AI was used
-            }
             
-            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
-            
-            # Clear duplicate prevention
-            if 'last_processed_input' in request.session:
-                del request.session['last_processed_input']
-            
-            response = JsonResponse(response_data)
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
-            return response
+                response['Access-Control-Allow-Origin'] = '*'
+                response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+                response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
+                return response
 
-        # GET request - show interview UI with first question
-        # Try AI-generated first question, fallback to predefined
-        ai_question = None
+                # GET request - show interview UI with first question
+                # Try AI-generated first question, fallback to predefined
+                ai_question = None
         try:
             first_prompt = f"""
-You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
+            You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
 
-Resume highlights: {resume_text[:300]}
+            Resume highlights: {resume_text[:300]}
+            INSTRUCTIONS:
+            - Give a warm, professional greeting
+            - Ask them to tell you about themselves and what drew them to this role
+            - Keep it natural and conversational (2-3 sentences max)
+            - Sound like a real human interviewer, not a robot
+            - Be welcoming and put them at ease
 
-INSTRUCTIONS:
-- Give a warm, professional greeting
-- Ask them to tell you about themselves and what drew them to this role
-- Keep it natural and conversational (2-3 sentences max)
-- Sound like a real human interviewer, not a robot
-- Be welcoming and put them at ease
-
-Respond as Alex would naturally speak:
-"""
+            Respond as Alex would naturally speak:
+            """
             ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
             logger.info(f"Generated AI initial question for interview {interview_uuid}")
         except Exception as e:

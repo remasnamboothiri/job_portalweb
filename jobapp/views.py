@@ -1930,6 +1930,22 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_number': question_count
             })
             
+            
+            predefined_questions = {
+                    1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
+                    2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
+                    3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
+                    4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
+                    5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
+                    6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
+                    7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
+                    8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
+                }
+            
+            
+            
+            
+            
             # IMPROVED QUESTION GENERATION LOGIC
             ai_response = None
             
@@ -2026,16 +2042,7 @@ This is the second-to-last question. Ask if they have any questions about the ro
             
             # Fallback to predefined questions if AI fails or for final question
             if ai_response is None or question_count >= 8:
-                predefined_questions = {
-                    1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
-                    2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
-                    3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
-                    4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
-                    5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
-                    6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
-                    7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
-                    8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
-                }
+                
                 
                 if question_count <= 8:
                     ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")

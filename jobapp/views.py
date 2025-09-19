@@ -31,7 +31,7 @@ from .health import health_check, readiness_check
 
 
 # At the top of your views.py file, add:
-from .utils import generate_interview_results
+
 
 
 
@@ -3094,3 +3094,29 @@ def test_interview_results(request):
             'success': False,
             'error': str(e)
         })
+        
+        
+        
+     
+     
+     
+# Add this function in your views.py file:
+def generate_interview_results(interview, conversation_history):
+    """Generate and save interview results"""
+    try:
+        logger.info(f"Interview completed for {interview.uuid} with {len(conversation_history)} exchanges")
+        
+        # Count responses
+        candidate_responses = [entry for entry in conversation_history if entry['speaker'] == 'candidate']
+        
+        # Update interview status
+        interview.status = 'completed'
+        interview.completed_at = timezone.now()
+        interview.save()
+        
+        logger.info(f"Interview results saved for interview {interview.uuid}")
+        return True
+    except Exception as e:
+        logger.error(f"Error generating interview results: {e}")
+        return False        
+        

@@ -146,10 +146,10 @@
         </div>
         
         <!-- Professional Interview Status Indicator -->
-        <div class="interview-status recording" id="interviewStatus">
+        {% comment %} <div class="interview-status recording" id="interviewStatus">
             <div class="status-dot"></div>
             
-        </div>
+        </div> {% endcomment %}
         
         <!-- Audio Level Indicator -->
         <div class="audio-level-indicator" id="audioLevelIndicator">
@@ -170,12 +170,12 @@
                 <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
             </div>
         </div>
-        
+
         <div class="transcript-section">
             <div class="conversation-text" id="conversationArea">
             </div>
         </div>
-        
+
         <div class="controls">
             <button class="btn recording" id="micBtn" onclick="toggleMic()" title="Microphone is ON (Professional Interview Mode)">🔴 </button>
             <button class="btn" id="cameraBtn" onclick="toggleCamera()">📹 </button>
@@ -189,7 +189,8 @@
     <!-- Professional Interview Audio System -->
     <!-- Load TypewriterSync for better synchronization -->
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
-    <script src="{% static 'js/professional-interview-audio.js' %}"></script>
+    <!-- Commented out professional audio JS to avoid conflicts with inline speech recognition -->
+    <!-- <script src="{% static 'js/professional-interview-audio.js' %}"></script> -->
 
 
     <!-- Pass Django variables to JavaScript -->

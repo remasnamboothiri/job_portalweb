@@ -467,50 +467,86 @@
                             interimTranscript += event.results[i][0].transcript;
                         }
                     }
-                    
-                    // Filter out AI voice patterns
-                    const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
-                    const textLower = (finalTranscript + interimTranscript).toLowerCase();
-                    
-                    if (aiPhrases.some(phrase => textLower.includes(phrase))) {
-                        console.log('AI echo detected, ignoring');
-                        return;
+                    // Show what user is saying in real-time
+                    const displayText = collectedText + finalTranscript + interimTranscript;\
+                    if (displayText.trim()) {
+                        document.getElementById('conversationArea').innerHTML = displayText;
+                        console.log('User speaking:', displayText); // Debug log
                     }
-                    
-                    // Collect all text
-                    if (finalTranscript) {
+    
+                    // Collect final speech and auto-submit after pause
+                    if (finalTranscript.trim()) {
                         collectedText += finalTranscript;
                         lastSpeechTime = Date.now();
-                        
+                        console.log('Final speech collected:', collectedText); // Debug log
                         // Clear any existing timeout
                         if (speechTimeout) {
                             clearTimeout(speechTimeout);
                         }
-                        
-                        // Set timeout to auto-submit after 1 second of silence
+                        // Auto-submit after 1.5 seconds of silence
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse) {
+                                console.log('Auto-submitting response:', collectedText); // Debug log
                                 autoSubmitResponse();
                             }
-                        }, 1000);
-                    }
-                    
-                    // Show live text with interim results
-                    const displayText = collectedText + interimTranscript;
-                    if (displayText.trim()) {
-                        document.getElementById('conversationArea').innerHTML = displayText;
-                        
-                        // Update last speech time for interim results too
-                        if (interimTranscript.trim()) {
-                            lastSpeechTime = Date.now();
-                        }
+                        }, 1500);
                     }
                 };
+
+                    
+                // Filter out AI voice patterns
+                const aiPhrases = ['tell me about', 'can you describe', 'what are your', 'how do you', 'thank you for', 'that sounds great', 'excellent', 'interesting'];
+                const textLower = (finalTranscript + interimTranscript).toLowerCase();
+                if (aiPhrases.some(phrase => textLower.includes(phrase))) {
+                    console.log('AI echo detected, ignoring');
+                    return;
+                }
+                    
+                // Collect all text
+                if (finalTranscript) {
+                    collectedText += finalTranscript;
+                    lastSpeechTime = Date.now();
+                        
+                    // Clear any existing timeout
+                    if (speechTimeout) {
+                        learTimeout(speechTimeout);
+                    }
+                        
+                    // Set timeout to auto-submit after 1 second of silence
+                    speechTimeout = setTimeout(() => {
+                        if (collectedText.trim() && !isProcessingResponse) {
+                            autoSubmitResponse();
+                        }
+                    }, 1000);
+                }
+                    
+                // Show live text with interim results
+                const displayText = collectedText + interimTranscript;
+                if (displayText.trim()) {
+                    document.getElementById('conversationArea').innerHTML = displayText;
+                        
+                    // Update last speech time for interim results too
+                    if (interimTranscript.trim()) {
+                         lastSpeechTime = Date.now();
+                    }
+                }
+            };
                 
-                // Start microphone automatically
-                startMicrophone();
-            }
+            // Start microphone automatically
+            startMicrophone();
         }
+
+
+        // Debug function to manually test response sending
+        function testSendResponse() {
+            const testText = "This is a test response";
+            console.log('Testing response send with:', testText);
+            sendResponse(testText);
+        }
+
+        // Add this to test - you can call it from browser console
+        window.testSendResponse = testSendResponse;
+    
         
         // Auto-submit response when candidate stops speaking
         function autoSubmitResponse() {

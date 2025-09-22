@@ -29,7 +29,6 @@ from django.conf import settings
 import logging
 from .health import health_check, readiness_check
 
-from jobapp.tts import generate_tts_fallback
 
 
 # At the top of your views.py file, add:
@@ -2001,6 +2000,8 @@ def start_interview_by_uuid(request, interview_uuid):
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
+                
+                from jobapp.tts import generate_tts                 
                 audio_path = generate_tts(ai_response, model="female_interview")
                 
                 if audio_path:

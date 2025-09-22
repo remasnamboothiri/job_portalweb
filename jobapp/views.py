@@ -1872,8 +1872,8 @@ def start_interview_by_uuid(request, interview_uuid):
         
         # Initialize conversation history
         request.session['conversation_history'] = []
-        #method =POST
         
+        # HANDLE POST REQUEST
         if request.method == "POST":
             # Handle candidate response
             try:
@@ -1907,11 +1907,11 @@ def start_interview_by_uuid(request, interview_uuid):
     
             request.session['last_processed_input'] = user_text
     
-            # FIXED: Get and increment question count properly
+            # Get and increment question count properly
             context = request.session.get('interview_context', {})
             question_count = context.get('question_count', 0) + 1
     
-            # FIXED: Save incremented count immediately
+            # Save incremented count immediately
             context['question_count'] = question_count
             request.session['interview_context'] = context
     
@@ -1925,7 +1925,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_number': question_count
             })
     
-            # FIXED: Use ONLY predefined questions for reliability
+            # Use predefined questions for reliability
             predefined_questions = {
                 1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
                 2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
@@ -1967,12 +1967,13 @@ def start_interview_by_uuid(request, interview_uuid):
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
         
-            # Generate TTS audio
+            # Generate TTS audio - Use reliable gTTS directly
             audio_path = None
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
-                audio_path = generate_gtts_fallback(ai_response)  # Use reliable gTTS directly
+                audio_path = generate_gtts_fallback(ai_response)
+                
                 if audio_path:
                     from jobapp.tts import estimate_audio_duration, get_audio_duration
                     full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
@@ -1988,58 +1989,44 @@ def start_interview_by_uuid(request, interview_uuid):
                     from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
                     logger.info(f"No audio - using estimated duration: {audio_duration} seconds")
+                    
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
                 audio_path = None
-                from jobapp.tts import estimate_audio_duration
-                audio_duration = estimate_audio_duration(ai_response)
+                try:
+                    from jobapp.tts import estimate_audio_duration
+                    audio_duration = estimate_audio_duration(ai_response)
+                except:
+                    audio_duration = 30.0
     
-                # Return response data
-                response_data = {
-                    'response': ai_response,
-                    'audio': audio_path if audio_path else '',
-                    'audio_duration': audio_duration,
-                    'success': True,
-                    'question_count': question_count,
-                    'is_final': question_count >= 8
-                }
+            # Return response data
+            response_data = {
+                'response': ai_response,
+                'audio': audio_path if audio_path else '',
+                'audio_duration': audio_duration,
+                'success': True,
+                'question_count': question_count,
+                'is_final': question_count >= 8
+            }
     
-                logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
+            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
     
-                # Clear duplicate prevention
-                if 'last_processed_input' in request.session:
-                    del request.session['last_processed_input']
-                return JsonResponse(response_data)
+            # Clear duplicate prevention
+            if 'last_processed_input' in request.session:
+                del request.session['last_processed_input']
             
-            
-                response['Access-Control-Allow-Origin'] = '*'
-                response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-                response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
-                return response
-
-                # GET request - show interview UI with first question
-                # Try AI-generated first question, fallback to predefined
-                ai_question = None
-        try:
-            first_prompt = f"""
-            You are Alex, a friendly HR interviewer at {company_name}. You're starting an interview with {candidate_name} for the {job_title} position.
-
-            Resume highlights: {resume_text[:300]}
-            INSTRUCTIONS:
-            - Give a warm, professional greeting
-            - Ask them to tell you about themselves and what drew them to this role
-            - Keep it natural and conversational (2-3 sentences max)
-            - Sound like a real human interviewer, not a robot
-            - Be welcoming and put them at ease
-
-            Respond as Alex would naturally speak:
-            """
-            ai_question = ask_ai_question(first_prompt, candidate_name, job_title, company_name)
-            logger.info(f"Generated AI initial question for interview {interview_uuid}")
-        except Exception as e:
-            logger.warning(f"AI initial question generation failed for interview {interview_uuid}: {e}")
-            ai_question = f"Hi {candidate_name}! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this {job_title} position at {company_name}?"
-            logger.info(f"Using predefined initial question for interview {interview_uuid}")
+            # Create JSON response with CORS headers
+            response = JsonResponse(response_data)
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
+            return response
+        
+        # HANDLE GET REQUEST - Show interview UI with first question
+        # Use predefined first question for speed and reliability
+        ai_question = f"Hi {candidate_name}, great to meet you and thanks for joining me today! I'm excited to learn more about you. Could you start by telling me a bit about yourself and what interests you about this {job_title} position at {company_name}?"
+        
+        logger.info(f"Generated AI initial question for interview {interview_uuid}")
         
         # Add initial question to conversation history
         conversation_history = request.session.get('conversation_history', [])
@@ -2050,13 +2037,12 @@ def start_interview_by_uuid(request, interview_uuid):
         })
         request.session['conversation_history'] = conversation_history
         
-        # Generate initial TTS
+        # Generate initial TTS - Use gTTS for speed and reliability
         audio_path = None
         audio_duration = None
         try:
-            audio_path = generate_tts(ai_question, model="female_natural")
-            if not audio_path:
-                audio_path = generate_gtts_fallback(ai_question)
+            logger.info(f"Starting initial TTS generation for interview {interview_uuid}")
+            audio_path = generate_gtts_fallback(ai_question)
             
             if audio_path:
                 from jobapp.tts import estimate_audio_duration, get_audio_duration
@@ -2077,8 +2063,11 @@ def start_interview_by_uuid(request, interview_uuid):
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
             audio_path = None
-            from jobapp.tts import estimate_audio_duration
-            audio_duration = estimate_audio_duration(ai_question)
+            try:
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_question)
+            except:
+                audio_duration = 30.0
 
         # Template context
         context_data = {
@@ -2125,9 +2114,7 @@ def start_interview_by_uuid(request, interview_uuid):
             return HttpResponse(
                 'Interview system temporarily unavailable. Please try again in a few minutes.',
                 status=500
-            )  
-     
-
+            )
 
 
 

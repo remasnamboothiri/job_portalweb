@@ -1907,15 +1907,17 @@ def start_interview_by_uuid(request, interview_uuid):
     
             request.session['last_processed_input'] = user_text
     
-            # Get and increment question count properly
+            # FIXED: Get current question count and increment properly
             context = request.session.get('interview_context', {})
-            question_count = context.get('question_count', 0) + 1
+            current_count = context.get('question_count', 0)
+            question_count = current_count + 1
     
-            # Save incremented count immediately
+            # FIXED: Save incremented count back to session IMMEDIATELY
             context['question_count'] = question_count
             request.session['interview_context'] = context
+            request.session.modified = True  # Force session save
     
-            logger.info(f"FIXED: Question count incremented to {question_count} for interview {interview_uuid}")
+            logger.info(f"FIXED: Question count incremented from {current_count} to {question_count} for interview {interview_uuid}")
     
             # Build conversation history
             conversation_history = request.session.get('conversation_history', [])
@@ -1925,25 +1927,49 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_number': question_count
             })
     
-            # Use predefined questions for reliability
-            predefined_questions = {
-                1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
-                2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
-                3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
-                4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
-                5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
-                6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
-                7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
-                8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
-            }
-    
-            # Get AI response based on question count
-            if question_count <= 8:
-                ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
-                logger.info(f"Using predefined question {question_count}: {ai_response[:50]}...")
+            # SPECIAL HANDLING: Check for "can you hear me" type responses
+            user_text_lower = user_text.lower().strip()
+            audio_issue_phrases = [
+                'can you hear me', 'cant hear', "can't hear", 'cannot hear', 
+                'cant listen', "can't listen", 'no audio', 'no sound',
+                'hello can you hear', 'audio problem', 'sound problem'
+            ]
+            
+            is_audio_issue = any(phrase in user_text_lower for phrase in audio_issue_phrases)
+            
+            if is_audio_issue:
+                logger.info(f"Audio issue detected for interview {interview_uuid}: {user_text}")
+                
+                # Provide appropriate response based on question count
+                if question_count == 1:
+                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you the first question: Can you tell me about yourself and your experience with {job_title} technologies?"
+                elif question_count <= 4:
+                    ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine on my end. Let me continue with our interview questions."
+                else:
+                    ai_response = f"Yes, I can hear you well, {candidate_name}! Don't worry about the audio - our interview is going smoothly. Let me ask you another question."
+                
+                logger.info(f"Using audio issue response for question {question_count}")
+            
             else:
-                ai_response = f"Thank you for the interview, {candidate_name}! We'll be in touch soon."
-                logger.info(f"Interview complete for {interview_uuid}")
+                # NORMAL INTERVIEW FLOW: Use predefined questions
+                predefined_questions = {
+                    1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
+                    2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
+                    3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
+                    4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
+                    5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
+                    6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
+                    7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
+                    8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
+                }
+        
+                # Get AI response based on question count
+                if question_count <= 8:
+                    ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
+                    logger.info(f"Using predefined question {question_count}: {ai_response[:50]}...")
+                else:
+                    ai_response = f"Thank you for the interview, {candidate_name}! We'll be in touch soon."
+                    logger.info(f"Interview complete for {interview_uuid}")
     
             # Add AI response to history
             conversation_history.append({
@@ -1957,6 +1983,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 conversation_history = conversation_history[-16:]
     
             request.session['conversation_history'] = conversation_history
+            request.session.modified = True  # Force session save
     
             # Generate final results if interview is complete
             if question_count >= 8:
@@ -2006,7 +2033,8 @@ def start_interview_by_uuid(request, interview_uuid):
                 'audio_duration': audio_duration,
                 'success': True,
                 'question_count': question_count,
-                'is_final': question_count >= 8
+                'is_final': question_count >= 8,
+                'audio_issue_handled': is_audio_issue  # Flag to let frontend know
             }
     
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")

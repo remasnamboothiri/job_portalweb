@@ -1,29 +1,32 @@
 /**
- * Typewriter Synchronization System - INSTANT START VERSION
- * Starts typing immediately while audio loads for natural interview experience
+ * Typewriter System - TEXT ONLY VERSION (No Audio)
+ * Prevents feedback loop by removing audio entirely during typing
  */
 
 (function() {
     'use strict';
     
-    console.log('⚡ Typewriter Sync System Loading - ULTRA FAST VERSION...');
+    console.log('📝 Typewriter System Loading - TEXT ONLY VERSION...');
     
-    // Configuration - ULTRA FAST
+    // Configuration
     const CONFIG = {
-        ultraFastSpeed: 25,         // milliseconds per character - ultra fast
-        minDuration: 500,           // minimum duration in milliseconds
-        maxDuration: 5000,          // maximum duration in milliseconds
+        standardSpeed: 50,          // milliseconds per character for standard typing
+        fastSpeed: 30,              // milliseconds per character for fast typing
+        minDuration: 1000,          // minimum duration in milliseconds
+        maxDuration: 8000,          // maximum duration in milliseconds
     };
     
     /**
-     * ULTRA FAST TYPEWRITER - No sync, just speed
+     * Text-only typewriter - no audio synchronization
      */
-    function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
+    function createTextOnlyTypewriter(element, text, options = {}) {
         return new Promise((resolve) => {
             element.textContent = '';
             let index = 0;
             
-            console.log(`⚡ ULTRA FAST: Starting typewriter: ${text.length} chars`);
+            console.log(`📝 TEXT ONLY: Starting typewriter: ${text.length} chars`);
+            
+            const speed = options.fast ? CONFIG.fastSpeed : CONFIG.standardSpeed;
             
             const typeInterval = setInterval(() => {
                 if (index < text.length) {
@@ -31,22 +34,28 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST: Typewriter completed');
+                    console.log('📝 TEXT ONLY: Typewriter completed');
                     resolve();
                 }
-            }, 25); // 25ms per character = ultra fast
+            }, speed);
         });
     }
     
     /**
-     * Ultra fast natural typewriter
+     * Smart duration typewriter - adjusts speed based on content length
      */
-    function createNaturalTypewriter(element, text, duration = null, options = {}) {
+    function createSmartTypewriter(element, text, targetDuration = null, options = {}) {
         return new Promise((resolve) => {
             element.textContent = '';
             let index = 0;
             
-            console.log(`⚡ ULTRA FAST Natural: ${text.length} chars`);
+            if (!targetDuration || targetDuration <= 0) {
+                targetDuration = Math.min(text.length * 60, CONFIG.maxDuration);
+            }
+            
+            const charDelay = Math.max(CONFIG.fastSpeed, Math.min(CONFIG.standardSpeed, targetDuration / text.length));
+            
+            console.log(`📝 SMART: ${text.length} chars, ${targetDuration}ms duration, ${charDelay}ms per char`);
             
             const typeInterval = setInterval(() => {
                 if (index < text.length) {
@@ -54,57 +63,59 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST Natural completed');
+                    console.log('📝 SMART: Typewriter completed');
                     resolve();
                 }
-            }, 25); // 25ms per character = ultra fast
+            }, charDelay);
         });
     }
     
     /**
-     * Ultra fast typewriter - always 25ms per character
+     * Main typewriter function - always text-only now
      */
     function startTypewriter(element, text, audioElement = null, duration = null, options = {}) {
         if (!element || !text) {
-            console.error('⚡ ULTRA FAST: Invalid element or text');
+            console.error('📝 TEXT ONLY: Invalid element or text');
             return Promise.resolve();
         }
         
         element.textContent = '';
-        console.log('⚡ ULTRA FAST: Starting ultra fast typewriter');
-        return createNaturalTypewriter(element, text, null, options);
+        console.log('📝 TEXT ONLY: Starting text-only typewriter (no audio)');
+        
+        // Ignore audio parameters completely
+        return createSmartTypewriter(element, text, duration, options);
     }
     
     /**
-     * Estimate natural speaking duration
+     * Estimate natural reading duration
      */
-    function estimateSpeechDuration(text, wordsPerMinute = 140) {
+    function estimateReadingDuration(text, wordsPerMinute = 150) {
         if (!text || !text.trim()) {
             return 2.0;
         }
         
         const wordCount = text.split(/\s+/).length;
         const baseDuration = (wordCount / wordsPerMinute) * 60;
-        const withPauses = baseDuration * 1.15; // Add 15% for natural pauses
+        const withPauses = baseDuration * 1.2; // Add 20% for reading pauses
         
-        return Math.max(2.0, Math.min(withPauses, 30.0));
+        return Math.max(2.0, Math.min(withPauses, 20.0));
     }
     
     // Export to global scope
     window.TypewriterSync = {
         start: startTypewriter,
-        createSynchronized: createSynchronizedTypewriter,
-        createNatural: createNaturalTypewriter,
-        estimateDuration: estimateSpeechDuration,
+        createTextOnly: createTextOnlyTypewriter,
+        createSmart: createSmartTypewriter,
+        estimateDuration: estimateReadingDuration,
         config: CONFIG
     };
     
-    console.log('✅ Typewriter Sync System Loaded - ULTRA FAST VERSION');
+    console.log('✅ Typewriter System Loaded - TEXT ONLY VERSION');
     console.log('📋 Available methods:');
-    console.log('  - window.TypewriterSync.start(element, text, audioElement, duration)');
-    console.log('  - window.TypewriterSync.createSynchronized(element, text, audioElement)');
-    console.log('  - window.TypewriterSync.createNatural(element, text, duration)');
+    console.log('  - window.TypewriterSync.start(element, text) - NO AUDIO');
+    console.log('  - window.TypewriterSync.createTextOnly(element, text)');
+    console.log('  - window.TypewriterSync.createSmart(element, text, duration)');
     console.log('  - window.TypewriterSync.estimateDuration(text)');
-    console.log('⚡ Ultra fast 25ms per character - no delays, no waiting');
+    console.log('📝 Text-only mode - prevents audio feedback loop');
     
 })();

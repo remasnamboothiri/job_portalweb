@@ -320,3 +320,16 @@ ELEVENLABS_API_KEY = config('ELEVENLABS_API_KEY', default='')
 # COMMENTED OUT - RunPod TTS Configuration (replaced with ElevenLabs)
 # RUNPOD_API_KEY = config('RUNPOD_API_KEY', default='')
 # JWT_SECRET = config('JWT_SECRET', default='')
+
+
+
+
+# Session Configuration for Interview Persistence - Add at bottom
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_AGE = 7200  # 2 hours
+
+# File upload settings - Increase for better performance
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB

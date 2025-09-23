@@ -1918,7 +1918,7 @@ def start_interview_by_uuid(request, interview_uuid):
             request.session['last_processed_input'] = user_text
     
             # FIXED: Get current question count and increment properly
-            context = request.session.get('interview_context', {})
+            context = request.session.get(session_key, {})
             current_count = context.get('question_count', 0)
             question_count = current_count + 1
     

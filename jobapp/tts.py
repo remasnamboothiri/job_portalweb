@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # ElevenLabs TTS Configuration - YOUR SPECIFIC SETTINGS
-ELEVENLABS_API_KEY = settings.ELEVENLABS_API_KEY # load from django settings
+ELEVENLABS_API_KEY = settings.ELEVENLABS_API_KEY.strip() if settings.ELEVENLABS_API_KEY else None
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
 
 # YOUR SPECIFIC FEMALE VOICE CONFIGURATION

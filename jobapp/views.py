@@ -1859,12 +1859,11 @@ def start_interview_by_uuid(request, interview_uuid):
                 status=400
             )
         
-        
-        # FIXED: Use unique session key per interview
+        # Use unique session key per interview
         session_key = f'interview_context_{interview_uuid}'
         
-        
         if session_key not in request.session:
+            logger.info(f"Created new session context for interview {interview_uuid}")
             request.session[session_key] = {
                 'candidate_name': candidate_name,
                 'job_title': job_title,
@@ -1878,14 +1877,10 @@ def start_interview_by_uuid(request, interview_uuid):
                 'started_at': timezone.now().isoformat()
             }
         
-        # Initialize conversation history
-        #request.session['conversation_history'] = []
         request.session.modified = True
-        logger.info(f"Created new session context for interview {interview_uuid}")
         
         # HANDLE POST REQUEST
         if request.method == "POST":
-            # Handle candidate response
             try:
                 if request.content_type == 'application/json':
                     data = json.loads(request.body)
@@ -1917,17 +1912,17 @@ def start_interview_by_uuid(request, interview_uuid):
     
             request.session['last_processed_input'] = user_text
     
-            # FIXED: Get current question count and increment properly
+            # Get current question count and increment properly
             context = request.session.get(session_key, {})
             current_count = context.get('question_count', 0)
             question_count = current_count + 1
     
-            # FIXED: Save incremented count back to session IMMEDIATELY
+            # Save incremented count back to session IMMEDIATELY
             context['question_count'] = question_count
-            request.session['interview_context'] = context
-            request.session.modified = True  # Force session save
+            request.session[session_key] = context
+            request.session.modified = True
     
-            logger.info(f"FIXED: Question count incremented from {current_count} to {question_count} for interview {interview_uuid}")
+            logger.info(f"Question count incremented from {current_count} to {question_count} for interview {interview_uuid}")
     
             # Build conversation history
             conversation_history = context.get('conversation_history', [])
@@ -1937,7 +1932,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_number': question_count
             })
     
-            # SPECIAL HANDLING: Check for "can you hear me" type responses
+            # Check for audio issues in candidate response
             user_text_lower = user_text.lower().strip()
             audio_issue_phrases = [
                 'can you hear me', 'cant hear', "can't hear", 'cannot hear', 
@@ -1950,7 +1945,6 @@ def start_interview_by_uuid(request, interview_uuid):
             if is_audio_issue:
                 logger.info(f"Audio issue detected for interview {interview_uuid}: {user_text}")
                 
-                # Provide appropriate response based on question count
                 if question_count == 1:
                     ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you the first question: Can you tell me about yourself and your experience with {job_title} technologies?"
                 elif question_count <= 4:
@@ -1961,7 +1955,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 logger.info(f"Using audio issue response for question {question_count}")
             
             else:
-                # NORMAL INTERVIEW FLOW: Use predefined questions
+                # Use predefined questions for reliability
                 predefined_questions = {
                     1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
                     2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
@@ -1973,7 +1967,6 @@ def start_interview_by_uuid(request, interview_uuid):
                     8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
                 }
         
-                # Get AI response based on question count
                 if question_count <= 8:
                     ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
                     logger.info(f"Using predefined question {question_count}: {ai_response[:50]}...")
@@ -1992,11 +1985,9 @@ def start_interview_by_uuid(request, interview_uuid):
             if len(conversation_history) > 16:
                 conversation_history = conversation_history[-16:]
                 
-                
-                
             context['conversation_history'] = conversation_history
             request.session[session_key] = context
-            request.session.modified = True  # Force session save
+            request.session.modified = True
     
             # Generate final results if interview is complete
             if question_count >= 8:
@@ -2007,11 +1998,12 @@ def start_interview_by_uuid(request, interview_uuid):
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
         
-            # Generate TTS audio - Use reliable gTTS directly
+            # Generate TTS audio
             audio_path = None
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
+                logger.info(f"Using gTTS fallback due to ElevenLabs issues")
                 
                 from jobapp.tts import generate_tts                 
                 audio_path = generate_tts(ai_response, model="female_interview")
@@ -2023,7 +2015,7 @@ def start_interview_by_uuid(request, interview_uuid):
             
                     if actual_duration and actual_duration > 0:
                         audio_duration = actual_duration
-                        logger.info(f"Using actual audio duration: {audio_duration} seconds")
+                        logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
                     else:
                         audio_duration = estimate_audio_duration(ai_response)
                         logger.info(f"Using estimated audio duration: {audio_duration} seconds")
@@ -2049,7 +2041,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'success': True,
                 'question_count': question_count,
                 'is_final': question_count >= 8,
-                'audio_issue_handled': is_audio_issue  # Flag to let frontend know
+                'audio_issue_handled': is_audio_issue
             }
     
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
@@ -2058,7 +2050,6 @@ def start_interview_by_uuid(request, interview_uuid):
             if 'last_processed_input' in request.session:
                 del request.session['last_processed_input']
             
-            # Create JSON response with CORS headers
             response = JsonResponse(response_data)
             response['Access-Control-Allow-Origin'] = '*'
             response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
@@ -2066,30 +2057,30 @@ def start_interview_by_uuid(request, interview_uuid):
             return response
         
         # HANDLE GET REQUEST - Show interview UI with first question
-        # Use predefined first question for speed and reliability
         ai_question = f"Hi {candidate_name}, great to meet you and thanks for joining me today! I'm excited to learn more about you. Could you start by telling me a bit about yourself and what interests you about this {job_title} position at {company_name}?"
         
         logger.info(f"Generated AI initial question for interview {interview_uuid}")
         
-        # # FIXED: Add initial question to context conversation history
+        # Add initial question to context conversation history
         context = request.session.get(session_key, {})
-        conversation_history = request.session.get('conversation_history', [])
+        conversation_history = context.get('conversation_history', [])
         conversation_history.append({
             'speaker': 'interviewer',
             'message': ai_question,
             'question_number': 0
         })
-        # Save updated conversation history
+        
         context['conversation_history'] = conversation_history
         request.session[session_key] = context
         request.session.modified = True
         
-        # Generate initial TTS - Use gTTS for speed and reliability
+        # Generate initial TTS
         audio_path = None
         audio_duration = None
         try:
             logger.info(f"Starting initial TTS generation for interview {interview_uuid}")
-            # FIXED: Use ElevenLabs for initial question too
+            logger.info(f"Using gTTS fallback due to ElevenLabs issues")
+            
             from jobapp.tts import generate_tts
             audio_path = generate_tts(ai_question, model="female_interview")
             

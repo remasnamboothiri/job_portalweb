@@ -77,6 +77,11 @@ urlpatterns = [
     path('generate-audio/', views.generate_audio, name='generate_audio'),
     path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
     
+    #monika sound 
+    # Add these to your urlpatterns in urls.py
+    path('test-monika-voice/', views.test_monika_voice, name='test_monika_voice'),
+    path('test-voice-direct/', views.test_voice_direct, name='test_voice_direct'),
+    
     # Add candidate from dashboard
     path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
     

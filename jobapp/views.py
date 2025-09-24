@@ -1311,6 +1311,143 @@ def start_interview_by_uuid(request, interview_uuid):
                 'Interview system temporarily unavailable. Please try again in a few minutes.',
                 status=500
             )
+            
+            
+            
+            
+# Add these functions to your views.py file
+
+def test_monika_voice(request):
+    """
+    Test Monika Sogam voice specifically - Add this to views.py
+    """
+    try:
+        from jobapp.tts import (
+            check_elevenlabs_status, 
+            generate_elevenlabs_tts, 
+            check_tts_system, 
+            ELEVENLABS_API_KEY,
+            MONIKA_VOICE_ID
+        )
+        
+        # Run comprehensive checks
+        api_status, api_message = check_elevenlabs_status()
+        health_info = check_tts_system()
+        
+        result = {
+            'timestamp': timezone.now().isoformat(),
+            'monika_voice_id': MONIKA_VOICE_ID,
+            'monika_voice_name': 'Monika Sogam - Natural Conversations',
+            'api_key_configured': bool(ELEVENLABS_API_KEY),
+            'api_key_length': len(ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else 0,
+            'api_status': api_status,
+            'api_message': api_message,
+            'health_info': health_info
+        }
+        
+        # Show API key preview (safely)
+        if ELEVENLABS_API_KEY and len(ELEVENLABS_API_KEY) > 20:
+            result['api_key_preview'] = ELEVENLABS_API_KEY[:15] + '...' + ELEVENLABS_API_KEY[-5:]
+        else:
+            result['api_key_preview'] = 'Not configured properly'
+        
+        # Test Monika voice specifically if API is working
+        if api_status:
+            logger.info("Testing Monika Sogam voice generation...")
+            test_text = "Hello! I am Monika Sogam. This is a test of my natural conversation voice for the AI interview system."
+            
+            test_audio = generate_elevenlabs_tts(test_text, "female_interview")
+            
+            result['monika_test_generation'] = bool(test_audio)
+            result['monika_test_audio_path'] = test_audio if test_audio else None
+            
+            if test_audio:
+                result['test_status'] = 'SUCCESS - Monika Sogam voice is working perfectly!'
+                result['test_details'] = f'Audio generated: {test_audio}'
+            else:
+                result['test_status'] = 'FAILED - Monika voice generation failed'
+                result['test_details'] = 'Check logs for specific error messages'
+        else:
+            result['monika_test_generation'] = False
+            result['test_status'] = f'CANNOT TEST - API not available: {api_message}'
+        
+        # Provide specific recommendations
+        if not api_status:
+            if 'unusual activity' in api_message.lower():
+                result['recommendation'] = 'ACCOUNT FLAGGED: Your ElevenLabs account has been flagged for unusual activity. You MUST upgrade to a paid plan to continue using ElevenLabs.'
+                result['solution'] = 'Visit https://elevenlabs.io/pricing and subscribe to any paid plan ($5/month minimum)'
+                result['alternative'] = 'The interview system will use Google TTS (gTTS) as fallback'
+            elif 'invalid' in api_message.lower():
+                result['recommendation'] = 'API KEY INVALID: Your ElevenLabs API key is not valid'
+                result['solution'] = 'Get your correct API key from https://elevenlabs.io/app/speech-synthesis'
+            else:
+                result['recommendation'] = f'API ERROR: {api_message}'
+        elif api_status and not result.get('monika_test_generation'):
+            result['recommendation'] = 'API is working but Monika voice generation failed. This could be a voice ID issue or account permissions.'
+            result['solution'] = 'Check if you have access to the Monika Sogam voice in your ElevenLabs account'
+        elif result.get('monika_test_generation'):
+            result['recommendation'] = 'PERFECT! Monika Sogam voice is working correctly!'
+        
+        logger.info(f"Monika voice test results: {result}")
+        return JsonResponse(result, indent=2)
+        
+    except ImportError as e:
+        return JsonResponse({
+            'error': f'Import error: {str(e)}',
+            'recommendation': 'Make sure your updated tts.py file is in place'
+        })
+    except Exception as e:
+        logger.error(f"Monika voice test failed: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': traceback.format_exc() if settings.DEBUG else 'Enable DEBUG for traceback',
+            'recommendation': 'Check the server logs for detailed error information'
+        })
+
+def test_voice_direct(request):
+    """
+    Direct voice test - generates audio file you can download
+    """
+    try:
+        from jobapp.tts import generate_elevenlabs_tts
+        
+        # Test text for Monika voice
+        test_text = request.GET.get('text', 'Hello! This is Monika Sogam speaking. I will be your AI interviewer today. Can you hear me clearly?')
+        
+        logger.info(f"Direct voice test with text: {test_text}")
+        
+        # Generate audio with Monika voice
+        audio_path = generate_elevenlabs_tts(test_text, "female_interview")
+        
+        if audio_path:
+            return JsonResponse({
+                'success': True,
+                'message': 'Monika voice generated successfully!',
+                'audio_url': audio_path,
+                'text_used': test_text,
+                'voice': 'Monika Sogam (EaBs7G1VibMrNAuz2Na7)',
+                'instructions': f'You can listen to the audio at: {request.build_absolute_uri(audio_path)}'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Failed to generate Monika voice',
+                'text_used': test_text,
+                'recommendation': 'Check your ElevenLabs account status and API key'
+            })
+            
+    except Exception as e:
+        logger.error(f"Direct voice test failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'message': 'Direct voice test failed'
+        })
+
+            
 
 
 

@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Interview</title>
+    <title>AI Interview - {{ candidate_name }}</title>
     <link rel="stylesheet" href="{% static 'css/professional-interview.css' %}">
     <style>
         body {
             background: #202124;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
             height: 100vh;
@@ -37,12 +37,19 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            border: 2px solid #444;
         }
         .candidate-box {
             height: 400px;
         }
         .ai-avatar {
             font-size: 80px;
+            animation: pulse 2s ease-in-out infinite alternate;
+        }
+        .ai-speaking {
+            animation: pulse 1s ease-in-out infinite alternate;
+            border-color: #ff9800 !important;
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
         }
         video {
             width: 100%;
@@ -59,6 +66,7 @@
             border-radius: 20px;
             font-size: 16px;
             font-weight: bold;
+            backdrop-filter: blur(10px);
         }
         .controls {
             position: fixed;
@@ -67,23 +75,31 @@
             transform: translateX(-50%);
             text-align: center;
             z-index: 1000;
+            display: flex;
+            gap: 15px;
         }
         .btn {
             background: #34a853;
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 16px;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-size: 24px;
             cursor: pointer;
-            margin: 0 10px;
+            transition: all 0.3s ease;
+            min-width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn:hover {
-            opacity: 0.8;
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         .btn.recording {
             background: #ea4335;
-            animation: pulse 1s infinite;
+            animation: recording-pulse 1s infinite;
         }
         .btn.camera-off {
             background: #ea4335;
@@ -92,10 +108,15 @@
             background: #666;
             cursor: not-allowed;
             opacity: 0.5;
+            pointer-events: none;
+        }
+        .btn.disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
         .transcript-section {
             background: #303134;
-            padding: 20px;
+            padding: 25px;
             border-radius: 12px;
             margin: 20px 0;
             flex: 1;
@@ -103,6 +124,8 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            border: 2px solid #444;
+            min-height: 200px;
         }
         .conversation-text {
             background: transparent;
@@ -113,29 +136,22 @@
             line-height: 1.6;
             text-align: center;
             width: 100%;
-        }
-        .transcript-item {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 8px;
-        }
-        .interviewer-msg {
-            background: #1a73e8;
-            text-align: left;
-        }
-        .candidate-msg {
-            background: #34a853;
-            text-align: right;
+            max-height: 200px;
+            overflow-y: auto;
         }
         .stats {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+            padding: 0 10px;
         }
         .stat {
             background: #303134;
-            padding: 10px 20px;
-            border-radius: 20px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 500;
+            border: 2px solid #444;
         }
         .audio-status {
             position: fixed;
@@ -144,36 +160,157 @@
             transform: translateX(-50%);
             background: #1a73e8;
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
             z-index: 1000;
             display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
         }
         .audio-status.playing {
             display: block;
             background: #ff9800;
+            animation: status-pulse 2s ease-in-out infinite;
         }
         .audio-status.listening {
             display: block;
             background: #4caf50;
+            animation: status-pulse 2s ease-in-out infinite;
         }
+        .audio-level-indicator {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 4px;
+            z-index: 999;
+        }
+        .audio-level-bar {
+            width: 4px;
+            height: 20px;
+            background: #4caf50;
+            border-radius: 2px;
+            animation: audio-bar 0.5s ease-in-out infinite alternate;
+        }
+        .audio-level-bar:nth-child(2) { animation-delay: 0.1s; }
+        .audio-level-bar:nth-child(3) { animation-delay: 0.2s; }
+        .audio-level-bar:nth-child(4) { animation-delay: 0.3s; }
+        .audio-level-bar:nth-child(5) { animation-delay: 0.4s; }
+        
+        /* Animations */
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        @keyframes recording-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 67, 53, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(234, 67, 53, 0); }
+        }
+        @keyframes status-pulse {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; }
+        }
+        @keyframes audio-bar {
+            0% { height: 20px; }
+            100% { height: 40px; }
+        }
+        
+        /* Interview completion modal */
+        .interview-complete-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: #303134;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            border: 2px solid #4caf50;
+            animation: modal-appear 0.5s ease-out;
+        }
+        .modal-content h2 {
+            color: #4caf50;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .modal-content p {
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .modal-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .modal-btn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+        @keyframes modal-appear {
+            0% { opacity: 0; transform: scale(0.7); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Connection status */
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .connection-status.connected {
+            background: #4caf50;
+            color: white;
+        }
+        .connection-status.disconnected {
+            background: #f44336;
+            color: white;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        {% comment %} <!-- Audio status indicator -->
-        <div class="audio-status" id="audioStatus">
+        <!-- Audio status indicator -->
+        {% comment %} <div class="audio-status" id="audioStatus">
             Interviewer speaking - Please listen
+        </div> {% endcomment %}
+        
+        <!-- Connection status -->
+        {% comment %} <div class="connection-status connected" id="connectionStatus">
+            Connected
         </div> {% endcomment %}
         
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
             <div class="stat">Time: <span id="timer">15:00</span></div>
+            {% comment %} <div class="stat">Status: <span id="interviewStatus">In Progress</span></div> {% endcomment %}
         </div>
         
         <!-- Audio Level Indicator -->
@@ -186,26 +323,36 @@
         </div>
         
         <div class="video-grid">
-            <div class="video-box">
-                <div class="ai-avatar">🤖</div>
+            <div class="video-box" id="aiVideoBox">
+                <div class="ai-avatar" id="aiAvatar">🤖</div>
                 <div class="participant-name">Alex - AI Interviewer</div>
             </div>
-            <div class="video-box candidate-box recording">
+            <div class="video-box candidate-box" id="candidateVideoBox">
                 <video id="userVideo" autoplay muted playsinline></video>
                 <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
             </div>
         </div>
 
-        <div class="transcript-section">
+        <div class="transcript-section" id="transcriptSection">
             <div class="conversation-text" id="conversationArea">
                 
             </div>
         </div>
 
         <div class="controls">
-            <button class="btn recording" id="micBtn" onclick="toggleMic()" title="Microphone is ON">🔴 </button>
-            <button class="btn" id="cameraBtn" onclick="toggleCamera()">📹 </button>
-            <button class="btn" id="endBtn" onclick="endInterview()" style="background: #ea4335;">📞 </button>
+            <button class="btn recording" id="micBtn" onclick="toggleMic()" title="Microphone is ON">🎤</button>
+            <button class="btn" id="cameraBtn" onclick="toggleCamera()" title="Camera is ON">📹</button>
+            <button class="btn" id="endBtn" onclick="endInterview()" title="End Interview" style="background: #ea4335;">📞</button>
+        </div>
+    </div>
+
+    <!-- Interview completion modal -->
+    <div class="interview-complete-modal" id="interviewCompleteModal">
+        <div class="modal-content">
+            <h2>🎉 Interview Complete!</h2>
+            <p>Thank you for participating in the AI interview. Your responses have been recorded and will be reviewed by our team.</p>
+            <p><strong>Next Steps:</strong> You will receive feedback within 2-3 business days via email.</p>
+            <button class="modal-btn" onclick="goToDashboard()">Return to Dashboard</button>
         </div>
     </div>
 
@@ -216,24 +363,39 @@
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
 
     <script>
+    // Global variables
     let recognition = null;
     let isListening = false;
     let questionCount = 1;
-    let timeLeft = 15 * 60;
+    let timeLeft = 15 * 60; // 15 minutes
     let userStream = null;
     let isCameraOn = true;
     let collectedText = '';
     let speechTimeout = null;
     let lastSpeechTime = 0;
     let isProcessingResponse = false;
-    let isInterviewerSpeaking = false;  // NEW: Track when interviewer is speaking
+    let isInterviewerSpeaking = false;
+    let interviewCompleted = false;
+    let audioEndedTimeout = null;
+    let currentAudioElement = null;
+    
+    // Interview configuration
+    const MAX_QUESTIONS = 8;
+    const SPEECH_TIMEOUT_MS = 2500; // 2.5 seconds pause before auto-submit
+    const AUDIO_TIMEOUT_MS = 30000; // 30 second max wait for audio
+    
+    console.log('🚀 AI Interview System Starting...');
     
     // Initialize camera and microphone
     async function initCamera() {
         try {
-            console.log('🎙️ Requesting microphone and camera permissions...');
+            console.log('🎙️ Requesting camera and microphone permissions...');
             userStream = await navigator.mediaDevices.getUserMedia({ 
-                video: true, 
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                }, 
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
@@ -246,18 +408,44 @@
             videoElement.srcObject = userStream;
             console.log('✅ Camera and microphone access granted');
             
+            // Update connection status
+            updateConnectionStatus(true);
+            
         } catch (error) {
             console.error('❌ Camera/Microphone error:', error);
-            let message = '';
+            updateConnectionStatus(false);
+            
+            let message = 'Camera/Microphone Error: ';
             if (error.name === 'NotAllowedError') {
-                message = 'Please allow microphone and camera access in your browser, then refresh this page.';
+                message += 'Please allow camera and microphone access, then refresh this page.';
             } else if (error.name === 'NotFoundError') {
-                message = 'No microphone found. Please connect a microphone and refresh this page.';
+                message += 'No camera or microphone found. Please connect devices and refresh.';
             } else {
-                message = 'Cannot access microphone. Please check your browser permissions and refresh this page.';
+                message += 'Cannot access camera/microphone. Please check permissions and refresh.';
             }
-            alert('Microphone Error: ' + message);
+            
+            showError(message);
         }
+    }
+    
+    // Update connection status indicator
+    function updateConnectionStatus(connected) {
+        const statusEl = document.getElementById('connectionStatus');
+        if (connected) {
+            statusEl.textContent = 'Connected';
+            statusEl.className = 'connection-status connected';
+        } else {
+            statusEl.textContent = 'Connection Issues';
+            statusEl.className = 'connection-status disconnected';
+        }
+    }
+    
+    // Show error message
+    function showError(message) {
+        document.getElementById('conversationArea').innerHTML = 
+            `<div style="color: #f44336; background: rgba(244, 67, 54, 0.1); padding: 20px; border-radius: 10px; border: 1px solid #f44336;">
+                <strong>⚠️ Error:</strong> ${message}
+            </div>`;
     }
     
     // Toggle camera
@@ -272,171 +460,226 @@
         });
         
         const btn = document.getElementById('cameraBtn');
+        const candidateBox = document.getElementById('candidateVideoBox');
+        
         if (isCameraOn) {
             btn.innerHTML = '📹';
             btn.classList.remove('camera-off');
+            btn.title = 'Camera is ON';
+            candidateBox.style.background = '#303134';
         } else {
             btn.innerHTML = '📹';
             btn.classList.add('camera-off');
+            btn.title = 'Camera is OFF';
+            candidateBox.style.background = '#1a1a1a';
         }
+        
+        console.log(`📹 Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
     }
     
-    // FIXED: Show current question with controlled audio playback
+    // FIXED: Enhanced audio playback control with better feedback prevention
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const element = document.getElementById('conversationArea');
         const audioStatus = document.getElementById('audioStatus');
         const micBtn = document.getElementById('micBtn');
+        const aiVideoBox = document.getElementById('aiVideoBox');
         
+        // Clear previous content and reset state
         element.innerHTML = '';
         isProcessingResponse = true;
         
-        console.log('📝 Showing AI question with controlled audio:', question.substring(0, 50) + '...');
+        // Clear any existing audio timeout
+        if (audioEndedTimeout) {
+            clearTimeout(audioEndedTimeout);
+            audioEndedTimeout = null;
+        }
+        
+        console.log('📝 Showing AI question:', question.substring(0, 50) + '...');
         
         if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
             console.log('🔊 Starting controlled audio playback');
             
-            // CRITICAL: Disable microphone during audio playback
+            // CRITICAL: Disable microphone and show visual feedback
             isInterviewerSpeaking = true;
             micBtn.classList.add('disabled');
-            micBtn.title = 'Listening to interviewer - microphone temporarily disabled';
+            micBtn.title = 'Interviewer is speaking - Please listen';
             
+            // Visual feedback
+            aiVideoBox.classList.add('ai-speaking');
             audioStatus.className = 'audio-status playing';
-            audioStatus.textContent = 'Interviewer speaking - Please listen';
+            audioStatus.textContent = '🔊 Interviewer speaking - Please listen carefully';
             
+            // Setup audio element
             const audio = document.getElementById('aiAudio');
+            currentAudioElement = audio;
             audio.src = audioUrl;
-            audio.volume = 0.8;
+            audio.volume = 0.7; // Slightly reduced volume
             
-            // Start typewriter synchronized with audio
+            // Calculate timing for synchronized typewriter
             const totalChars = question.length;
-            const audioDurationMs = (audioDuration || 5) * 1000;
-            const charDelay = Math.max(30, audioDurationMs / totalChars);
+            const audioDurationMs = (audioDuration || 6) * 1000;
+            const charDelay = Math.max(40, Math.min(120, audioDurationMs / totalChars));
             
+            // Start typewriter effect
             let index = 0;
-            const streamText = () => {
-                if (index < question.length) {
+            const typewriter = () => {
+                if (index < question.length && isInterviewerSpeaking) {
                     element.innerHTML += question.charAt(index);
                     index++;
-                    setTimeout(streamText, charDelay);
+                    setTimeout(typewriter, charDelay);
+                } else if (index >= question.length) {
+                    console.log('✅ Typewriter completed');
                 }
             };
             
+            // Audio event handlers
             audio.oncanplaythrough = () => {
+                console.log('🔊 Audio ready, starting playback...');
                 audio.play().then(() => {
-                    console.log('🔊 Audio playing - microphone disabled');
-                    streamText(); // Start typewriter with audio
+                    console.log('🔊 Audio playing - microphone disabled for', audioDuration, 'seconds');
+                    typewriter(); // Start synchronized typewriter
                 }).catch(error => {
-                    console.error('Audio play failed:', error);
-                    enableCandidateResponse();
-                    startFallbackTypewriter(element, question);
+                    console.error('❌ Audio play failed:', error);
+                    enableCandidateResponse('Audio playback failed');
+                    fallbackTypewriter(element, question);
                 });
             };
             
-            // CRITICAL: Re-enable microphone when audio ends
+            // CRITICAL: Re-enable microphone when audio actually ends
             audio.onended = () => {
-                console.log('✅ Audio ended - enabling candidate microphone');
-                enableCandidateResponse();
+                console.log('✅ Audio playback ended - enabling candidate response');
+                enableCandidateResponse('Audio completed');
             };
             
             audio.onerror = (error) => {
-                console.error('Audio error:', error);
-                enableCandidateResponse();
-                startFallbackTypewriter(element, question);
+                console.error('❌ Audio error:', error);
+                enableCandidateResponse('Audio error occurred');
+                fallbackTypewriter(element, question);
             };
             
-            // Fallback if audio doesn't load
-            setTimeout(() => {
+            // Backup timeout in case audio events don't fire
+            audioEndedTimeout = setTimeout(() => {
                 if (isInterviewerSpeaking) {
-                    console.warn('Audio timeout - enabling microphone anyway');
-                    enableCandidateResponse();
+                    console.warn('⏰ Audio timeout reached - enabling microphone');
+                    enableCandidateResponse('Audio timeout');
                 }
-            }, (audioDuration + 3) * 1000);
+            }, (audioDuration + 5) * 1000); // Extra 5 seconds buffer
             
+            // Load and attempt to play audio
             try {
                 audio.load();
             } catch (error) {
-                console.error('Audio load failed:', error);
-                enableCandidateResponse();
-                startFallbackTypewriter(element, question);
+                console.error('❌ Audio load failed:', error);
+                enableCandidateResponse('Audio load failed');
+                fallbackTypewriter(element, question);
             }
             
         } else {
-            console.log('🖊️ No audio, using fast typewriter');
-            startFallbackTypewriter(element, question);
+            console.log('📝 No audio provided, using fast typewriter');
+            fallbackTypewriter(element, question);
         }
     }
     
-    // Enable candidate response after audio ends
-    function enableCandidateResponse() {
+    // Enable candidate response after audio completes
+    function enableCandidateResponse(reason = 'Audio completed') {
+        console.log('🎤 Enabling candidate response:', reason);
+        
         isInterviewerSpeaking = false;
         isProcessingResponse = false;
         
         const micBtn = document.getElementById('micBtn');
         const audioStatus = document.getElementById('audioStatus');
+        const aiVideoBox = document.getElementById('aiVideoBox');
         
+        // Update UI elements
         micBtn.classList.remove('disabled');
-        micBtn.title = 'Microphone is ON - You can speak now';
+        micBtn.title = 'Microphone is ON - Speak your answer';
+        
+        aiVideoBox.classList.remove('ai-speaking');
         
         audioStatus.className = 'audio-status listening';
-        audioStatus.textContent = 'Your turn - Please speak your answer';
+        audioStatus.textContent = '🎤 Your turn - Please speak your answer';
         
-        // Hide status after 3 seconds
+        // Hide status indicator after delay
         setTimeout(() => {
-            audioStatus.style.display = 'none';
-        }, 3000);
+            if (audioStatus.style.display !== 'none') {
+                audioStatus.style.display = 'none';
+            }
+        }, 4000);
+        
+        // Clear any audio timeout
+        if (audioEndedTimeout) {
+            clearTimeout(audioEndedTimeout);
+            audioEndedTimeout = null;
+        }
         
         console.log('✅ Candidate can now respond');
     }
     
     // Fallback typewriter without audio
-    function startFallbackTypewriter(element, question) {
+    function fallbackTypewriter(element, question) {
+        console.log('📝 Using fallback typewriter');
         let index = 0;
-        const streamText = () => {
+        const typeSpeed = 60; // Slightly faster for no audio
+        
+        const typeChar = () => {
             if (index < question.length) {
                 element.innerHTML += question.charAt(index);
                 index++;
-                setTimeout(streamText, 50);
+                setTimeout(typeChar, typeSpeed);
             } else {
-                // Typewriter finished, enable candidate response
+                // Typewriter finished, enable response after short delay
                 setTimeout(() => {
-                    enableCandidateResponse();
-                }, 500);
+                    enableCandidateResponse('Typewriter completed');
+                }, 800);
             }
         };
-        streamText();
+        typeChar();
     }
     
-    // Initialize speech recognition with controlled flow
+    // Initialize speech recognition with improved error handling
     function initSpeech() {
-        if (!('webkitSpeechRecognition' in window)) {
-            console.error('❌ Speech recognition not supported');
-            alert('Speech recognition not supported in this browser. Please use Chrome or Edge.');
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.error('❌ Speech recognition not supported in this browser');
+            showError('Speech recognition not supported. Please use Chrome, Edge, or Safari.');
             return;
         }
         
-        recognition = new webkitSpeechRecognition();
+        // Use the appropriate speech recognition class
+        const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        // Configure speech recognition
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
         
         recognition.onstart = function() {
             isListening = true;
             document.getElementById('micBtn').classList.add('recording');
             document.getElementById('micBtn').innerHTML = '🔴';
-            console.log('🎙️ Microphone started');
+            console.log('🎙️ Speech recognition started');
         };
         
         recognition.onend = function() {
-            console.log('🎙️ Speech recognition ended - auto-restarting');
-            if (isListening) {
+            console.log('🎙️ Speech recognition ended');
+            
+            // Auto-restart if still supposed to be listening and interview not completed
+            if (isListening && !interviewCompleted && !isInterviewerSpeaking) {
                 setTimeout(() => {
                     try {
-                        recognition.start();
-                        console.log('🔄 Microphone restarted');
+                        if (recognition && isListening) {
+                            recognition.start();
+                            console.log('🔄 Speech recognition restarted');
+                        }
                     } catch (e) {
-                        console.log('❌ Recognition restart failed:', e);
+                        console.warn('⚠️ Could not restart recognition:', e.message);
+                        if (e.name !== 'InvalidStateError') {
+                            setTimeout(() => initSpeech(), 1000);
+                        }
                     }
-                }, 50);
+                }, 100);
             }
         };
         
@@ -445,24 +688,28 @@
             
             switch(event.error) {
                 case 'not-allowed':
-                    alert('Microphone permission required for interview. Please allow microphone access and refresh the page.');
+                    showError('Microphone access denied. Please allow microphone access and refresh the page.');
                     break;
                 case 'no-speech':
+                    console.log('⚠️ No speech detected, continuing...');
                     break;
                 case 'audio-capture':
-                    alert('Cannot capture audio from microphone. Please check if another application is using your microphone.');
+                    showError('Microphone not available. Please check if another application is using it.');
                     break;
                 case 'network':
-                    console.log('🌐 Network error, retrying...');
+                    console.log('🌐 Network error, attempting to restart...');
                     setTimeout(() => {
-                        if (isListening) {
+                        if (isListening && recognition) {
                             try {
                                 recognition.start();
                             } catch (e) {
-                                console.log('❌ Network retry failed:', e);
+                                console.log('❌ Network restart failed');
                             }
                         }
-                    }, 100);
+                    }, 1000);
+                    break;
+                case 'service-not-allowed':
+                    showError('Speech recognition service not available. Please try refreshing the page.');
                     break;
             }
         };
@@ -472,42 +719,47 @@
             let finalTranscript = '';
             
             for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+                    finalTranscript += transcript;
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    interimTranscript += transcript;
                 }
             }
 
-            // CRITICAL: Only process speech when interviewer is NOT speaking
-            if (!isInterviewerSpeaking && !isProcessingResponse) {
-                const displayText = collectedText + finalTranscript + interimTranscript;
+            // CRITICAL: Only process speech when candidate can speak
+            if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted) {
+                const displayText = collectedText + finalTranscript + 
+                    (interimTranscript ? `<span style="opacity: 0.7; font-style: italic;">${interimTranscript}</span>` : '');
+                
                 if (displayText.trim()) {
                     document.getElementById('conversationArea').innerHTML = displayText;
-                    console.log('👤 Candidate speaking:', displayText.substring(0, 50) + '...');
                 }
             
                 if (finalTranscript.trim()) {
                     collectedText += finalTranscript;
                     lastSpeechTime = Date.now();
-                    console.log('✅ Speech collected:', collectedText.substring(0, 50) + '...');
+                    console.log('👤 Speech collected:', collectedText.substring(0, 100) + '...');
                 
+                    // Clear existing timeout
                     if (speechTimeout) {
                         clearTimeout(speechTimeout);
                     }
                 
-                    // Auto-submit after pause
+                    // Auto-submit after speech pause
                     speechTimeout = setTimeout(() => {
-                        if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking) {
-                            console.log('⚡ Auto-submitting response');
+                        if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
+                            console.log('⚡ Auto-submitting response after speech pause');
                             autoSubmitResponse();
                         }
-                    }, 2000); // 2 second pause
+                    }, SPEECH_TIMEOUT_MS);
                 }
             } else {
-                // Log but ignore speech while interviewer is speaking
+                // Log ignored speech
                 if (isInterviewerSpeaking) {
                     console.log('🚫 Ignoring candidate speech - interviewer is speaking');
+                } else if (interviewCompleted) {
+                    console.log('🚫 Ignoring speech - interview completed');
                 }
             }
         };
@@ -517,42 +769,57 @@
     
     // Start microphone
     function startMicrophone() {
-        if (recognition && !isListening) {
+        if (recognition && !isListening && !interviewCompleted) {
             try {
                 isListening = true;
                 recognition.start();
-                console.log('🎙️ Microphone started');
+                console.log('🎙️ Microphone started successfully');
             } catch (e) {
                 console.error('❌ Failed to start microphone:', e);
+                if (e.name === 'InvalidStateError') {
+                    console.log('⚠️ Recognition already running, continuing...');
+                    isListening = true;
+                } else {
+                    isListening = false;
+                }
             }
         }
     }
     
-    // Auto-submit response
+    // Auto-submit collected speech
     function autoSubmitResponse() {
-        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim()) return;
+        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim() || interviewCompleted) {
+            return;
+        }
         
-        console.log('📤 Auto-submitting response');
+        console.log('📤 Auto-submitting response:', collectedText.substring(0, 100) + '...');
         isProcessingResponse = true;
         
+        // Clear speech timeout
         if (speechTimeout) {
             clearTimeout(speechTimeout);
             speechTimeout = null;
         }
         
         const responseText = collectedText.trim();
-        collectedText = '';
+        collectedText = ''; // Clear collected text
+        
+        // Show processing state
+        document.getElementById('conversationArea').innerHTML = 
+            `<div style="opacity: 0.7; font-style: italic;">Processing your response...</div>`;
         
         sendResponse(responseText).finally(() => {
             isProcessingResponse = false;
-            console.log('✅ Processing complete');
+            console.log('✅ Response processing complete');
         });
     }
     
-    // Send response to server
+    // Send response to server with improved error handling
     async function sendResponse(text) {
         try {
-            console.log('⚡ Sending candidate response:', text);
+            console.log('📡 Sending response to server:', text.substring(0, 100) + '...');
+            
+            updateConnectionStatus(true);
             
             const response = await fetch(window.location.href, {
                 method: 'POST',
@@ -563,122 +830,208 @@
                 body: new URLSearchParams({ text: text })
             });
             
-            console.log('⚡ Server response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
-            console.log('⚡ Server response data:', data);
+            console.log('📡 Server response received:', data);
             
             if (data.success) {
-                console.log('⚡ Response processed, showing AI question');
+                console.log('✅ Response processed successfully');
                 
+                // Update question count
+                questionCount = data.question_count || questionCount + 1;
+                document.getElementById('questionCount').textContent = `${questionCount}/${MAX_QUESTIONS}`;
+                
+                // Clear conversation area before showing new question
                 document.getElementById('conversationArea').innerHTML = '';
                 
-                // Small delay before showing next question
+                // Small delay before showing next question for better UX
                 setTimeout(() => {
                     showCurrentQuestion(data.response, data.audio, data.audio_duration);
-                }, 200);
+                }, 500);
                 
-                questionCount = data.question_count || questionCount + 1;
-                document.getElementById('questionCount').textContent = questionCount + '/8';
-                
-                if (data.is_final || questionCount >= 8) {
-                    setTimeout(endInterview, 5000);
+                // Check if interview is complete
+                if (data.is_final || questionCount >= MAX_QUESTIONS) {
+                    console.log('🏁 Interview completed, scheduling completion...');
+                    setTimeout(() => {
+                        completeInterview();
+                    }, (data.audio_duration || 5) * 1000 + 3000); // Wait for audio + buffer
                 }
             } else {
                 console.error('❌ Server returned error:', data);
-                alert('Error: Could not process your response. Please try again.');
+                showError('Could not process your response. Please try speaking again.');
+                enableCandidateResponse('Server error');
             }
         } catch (error) {
             console.error('❌ Network error:', error);
-            alert('Network error. Please check your connection and try again.');
+            updateConnectionStatus(false);
+            showError('Network error. Please check your connection and try again.');
+            enableCandidateResponse('Network error');
         }
+    }
+    
+    // Complete interview
+    function completeInterview() {
+        console.log('🏁 Completing interview...');
+        
+        interviewCompleted = true;
+        
+        // Stop speech recognition
+        if (recognition && isListening) {
+            isListening = false;
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.log('Speech recognition already stopped');
+            }
+        }
+        
+        // Stop any playing audio
+        if (currentAudioElement) {
+            currentAudioElement.pause();
+            currentAudioElement.currentTime = 0;
+        }
+        
+        // Update UI
+        document.getElementById('interviewStatus').textContent = 'Completed';
+        document.getElementById('audioStatus').style.display = 'none';
+        
+        // Disable controls
+        const controls = document.querySelectorAll('.btn');
+        controls.forEach(btn => {
+            btn.classList.add('disabled');
+        });
+        
+        // Show completion modal
+        setTimeout(() => {
+            document.getElementById('interviewCompleteModal').style.display = 'flex';
+        }, 1000);
     }
     
     // Toggle microphone
     function toggleMic() {
-        if (!recognition) return;
+        if (!recognition || interviewCompleted) return;
         
-        // Don't allow toggling when interviewer is speaking
+        // Prevent toggling when interviewer is speaking
         if (isInterviewerSpeaking) {
-            alert('Please wait for the interviewer to finish speaking before toggling microphone.');
+            alert('Please wait for the interviewer to finish speaking.');
             return;
         }
         
         if (isListening) {
-            if (confirm('Turn off microphone? This is not recommended during interview.')) {
+            // Turn off microphone
+            if (confirm('Turn off microphone? This is not recommended during the interview.')) {
                 isListening = false;
-                recognition.stop();
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.log('Recognition stop error:', e);
+                }
                 document.getElementById('micBtn').classList.remove('recording');
                 document.getElementById('micBtn').innerHTML = '🎤';
                 
+                // Submit any collected text
                 if (speechTimeout) {
                     clearTimeout(speechTimeout);
                     speechTimeout = null;
                 }
                 
                 if (collectedText.trim()) {
-                    sendResponse(collectedText.trim());
-                    collectedText = '';
+                    autoSubmitResponse();
                 }
             }
         } else {
+            // Turn on microphone
             isListening = true;
             collectedText = '';
             try {
                 recognition.start();
             } catch (e) {
-                console.log('❌ Failed to restart microphone:', e);
+                console.error('Failed to restart microphone:', e);
+                isListening = false;
             }
         }
     }
     
-    // Timer
+    // Timer functionality
     function updateTimer() {
+        if (interviewCompleted) return;
+        
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
         document.getElementById('timer').textContent = 
-            minutes + ':' + seconds.toString().padStart(2, '0');
+            `${minutes}:${seconds.toString().padStart(2, '0')}`;
         
         if (timeLeft <= 0) {
-            endInterview();
+            console.log('⏰ Time expired - ending interview');
+            completeInterview();
             return;
         }
+        
         timeLeft--;
     }
     
-    // End interview
+    // End interview manually
     function endInterview() {
-        if (recognition && isListening) {
-            isListening = false;
-            recognition.stop();
+        if (confirm('Are you sure you want to end the interview? This action cannot be undone.')) {
+            console.log('🛑 Interview ended manually');
+            completeInterview();
         }
-        alert('Interview completed! Redirecting to dashboard...');
+    }
+    
+    // Go to dashboard
+    function goToDashboard() {
+        console.log('🏠 Redirecting to dashboard');
         window.location.href = '{% url "jobseeker_dashboard" %}';
     }
     
-    // Initialize everything
+    // Initialize everything when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Interview system initializing with controlled audio...');
+        console.log('🚀 Initializing AI Interview System...');
         
+        // Initialize camera and microphone
         initCamera();
-        initSpeech();
-        setInterval(updateTimer, 1000);
         
-        // Get initial question data
-        const initialQuestion = `{{ ai_question|escapejs|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}`;
+        // Initialize speech recognition
+        setTimeout(() => {
+            initSpeech();
+        }, 1000);
+        
+        // Start timer
+        const timerInterval = setInterval(() => {
+            updateTimer();
+            if (interviewCompleted) {
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+        
+        // Get initial question data from template
+        const initialQuestion = `{{ ai_question|escapejs|default:"Welcome to your AI interview! Let's begin." }}`;
         const initialAudio = `{{ audio_url|escapejs|safe }}`;
         const initialDuration = {{ audio_duration|default:"5" }};
         
-        console.log('📝 Initial question:', initialQuestion.substring(0, 50) + '...');
-        console.log('🔊 Initial audio:', initialAudio);
-        console.log('⏱️ Initial duration:', initialDuration);
+        console.log('📝 Initial question prepared');
+        console.log('🔊 Audio URL:', initialAudio);
+        console.log('⏱️ Duration:', initialDuration, 'seconds');
         
-        // Show initial question with audio after short delay
+        // Show initial question after short delay
         setTimeout(() => {
             showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
-            console.log('✅ Initial question started with controlled audio');
-        }, 1000);
+            console.log('✅ Interview started successfully');
+        }, 1500);
         
-        console.log('✅ Interview system ready with audio feedback prevention');
+        // Prevent page refresh during interview
+        window.addEventListener('beforeunload', function(e) {
+            if (!interviewCompleted) {
+                e.preventDefault();
+                e.returnValue = 'Interview is in progress. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+        
+        console.log('✅ AI Interview System initialized successfully');
     });
 </script>
 </body>

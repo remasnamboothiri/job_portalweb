@@ -34,6 +34,9 @@ from .health import health_check, readiness_check
 # At the top of your views.py file, add:
 
 
+import hashlib
+
+
 
 
 
@@ -954,6 +957,8 @@ def interview_ready(request, interview_uuid):
             
 
 
+# FIXED INTERVIEW LOGIC - Replace your start_interview_by_uuid function with this improved version
+
 @csrf_exempt
 def start_interview_by_uuid(request, interview_uuid):
     try:
@@ -1022,7 +1027,8 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_count': 0,
                 'is_registered_candidate': interview.is_registered_candidate,
                 'conversation_history': [],
-                'started_at': timezone.now().isoformat()
+                'started_at': timezone.now().isoformat(),
+                'interview_completed': False  # Add completion flag
             }
         
         request.session.modified = True
@@ -1048,9 +1054,23 @@ def start_interview_by_uuid(request, interview_uuid):
     
             logger.info(f"User input for interview {interview_uuid}: {user_text}")
     
+            # Get current context
+            context = request.session.get(session_key, {})
+            
+            # Check if interview is already completed
+            if context.get('interview_completed', False):
+                return JsonResponse({
+                    'error': 'Interview already completed',
+                    'response': 'Thank you! Your interview has been completed.',
+                    'is_final': True,
+                    'success': True
+                })
+    
             # Prevent duplicate processing
-            last_processed = request.session.get('last_processed_input', '')
-            if last_processed == user_text:
+            last_processed = context.get('last_processed_input', '')
+            current_input_hash = hashlib.md5(user_text.encode()).hexdigest()
+            
+            if last_processed == current_input_hash:
                 logger.warning(f"Duplicate request detected for interview {interview_uuid}, ignoring")
                 return JsonResponse({
                     'error': 'Duplicate request detected',
@@ -1058,10 +1078,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     'success': False
                 })
     
-            request.session['last_processed_input'] = user_text
+            context['last_processed_input'] = current_input_hash
     
             # Get current question count and increment properly
-            context = request.session.get(session_key, {})
             current_count = context.get('question_count', 0)
             question_count = current_count + 1
     
@@ -1077,33 +1096,36 @@ def start_interview_by_uuid(request, interview_uuid):
             conversation_history.append({
                 'speaker': 'candidate',
                 'message': user_text,
-                'question_number': question_count
+                'question_number': question_count,
+                'timestamp': timezone.now().isoformat()
             })
     
             # IMPROVED: Better audio issue detection that doesn't interfere with real responses
             user_text_lower = user_text.lower().strip()
             
-            # Only detect simple audio issues, not complex responses
+            # Only detect very simple audio test phrases
             simple_audio_phrases = [
                 'can you hear me', 'can you hear me can you hear me',
-                'hello can you hear me', 'can you hear', 'audio test'
+                'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
+                'testing testing', 'test test'
             ]
             
             is_simple_audio_issue = any(phrase == user_text_lower for phrase in simple_audio_phrases)
             
             # CRITICAL: Don't treat legitimate responses as audio issues
-            has_substantial_content = len(user_text.split()) > 5 or any(word in user_text_lower for word in [
+            has_substantial_content = len(user_text.split()) > 4 or any(word in user_text_lower for word in [
                 'experience', 'project', 'work', 'skill', 'technology', 'challenge', 'team', 'develop',
                 'position', 'company', 'career', 'goal', 'learn', 'python', 'django', 'javascript',
-                'course', 'fresher', 'transcript', 'question', 'doubt'
+                'course', 'fresher', 'transcript', 'question', 'doubt', 'currently', 'internship',
+                'framework', 'interested', 'application', 'software', 'developer', 'programming'
             ])
             
             if is_simple_audio_issue and not has_substantial_content:
                 logger.info(f"Audio issue detected for interview {interview_uuid}: {user_text}")
                 
-                if question_count == 1:
+                if question_count <= 2:
                     ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you the first question: Can you tell me about yourself and your experience?"
-                elif question_count <= 4:
+                elif question_count <= 5:
                     ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with our interview."
                 else:
                     ai_response = f"Yes, I can hear you well, {candidate_name}! Let me ask you another question."
@@ -1111,74 +1133,87 @@ def start_interview_by_uuid(request, interview_uuid):
                 logger.info(f"Using audio issue response for question {question_count}")
             
             else:
-                # Use predefined questions for reliability
-                predefined_questions = {
-                    1: f"That's great to hear! Can you tell me more about your technical experience with {job_title} technologies? What programming languages or tools have you been working with recently?",
-                    2: "Interesting! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the obstacles you faced and how you overcame them.",
-                    3: "That sounds like a great approach to problem-solving! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project?",
-                    4: "Excellent teamwork skills! Where do you see yourself in the next 3-5 years? What are your career goals and how does this position fit into them?",
-                    5: "Those are great career aspirations! How do you stay updated with the latest technologies and trends in your field? Do you have any preferred learning methods?",
-                    6: f"That's a great way to stay current! Given this {job_title} role, do you have experience with any specific technologies or frameworks that would be relevant? How do you typically approach learning new tools or technologies?",
-                    7: f"Thank you for sharing that! Before we wrap up, do you have any questions about this {job_title} position, our company culture, or the team you'd be working with?",
-                    8: f"Thank you for those great questions, {candidate_name}! I really enjoyed our conversation today. We'll review everything we discussed and get back to you with next steps within the next few days."
+                # FIXED: Use structured interview flow with 8 distinct questions
+                interview_questions = {
+                    1: f"Thank you for that introduction, {candidate_name}! Can you tell me more about your technical experience with {job_title} technologies? What programming languages, frameworks, or tools have you been working with recently?",
+                    
+                    2: "That's great technical background! Can you walk me through a challenging project you've worked on recently? I'd love to hear about the specific obstacles you encountered and how you approached solving them.",
+                    
+                    3: "Excellent problem-solving approach! How do you typically work in a team environment? Can you give me an example of how you've collaborated with others on a project, especially when there were different opinions or approaches?",
+                    
+                    4: "Those are valuable teamwork skills! Where do you see yourself in the next 3-5 years career-wise? What are your professional goals and how does this position align with them?",
+                    
+                    5: "Great career vision! How do you stay updated with the latest technologies and industry trends? Do you have any preferred learning methods or resources you use for professional development?",
+                    
+                    6: f"That's a wonderful approach to continuous learning! Given this {job_title} role at {company_name}, do you have experience with any specific technologies or methodologies that would be directly relevant? How do you typically approach learning new technical skills?",
+                    
+                    7: f"Thank you for sharing those insights! Before we wrap up, do you have any questions about this {job_title} position, our company culture, the team you'd be working with, or anything else about the opportunity?",
+                    
+                    8: f"Thank you for those thoughtful questions, {candidate_name}! I really enjoyed our conversation today and learning about your background and interests. We'll review everything we discussed and get back to you with next steps within the next 2-3 business days. Thank you for your time!"
                 }
         
                 if question_count <= 8:
-                    ai_response = predefined_questions.get(question_count, "Can you tell me more about that?")
-                    logger.info(f"Using predefined question {question_count}: {ai_response[:50]}...")
+                    ai_response = interview_questions.get(question_count, "Can you tell me more about that?")
+                    logger.info(f"Using structured question {question_count}: {ai_response[:75]}...")
                 else:
                     ai_response = f"Thank you for the interview, {candidate_name}! We'll be in touch soon."
-                    logger.info(f"Interview complete for {interview_uuid}")
+                    logger.info(f"Interview exceeded 8 questions for {interview_uuid}")
     
             # Add AI response to history
             conversation_history.append({
-                'speaker': 'interviewer',
+                'speaker': 'interviewer', 
                 'message': ai_response,
-                'question_number': question_count
+                'question_number': question_count,
+                'timestamp': timezone.now().isoformat()
             })
     
             # Keep conversation history manageable
-            if len(conversation_history) > 16:
-                conversation_history = conversation_history[-16:]
+            if len(conversation_history) > 20:
+                conversation_history = conversation_history[-20:]
                 
             context['conversation_history'] = conversation_history
-            request.session[session_key] = context
-            request.session.modified = True
-    
-            # Generate final results if interview is complete
+            
+            # Check if interview should be completed
             if question_count >= 8:
+                logger.info(f"Interview completion triggered for {interview_uuid} at question {question_count}")
+                context['interview_completed'] = True
+                
                 try:
-                    logger.info(f"Generating final interview results for {interview_uuid}")
                     generate_interview_results(interview, conversation_history)
                     logger.info(f"Interview results generation completed for {interview_uuid}")
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
+            
+            # Save updated context
+            request.session[session_key] = context
+            request.session.modified = True
         
-            # RE-ENABLE TTS AUDIO with controlled approach
+            # Generate TTS audio with improved error handling
             audio_path = None
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
-                logger.info(f"Using gTTS fallback due to ElevenLabs issues")
                 
-                # Use gTTS for reliable, fast audio generation
-                audio_path = generate_gtts_fallback(ai_response)
+                # Import TTS functions
+                from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
+                
+                # Generate audio
+                audio_path = generate_tts(ai_response, "female_interview")
                 
                 if audio_path:
-                    from jobapp.tts import estimate_audio_duration, get_audio_duration
+                    # Get actual duration
                     full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                     actual_duration = get_audio_duration(full_audio_path)
             
                     if actual_duration and actual_duration > 0:
                         audio_duration = actual_duration
-                        logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
+                        logger.info(f"Using actual audio duration: {audio_duration:.2f} seconds")
                     else:
                         audio_duration = estimate_audio_duration(ai_response)
-                        logger.info(f"Using estimated audio duration: {audio_duration} seconds")
+                        logger.info(f"Using estimated audio duration: {audio_duration:.2f} seconds")
                 else:
-                    from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
-                    logger.info(f"No audio - using estimated duration: {audio_duration} seconds")
+                    logger.info(f"No audio generated - using estimated duration: {audio_duration:.2f} seconds")
                     
             except Exception as e:
                 logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
@@ -1187,9 +1222,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
                 except:
-                    audio_duration = 5.0
+                    audio_duration = 6.0
     
-            # Return response data WITH AUDIO
+            # Return response data
             response_data = {
                 'response': ai_response,
                 'audio': audio_path if audio_path else '',
@@ -1197,20 +1232,19 @@ def start_interview_by_uuid(request, interview_uuid):
                 'success': True,
                 'question_count': question_count,
                 'is_final': question_count >= 8,
-                'has_audio': bool(audio_path)  # Flag for frontend
+                'has_audio': bool(audio_path),
+                'interview_completed': context.get('interview_completed', False)
             }
     
-            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
+            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}, is_final={response_data['is_final']}")
     
             # Clear duplicate prevention
-            if 'last_processed_input' in request.session:
-                del request.session['last_processed_input']
+            if 'last_processed_input' in context:
+                context['last_processed_input'] = ''
+                request.session[session_key] = context
+                request.session.modified = True
             
-            response = JsonResponse(response_data)
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
-            return response
+            return JsonResponse(response_data)
         
         # HANDLE GET REQUEST - Show interview UI with first question
         ai_question = f"Hi {candidate_name}, great to meet you and thanks for joining me today! I'm excited to learn more about you. Could you start by telling me a bit about yourself and what interests you about this {job_title} position at {company_name}?"
@@ -1223,38 +1257,37 @@ def start_interview_by_uuid(request, interview_uuid):
         conversation_history.append({
             'speaker': 'interviewer',
             'message': ai_question,
-            'question_number': 0
+            'question_number': 0,
+            'timestamp': timezone.now().isoformat()
         })
         
         context['conversation_history'] = conversation_history
         request.session[session_key] = context
         request.session.modified = True
         
-        # RE-ENABLE INITIAL TTS with controlled approach
+        # Generate initial TTS
         audio_path = None
         audio_duration = None
         try:
             logger.info(f"Starting initial TTS generation for interview {interview_uuid}")
-            logger.info(f"Using gTTS fallback due to ElevenLabs issues")
             
-            # Use gTTS for fast, reliable audio
-            audio_path = generate_gtts_fallback(ai_question)
+            from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
+            
+            audio_path = generate_tts(ai_question, "female_interview")
             
             if audio_path:
-                from jobapp.tts import estimate_audio_duration, get_audio_duration
                 full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                 actual_duration = get_audio_duration(full_audio_path)
                 
                 if actual_duration and actual_duration > 0:
                     audio_duration = actual_duration
-                    logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
+                    logger.info(f"Initial question - using actual audio duration: {audio_duration:.2f} seconds")
                 else:
                     audio_duration = estimate_audio_duration(ai_question)
-                    logger.info(f"Initial question - using estimated audio duration: {audio_duration} seconds")
+                    logger.info(f"Initial question - using estimated audio duration: {audio_duration:.2f} seconds")
             else:
-                from jobapp.tts import estimate_audio_duration
                 audio_duration = estimate_audio_duration(ai_question)
-                logger.info(f"Initial question - no audio, using estimated duration: {audio_duration} seconds")
+                logger.info(f"Initial question - no audio, using estimated duration: {audio_duration:.2f} seconds")
                 
         except Exception as e:
             logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
@@ -1263,9 +1296,9 @@ def start_interview_by_uuid(request, interview_uuid):
                 from jobapp.tts import estimate_audio_duration
                 audio_duration = estimate_audio_duration(ai_question)
             except:
-                audio_duration = 5.0
+                audio_duration = 6.0
 
-        # Template context WITH AUDIO
+        # Template context
         context_data = {
             'interview': interview,
             'ai_question': ai_question,
@@ -1311,8 +1344,6 @@ def start_interview_by_uuid(request, interview_uuid):
                 'Interview system temporarily unavailable. Please try again in a few minutes.',
                 status=500
             )
-            
-            
             
             
 # Add these functions to your views.py file

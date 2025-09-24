@@ -546,15 +546,25 @@
             };
             
             // Audio event handlers
+            //audio.oncanplaythrough = () => {
+            //    console.log('🔊 Audio ready, starting playback...');
+            //    audio.play().then(() => {
+            //        console.log('🔊 Audio playing - microphone disabled for', audioDuration, 'seconds');
+            //        typewriter(); // Start synchronized typewriter
+            //    }).catch(error => {
+            //        console.error('❌ Audio play failed:', error);
+            //        enableCandidateResponse('Audio playback failed');
+            //        fallbackTypewriter(element, question);
+            //    });
+            //};
             audio.oncanplaythrough = () => {
-                console.log('🔊 Audio ready, starting playback...');
                 audio.play().then(() => {
-                    console.log('🔊 Audio playing - microphone disabled for', audioDuration, 'seconds');
-                    typewriter(); // Start synchronized typewriter
+                    console.log('🔊 Audio playing - microphone disabled');
+                    streamText(); // Start typewriter with audio
                 }).catch(error => {
-                    console.error('❌ Audio play failed:', error);
-                    enableCandidateResponse('Audio playback failed');
-                    fallbackTypewriter(element, question);
+                    console.error('Audio play failed:', error);
+                    enableCandidateResponse();
+                    startFallbackTypewriter(element, question);
                 });
             };
             

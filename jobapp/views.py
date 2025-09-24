@@ -1080,7 +1080,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'question_number': question_count
             })
     
-            # FIXED: Better audio issue detection that doesn't interfere with real responses
+            # IMPROVED: Better audio issue detection that doesn't interfere with real responses
             user_text_lower = user_text.lower().strip()
             
             # Only detect simple audio issues, not complex responses
@@ -1091,10 +1091,11 @@ def start_interview_by_uuid(request, interview_uuid):
             
             is_simple_audio_issue = any(phrase == user_text_lower for phrase in simple_audio_phrases)
             
-            # CRITICAL FIX: Don't treat legitimate responses as audio issues
+            # CRITICAL: Don't treat legitimate responses as audio issues
             has_substantial_content = len(user_text.split()) > 5 or any(word in user_text_lower for word in [
                 'experience', 'project', 'work', 'skill', 'technology', 'challenge', 'team', 'develop',
-                'position', 'company', 'career', 'goal', 'learn', 'python', 'django', 'javascript'
+                'position', 'company', 'career', 'goal', 'learn', 'python', 'django', 'javascript',
+                'course', 'fresher', 'transcript', 'question', 'doubt'
             ])
             
             if is_simple_audio_issue and not has_substantial_content:
@@ -1153,24 +1154,50 @@ def start_interview_by_uuid(request, interview_uuid):
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
         
-            # Generate TTS audio - NO AUDIO FOR NOW TO FIX FEEDBACK LOOP
+            # RE-ENABLE TTS AUDIO with controlled approach
             audio_path = None
             audio_duration = None
+            try:
+                logger.info(f"Starting TTS generation for interview {interview_uuid}")
+                logger.info(f"Using gTTS fallback due to ElevenLabs issues")
+                
+                # Use gTTS for reliable, fast audio generation
+                audio_path = generate_gtts_fallback(ai_response)
+                
+                if audio_path:
+                    from jobapp.tts import estimate_audio_duration, get_audio_duration
+                    full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                    actual_duration = get_audio_duration(full_audio_path)
             
-            # TEMPORARY FIX: Disable TTS to prevent feedback loop
-            logger.info(f"TTS disabled temporarily to prevent feedback loop")
-            from jobapp.tts import estimate_audio_duration
-            audio_duration = estimate_audio_duration(ai_response)
+                    if actual_duration and actual_duration > 0:
+                        audio_duration = actual_duration
+                        logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
+                    else:
+                        audio_duration = estimate_audio_duration(ai_response)
+                        logger.info(f"Using estimated audio duration: {audio_duration} seconds")
+                else:
+                    from jobapp.tts import estimate_audio_duration
+                    audio_duration = estimate_audio_duration(ai_response)
+                    logger.info(f"No audio - using estimated duration: {audio_duration} seconds")
+                    
+            except Exception as e:
+                logger.error(f"TTS generation failed for interview {interview_uuid}: {e}")
+                audio_path = None
+                try:
+                    from jobapp.tts import estimate_audio_duration
+                    audio_duration = estimate_audio_duration(ai_response)
+                except:
+                    audio_duration = 5.0
     
-            # Return response data
+            # Return response data WITH AUDIO
             response_data = {
                 'response': ai_response,
-                'audio': '',  # NO AUDIO FOR NOW
+                'audio': audio_path if audio_path else '',
                 'audio_duration': audio_duration,
                 'success': True,
                 'question_count': question_count,
                 'is_final': question_count >= 8,
-                'text_only_mode': True  # Flag for frontend to know audio is disabled
+                'has_audio': bool(audio_path)  # Flag for frontend
             }
     
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}")
@@ -1203,27 +1230,53 @@ def start_interview_by_uuid(request, interview_uuid):
         request.session[session_key] = context
         request.session.modified = True
         
-        # NO INITIAL TTS - prevents feedback loop
+        # RE-ENABLE INITIAL TTS with controlled approach
         audio_path = None
         audio_duration = None
-        
-        logger.info(f"Initial TTS disabled to prevent feedback loop")
-        from jobapp.tts import estimate_audio_duration
-        audio_duration = estimate_audio_duration(ai_question)
+        try:
+            logger.info(f"Starting initial TTS generation for interview {interview_uuid}")
+            logger.info(f"Using gTTS fallback due to ElevenLabs issues")
+            
+            # Use gTTS for fast, reliable audio
+            audio_path = generate_gtts_fallback(ai_question)
+            
+            if audio_path:
+                from jobapp.tts import estimate_audio_duration, get_audio_duration
+                full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
+                actual_duration = get_audio_duration(full_audio_path)
+                
+                if actual_duration and actual_duration > 0:
+                    audio_duration = actual_duration
+                    logger.info(f"Initial question - using actual audio duration: {audio_duration} seconds")
+                else:
+                    audio_duration = estimate_audio_duration(ai_question)
+                    logger.info(f"Initial question - using estimated audio duration: {audio_duration} seconds")
+            else:
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_question)
+                logger.info(f"Initial question - no audio, using estimated duration: {audio_duration} seconds")
+                
+        except Exception as e:
+            logger.error(f"Initial TTS generation failed for interview {interview_uuid}: {e}")
+            audio_path = None
+            try:
+                from jobapp.tts import estimate_audio_duration
+                audio_duration = estimate_audio_duration(ai_question)
+            except:
+                audio_duration = 5.0
 
-        # Template context
+        # Template context WITH AUDIO
         context_data = {
             'interview': interview,
             'ai_question': ai_question,
-            'audio_url': '',  # NO AUDIO
+            'audio_url': audio_path if audio_path else '',
             'audio_duration': audio_duration,
             'candidate_name': candidate_name,
             'job_title': job_title,
             'company_name': company_name,
-            'has_audio': False,  # NO AUDIO
+            'has_audio': bool(audio_path),
             'csrf_token': get_token(request),
             'is_registered_candidate': interview.is_registered_candidate,
-            'text_only_mode': True  # Flag for template
         }
         
         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")

@@ -88,6 +88,11 @@
         .btn.camera-off {
             background: #ea4335;
         }
+        .btn.disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
         .transcript-section {
             background: #303134;
             padding: 20px;
@@ -132,7 +137,7 @@
             padding: 10px 20px;
             border-radius: 20px;
         }
-        .text-only-notice {
+        .audio-status {
             position: fixed;
             top: 20px;
             left: 50%;
@@ -143,6 +148,15 @@
             border-radius: 20px;
             font-size: 12px;
             z-index: 1000;
+            display: none;
+        }
+        .audio-status.playing {
+            display: block;
+            background: #ff9800;
+        }
+        .audio-status.listening {
+            display: block;
+            background: #4caf50;
         }
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
@@ -152,10 +166,10 @@
 </head>
 <body>
     <div class="container">
-        <!-- Text-only mode indicator -->
-        {% comment %} <div class="text-only-notice">
-            TEXT-ONLY MODE - Read questions, speak your answers
-        </div> {% endcomment %}
+        <!-- Audio status indicator -->
+        <div class="audio-status" id="audioStatus">
+            Interviewer speaking - Please listen
+        </div>
         
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
@@ -195,7 +209,8 @@
         </div>
     </div>
 
-    <!-- NO AUDIO ELEMENT - prevents feedback loop -->
+    <!-- Audio element for interviewer questions -->
+    <audio id="aiAudio" preload="auto"></audio>
     {% csrf_token %}
     
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
@@ -211,7 +226,7 @@
     let speechTimeout = null;
     let lastSpeechTime = 0;
     let isProcessingResponse = false;
-    let isShowingQuestion = false;  // NEW: Track when showing question
+    let isInterviewerSpeaking = false;  // NEW: Track when interviewer is speaking
     
     // Initialize camera and microphone
     async function initCamera() {
@@ -266,31 +281,132 @@
         }
     }
     
-    // FIXED: Show current question - TEXT ONLY, NO AUDIO
+    // FIXED: Show current question with controlled audio playback
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const element = document.getElementById('conversationArea');
+        const audioStatus = document.getElementById('audioStatus');
+        const micBtn = document.getElementById('micBtn');
+        
         element.innerHTML = '';
-        isShowingQuestion = true;  // NEW: Block microphone during question display
-        isProcessingResponse = true;  // Block response processing
+        isProcessingResponse = true;
         
-        console.log('📝 Showing AI question (TEXT-ONLY):', question.substring(0, 50) + '...');
+        console.log('📝 Showing AI question with controlled audio:', question.substring(0, 50) + '...');
         
-        // Use text-only typewriter - NO AUDIO
-        window.TypewriterSync.createSmart(element, question, audioDuration * 1000 || 5000)
-            .then(() => {
-                // Question display complete - enable candidate response
-                isShowingQuestion = false;
-                isProcessingResponse = false;
-                console.log('✅ Question display complete - candidate can respond');
-            })
-            .catch((error) => {
-                console.error('Typewriter error:', error);
-                isShowingQuestion = false;
-                isProcessingResponse = false;
-            });
+        if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
+            console.log('🔊 Starting controlled audio playback');
+            
+            // CRITICAL: Disable microphone during audio playback
+            isInterviewerSpeaking = true;
+            micBtn.classList.add('disabled');
+            micBtn.title = 'Listening to interviewer - microphone temporarily disabled';
+            
+            audioStatus.className = 'audio-status playing';
+            audioStatus.textContent = 'Interviewer speaking - Please listen';
+            
+            const audio = document.getElementById('aiAudio');
+            audio.src = audioUrl;
+            audio.volume = 0.8;
+            
+            // Start typewriter synchronized with audio
+            const totalChars = question.length;
+            const audioDurationMs = (audioDuration || 5) * 1000;
+            const charDelay = Math.max(30, audioDurationMs / totalChars);
+            
+            let index = 0;
+            const streamText = () => {
+                if (index < question.length) {
+                    element.innerHTML += question.charAt(index);
+                    index++;
+                    setTimeout(streamText, charDelay);
+                }
+            };
+            
+            audio.oncanplaythrough = () => {
+                audio.play().then(() => {
+                    console.log('🔊 Audio playing - microphone disabled');
+                    streamText(); // Start typewriter with audio
+                }).catch(error => {
+                    console.error('Audio play failed:', error);
+                    enableCandidateResponse();
+                    startFallbackTypewriter(element, question);
+                });
+            };
+            
+            // CRITICAL: Re-enable microphone when audio ends
+            audio.onended = () => {
+                console.log('✅ Audio ended - enabling candidate microphone');
+                enableCandidateResponse();
+            };
+            
+            audio.onerror = (error) => {
+                console.error('Audio error:', error);
+                enableCandidateResponse();
+                startFallbackTypewriter(element, question);
+            };
+            
+            // Fallback if audio doesn't load
+            setTimeout(() => {
+                if (isInterviewerSpeaking) {
+                    console.warn('Audio timeout - enabling microphone anyway');
+                    enableCandidateResponse();
+                }
+            }, (audioDuration + 3) * 1000);
+            
+            try {
+                audio.load();
+            } catch (error) {
+                console.error('Audio load failed:', error);
+                enableCandidateResponse();
+                startFallbackTypewriter(element, question);
+            }
+            
+        } else {
+            console.log('🖊️ No audio, using fast typewriter');
+            startFallbackTypewriter(element, question);
+        }
     }
     
-    // Initialize speech recognition - ALWAYS ON MODE with better filtering
+    // Enable candidate response after audio ends
+    function enableCandidateResponse() {
+        isInterviewerSpeaking = false;
+        isProcessingResponse = false;
+        
+        const micBtn = document.getElementById('micBtn');
+        const audioStatus = document.getElementById('audioStatus');
+        
+        micBtn.classList.remove('disabled');
+        micBtn.title = 'Microphone is ON - You can speak now';
+        
+        audioStatus.className = 'audio-status listening';
+        audioStatus.textContent = 'Your turn - Please speak your answer';
+        
+        // Hide status after 3 seconds
+        setTimeout(() => {
+            audioStatus.style.display = 'none';
+        }, 3000);
+        
+        console.log('✅ Candidate can now respond');
+    }
+    
+    // Fallback typewriter without audio
+    function startFallbackTypewriter(element, question) {
+        let index = 0;
+        const streamText = () => {
+            if (index < question.length) {
+                element.innerHTML += question.charAt(index);
+                index++;
+                setTimeout(streamText, 50);
+            } else {
+                // Typewriter finished, enable candidate response
+                setTimeout(() => {
+                    enableCandidateResponse();
+                }, 500);
+            }
+        };
+        streamText();
+    }
+    
+    // Initialize speech recognition with controlled flow
     function initSpeech() {
         if (!('webkitSpeechRecognition' in window)) {
             console.error('❌ Speech recognition not supported');
@@ -363,8 +479,8 @@
                 }
             }
 
-            // CRITICAL FIX: Only process speech when NOT showing question
-            if (!isShowingQuestion && !isProcessingResponse) {
+            // CRITICAL: Only process speech when interviewer is NOT speaking
+            if (!isInterviewerSpeaking && !isProcessingResponse) {
                 const displayText = collectedText + finalTranscript + interimTranscript;
                 if (displayText.trim()) {
                     document.getElementById('conversationArea').innerHTML = displayText;
@@ -380,17 +496,19 @@
                         clearTimeout(speechTimeout);
                     }
                 
-                    // Auto-submit after short pause
+                    // Auto-submit after pause
                     speechTimeout = setTimeout(() => {
-                        if (collectedText.trim() && !isProcessingResponse && !isShowingQuestion) {
+                        if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking) {
                             console.log('⚡ Auto-submitting response');
                             autoSubmitResponse();
                         }
                     }, 2000); // 2 second pause
                 }
             } else {
-                // Ignore speech while showing question
-                console.log('🚫 Ignoring speech - question being displayed');
+                // Log but ignore speech while interviewer is speaking
+                if (isInterviewerSpeaking) {
+                    console.log('🚫 Ignoring candidate speech - interviewer is speaking');
+                }
             }
         };
         
@@ -412,7 +530,7 @@
     
     // Auto-submit response
     function autoSubmitResponse() {
-        if (isProcessingResponse || isShowingQuestion || !collectedText.trim()) return;
+        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim()) return;
         
         console.log('📤 Auto-submitting response');
         isProcessingResponse = true;
@@ -456,7 +574,7 @@
                 
                 // Small delay before showing next question
                 setTimeout(() => {
-                    showCurrentQuestion(data.response, '', data.audio_duration);
+                    showCurrentQuestion(data.response, data.audio, data.audio_duration);
                 }, 200);
                 
                 questionCount = data.question_count || questionCount + 1;
@@ -478,6 +596,12 @@
     // Toggle microphone
     function toggleMic() {
         if (!recognition) return;
+        
+        // Don't allow toggling when interviewer is speaking
+        if (isInterviewerSpeaking) {
+            alert('Please wait for the interviewer to finish speaking before toggling microphone.');
+            return;
+        }
         
         if (isListening) {
             if (confirm('Turn off microphone? This is not recommended during interview.')) {
@@ -533,7 +657,7 @@
     
     // Initialize everything
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Interview system initializing - TEXT ONLY MODE...');
+        console.log('🚀 Interview system initializing with controlled audio...');
         
         initCamera();
         initSpeech();
@@ -541,18 +665,20 @@
         
         // Get initial question data
         const initialQuestion = `{{ ai_question|escapejs|default:"Hello! Welcome to your AI interview. Can you tell me about yourself?" }}`;
+        const initialAudio = `{{ audio_url|escapejs|safe }}`;
         const initialDuration = {{ audio_duration|default:"5" }};
         
         console.log('📝 Initial question:', initialQuestion.substring(0, 50) + '...');
+        console.log('🔊 Initial audio:', initialAudio);
         console.log('⏱️ Initial duration:', initialDuration);
         
-        // Show initial question after short delay
+        // Show initial question with audio after short delay
         setTimeout(() => {
-            showCurrentQuestion(initialQuestion, '', initialDuration);
-            console.log('✅ Initial question started (TEXT-ONLY)');
+            showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
+            console.log('✅ Initial question started with controlled audio');
         }, 1000);
         
-        console.log('✅ Interview system ready - NO AUDIO FEEDBACK LOOP');
+        console.log('✅ Interview system ready with audio feedback prevention');
     });
 </script>
 </body>

@@ -298,14 +298,14 @@
 <body>
     <div class="container">
         <!-- Audio status indicator -->
-        {% comment %} <div class="audio-status" id="audioStatus">
-            Interviewer speaking - Please listen
-        </div> {% endcomment %}
+        <div class="audio-status" id="audioStatus">
+            
+        </div>
         
         <!-- Connection status -->
-        {% comment %} <div class="connection-status connected" id="connectionStatus">
-            Connected
-        </div> {% endcomment %}
+        <div class="connection-status connected" id="connectionStatus">
+            
+        </div>
         
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
@@ -477,7 +477,7 @@
         console.log(`📹 Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
     }
     
-    // FIXED: Enhanced audio playback control with better feedback prevention
+    // FIXED: Enhanced audio playback control with proper TypewriterSync integration
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const element = document.getElementById('conversationArea');
         const audioStatus = document.getElementById('audioStatus');
@@ -495,6 +495,8 @@
         }
         
         console.log('📝 Showing AI question:', question.substring(0, 50) + '...');
+        console.log('🔊 Audio URL:', audioUrl);
+        console.log('⏱️ Duration:', audioDuration);
         
         if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
             console.log('🔊 Starting controlled audio playback');
@@ -508,62 +510,30 @@
             aiVideoBox.classList.add('ai-speaking');
             audioStatus.className = 'audio-status playing';
             audioStatus.textContent = '🔊 Interviewer speaking - Please listen carefully';
+            audioStatus.style.display = 'block';
             
             // Setup audio element
             const audio = document.getElementById('aiAudio');
             currentAudioElement = audio;
             audio.src = audioUrl;
-            audio.volume = 0.7; // Slightly reduced volume
+            audio.volume = 0.8;
             
-            // Calculate timing for synchronized typewriter
-            //const totalChars = question.length;
-            //const audioDurationMs = (audioDuration || 6) * 1000;
-            //const charDelay = Math.max(40, Math.min(120, audioDurationMs / totalChars));
-            
-            // Start typewriter effect
-            //let index = 0;
-            //const typewriter = () => {
-            //    if (index < question.length && isInterviewerSpeaking) {
-            //        element.innerHTML += question.charAt(index);
-            //        index++;
-            //        setTimeout(typewriter, charDelay);
-            //    } else if (index >= question.length) {
-            //        console.log('✅ Typewriter completed');
-            //    }
-            //};
-            // Start typewriter synchronized with audio
-            const totalChars = question.length;
-            const audioDurationMs = (audioDuration || 5) * 1000;
-            const charDelay = Math.max(30, audioDurationMs / totalChars);
-            
-            let index = 0;
-            const streamText = () => {
-                if (index < question.length) {
-                    element.innerHTML += question.charAt(index);
-                    index++;
-                    setTimeout(streamText, charDelay);
-                }
-            };
-            
-            // Audio event handlers
-            //audio.oncanplaythrough = () => {
-            //    console.log('🔊 Audio ready, starting playback...');
-            //    audio.play().then(() => {
-            //        console.log('🔊 Audio playing - microphone disabled for', audioDuration, 'seconds');
-            //        typewriter(); // Start synchronized typewriter
-            //    }).catch(error => {
-            //        console.error('❌ Audio play failed:', error);
-            //        enableCandidateResponse('Audio playback failed');
-            //        fallbackTypewriter(element, question);
-            //    });
-            //};
+            // Use TypewriterSync with audio
             audio.oncanplaythrough = () => {
                 audio.play().then(() => {
-                    console.log('🔊 Audio playing - microphone disabled');
-                    streamText(); // Start typewriter with audio
+                    console.log('🔊 Audio playing - starting synchronized typewriter');
+                    
+                    // Use the fixed TypewriterSync with audio support
+                    if (window.TypewriterSync) {
+                        window.TypewriterSync.start(element, question, audio, audioDuration);
+                    } else {
+                        // Fallback if TypewriterSync not loaded
+                        startFallbackTypewriter(element, question, audioDuration);
+                    }
+                    
                 }).catch(error => {
                     console.error('Audio play failed:', error);
-                    enableCandidateResponse();
+                    enableCandidateResponse('Audio playback failed');
                     startFallbackTypewriter(element, question);
                 });
             };
@@ -577,7 +547,7 @@
             audio.onerror = (error) => {
                 console.error('❌ Audio error:', error);
                 enableCandidateResponse('Audio error occurred');
-                fallbackTypewriter(element, question);
+                startFallbackTypewriter(element, question);
             };
             
             // Backup timeout in case audio events don't fire
@@ -594,13 +564,43 @@
             } catch (error) {
                 console.error('❌ Audio load failed:', error);
                 enableCandidateResponse('Audio load failed');
-                fallbackTypewriter(element, question);
+                startFallbackTypewriter(element, question);
             }
             
         } else {
-            console.log('📝 No audio provided, using fast typewriter');
-            fallbackTypewriter(element, question);
+            console.log('📝 No audio provided, using text-only typewriter');
+            if (window.TypewriterSync) {
+                window.TypewriterSync.createTextOnly(element, question, { fast: false }).then(() => {
+                    setTimeout(() => enableCandidateResponse('Text completed'), 800);
+                });
+            } else {
+                startFallbackTypewriter(element, question);
+            }
         }
+    }
+    
+    // Enhanced fallback typewriter
+    function startFallbackTypewriter(element, question, audioDuration = null) {
+        console.log('📝 Using fallback typewriter');
+        let index = 0;
+        
+        // Calculate typing speed based on audio duration or use default
+        const targetDuration = audioDuration ? audioDuration * 1000 : Math.min(question.length * 60, 6000);
+        const charDelay = Math.max(30, Math.min(100, targetDuration / question.length));
+        
+        const typeChar = () => {
+            if (index < question.length) {
+                element.textContent += question.charAt(index);
+                index++;
+                setTimeout(typeChar, charDelay);
+            } else {
+                // Typewriter finished, enable response after short delay
+                setTimeout(() => {
+                    enableCandidateResponse('Fallback typewriter completed');
+                }, 800);
+            }
+        };
+        typeChar();
     }
     
     // Enable candidate response after audio completes
@@ -637,27 +637,6 @@
         }
         
         console.log('✅ Candidate can now respond');
-    }
-    
-    // Fallback typewriter without audio
-    function fallbackTypewriter(element, question) {
-        console.log('📝 Using fallback typewriter');
-        let index = 0;
-        const typeSpeed = 60; // Slightly faster for no audio
-        
-        const typeChar = () => {
-            if (index < question.length) {
-                element.innerHTML += question.charAt(index);
-                index++;
-                setTimeout(typeChar, typeSpeed);
-            } else {
-                // Typewriter finished, enable response after short delay
-                setTimeout(() => {
-                    enableCandidateResponse('Typewriter completed');
-                }, 800);
-            }
-        };
-        typeChar();
     }
     
     // Initialize speech recognition with improved error handling

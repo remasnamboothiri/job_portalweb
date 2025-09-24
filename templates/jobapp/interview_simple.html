@@ -516,19 +516,32 @@
             audio.volume = 0.7; // Slightly reduced volume
             
             // Calculate timing for synchronized typewriter
-            const totalChars = question.length;
-            const audioDurationMs = (audioDuration || 6) * 1000;
-            const charDelay = Math.max(40, Math.min(120, audioDurationMs / totalChars));
+            //const totalChars = question.length;
+            //const audioDurationMs = (audioDuration || 6) * 1000;
+            //const charDelay = Math.max(40, Math.min(120, audioDurationMs / totalChars));
             
             // Start typewriter effect
+            //let index = 0;
+            //const typewriter = () => {
+            //    if (index < question.length && isInterviewerSpeaking) {
+            //        element.innerHTML += question.charAt(index);
+            //        index++;
+            //        setTimeout(typewriter, charDelay);
+            //    } else if (index >= question.length) {
+            //        console.log('✅ Typewriter completed');
+            //    }
+            //};
+            // Start typewriter synchronized with audio
+            const totalChars = question.length;
+            const audioDurationMs = (audioDuration || 5) * 1000;
+            const charDelay = Math.max(30, audioDurationMs / totalChars);
+            
             let index = 0;
-            const typewriter = () => {
-                if (index < question.length && isInterviewerSpeaking) {
+            const streamText = () => {
+                if (index < question.length) {
                     element.innerHTML += question.charAt(index);
                     index++;
-                    setTimeout(typewriter, charDelay);
-                } else if (index >= question.length) {
-                    console.log('✅ Typewriter completed');
+                    setTimeout(streamText, charDelay);
                 }
             };
             

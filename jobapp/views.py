@@ -1310,6 +1310,7 @@ def start_interview_by_uuid(request, interview_uuid):
             'has_audio': bool(audio_path),
             'csrf_token': get_token(request),
             'is_registered_candidate': interview.is_registered_candidate,
+            
         }
         
         logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}")

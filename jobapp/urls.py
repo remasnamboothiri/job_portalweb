@@ -79,8 +79,15 @@ urlpatterns = [
     
     #monika sound 
     # Add these to your urlpatterns in urls.py
-    path('test-monika-voice/', views.test_monika_voice, name='test_monika_voice'),
+    # path('test-monika-voice/', views.test_monika_voice, name='test_monika_voice'),
     path('test-voice-direct/', views.test_voice_direct, name='test_voice_direct'),
+    
+    
+    # Monika Voice Testing Endpoints
+    path('test-monika-voice/', views.test_monika_voice_only, name='test_monika_voice'),
+    path('test-monika-direct/', views.test_monika_direct_generation, name='test_monika_direct'),
+    path('test-monika-interview/', views.test_monika_interview_simulation, name='test_monika_interview'),
+    path('monika-status/', views.monika_voice_status, name='monika_status'),
     
     # Add candidate from dashboard
     path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),

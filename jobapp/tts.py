@@ -8,14 +8,14 @@ from django.conf import settings
 import hashlib
 import logging
 from django.utils import timezone
-from mutagen.mp3 import MP3
+
 import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 # ElevenLabs TTS Configuration
-VOICE_ID = "EaBs7G1VibMrNAuz2Na7"
+VOICE_ID = "EaBs7G1VibMrNAuz2Na7" # Monika Sogam - Natural Conversations 
 ELEVENLABS_API_KEY = getattr(settings, 'ELEVENLABS_API_KEY', '') or os.environ.get('ELEVENLABS_API_KEY', '')
 if ELEVENLABS_API_KEY:
     ELEVENLABS_API_KEY = ELEVENLABS_API_KEY.strip()

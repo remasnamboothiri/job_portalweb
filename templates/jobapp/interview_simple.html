@@ -269,12 +269,35 @@
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0.5; }
         }
+
+        /* Speech status indicator */
+        .speech-status {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .speech-status.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Audio status indicator -->
         <div class="audio-status" id="audioStatus"></div>
+        
+        <!-- Speech status indicator -->
+        <div class="speech-status" id="speechStatus">🎤 Listening...</div>
         
         <!-- Connection status -->
         <div class="connection-status connected" id="connectionStatus">Connected</div>
@@ -341,10 +364,11 @@
     let interviewCompleted = false;
     let audioEndedTimeout = null;
     let currentAudioElement = null;
+    let speechDetectionActive = false; // FIXED: Add proper speech detection state
     
     // Interview configuration
     const MAX_QUESTIONS = 8;
-    const SPEECH_TIMEOUT_MS = 2500; // 2.5 seconds pause before auto-submit
+    const SPEECH_TIMEOUT_MS = 3000; // FIXED: Increased to 3 seconds for better speech capture
     
     console.log('AI Interview System Starting...');
     
@@ -409,6 +433,17 @@
             </div>`;
     }
     
+    // FIXED: Update speech status indicator
+    function updateSpeechStatus(isActive, message = '') {
+        const speechStatus = document.getElementById('speechStatus');
+        if (isActive && !isInterviewerSpeaking) {
+            speechStatus.textContent = message || '🎤 Listening...';
+            speechStatus.classList.add('active');
+        } else {
+            speechStatus.classList.remove('active');
+        }
+    }
+    
     // Toggle camera
     function toggleCamera() {
         if (!userStream) return;
@@ -448,6 +483,11 @@
         // Clear previous content and reset state
         element.innerHTML = '';
         isProcessingResponse = true;
+        isInterviewerSpeaking = true; // FIXED: Set this immediately
+        speechDetectionActive = false; // FIXED: Disable speech detection during AI speech
+        
+        // Update speech status
+        updateSpeechStatus(false);
         
         // Clear any existing audio timeout
         if (audioEndedTimeout) {
@@ -466,7 +506,6 @@
             console.log('Starting controlled audio playback');
             
             // Disable microphone and show visual feedback
-            isInterviewerSpeaking = true;
             micBtn.classList.add('disabled');
             micBtn.title = 'Interviewer is speaking - Please listen';
             
@@ -581,12 +620,13 @@
         typeChar();
     }
     
-    // Enable candidate response after audio completes
+    // FIXED: Enable candidate response after audio completes
     function enableCandidateResponse(reason = 'Audio completed') {
         console.log('Enabling candidate response:', reason);
         
         isInterviewerSpeaking = false;
         isProcessingResponse = false;
+        speechDetectionActive = true; // FIXED: Enable speech detection
         
         const micBtn = document.getElementById('micBtn');
         const audioStatus = document.getElementById('audioStatus');
@@ -601,6 +641,9 @@
         audioStatus.className = 'audio-status listening';
         audioStatus.textContent = 'Your turn - Please speak your answer';
         
+        // Update speech status
+        updateSpeechStatus(true, '🎤 Ready to listen - Please speak');
+        
         // Hide status indicator after delay
         setTimeout(() => {
             if (audioStatus.style.display !== 'none') {
@@ -614,10 +657,17 @@
             audioEndedTimeout = null;
         }
         
-        console.log('Candidate can now respond');
+        // FIXED: Clear any collected text and reset speech state
+        collectedText = '';
+        if (speechTimeout) {
+            clearTimeout(speechTimeout);
+            speechTimeout = null;
+        }
+        
+        console.log('Candidate can now respond - speech detection active');
     }
     
-    // Initialize speech recognition
+    // FIXED: Initialize speech recognition with better error handling
     function initSpeech() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             console.error('Speech recognition not supported in this browser');
@@ -639,16 +689,21 @@
             document.getElementById('micBtn').classList.add('recording');
             document.getElementById('micBtn').innerHTML = '🔴';
             console.log('Speech recognition started');
+            
+            // Update speech status if detection is active
+            if (speechDetectionActive && !isInterviewerSpeaking) {
+                updateSpeechStatus(true, '🎤 Listening for your response...');
+            }
         };
         
         recognition.onend = function() {
-            console.log('Speech recognition ended');
+            console.log('Speech recognition ended, isListening:', isListening, 'completed:', interviewCompleted, 'interviewer speaking:', isInterviewerSpeaking);
             
             // Auto-restart if still supposed to be listening
             if (isListening && !interviewCompleted && !isInterviewerSpeaking) {
                 setTimeout(() => {
                     try {
-                        if (recognition && isListening) {
+                        if (recognition && isListening && speechDetectionActive) {
                             recognition.start();
                             console.log('Speech recognition restarted');
                         }
@@ -659,6 +714,11 @@
                         }
                     }
                 }, 100);
+            } else {
+                // Clear UI states when not restarting
+                document.getElementById('micBtn').classList.remove('recording');
+                document.getElementById('micBtn').innerHTML = '🎤';
+                updateSpeechStatus(false);
             }
         };
         
@@ -671,6 +731,7 @@
                     break;
                 case 'no-speech':
                     console.log('No speech detected, continuing...');
+                    // Don't show error for no speech - this is normal
                     break;
                 case 'audio-capture':
                     showError('Microphone not available. Please check if another application is using it.');
@@ -678,7 +739,7 @@
                 case 'network':
                     console.log('Network error, attempting to restart...');
                     setTimeout(() => {
-                        if (isListening && recognition) {
+                        if (isListening && recognition && speechDetectionActive) {
                             try {
                                 recognition.start();
                             } catch (e) {
@@ -687,13 +748,26 @@
                         }
                     }, 1000);
                     break;
+                case 'aborted':
+                    console.log('Speech recognition aborted - this is normal during transitions');
+                    break;
+                default:
+                    console.warn('Unhandled speech error:', event.error);
             }
         };
         
+        // FIXED: Improved speech result processing
         recognition.onresult = function(event) {
+            // Only process if we're actively listening for candidate responses
+            if (!speechDetectionActive || isInterviewerSpeaking || isProcessingResponse || interviewCompleted) {
+                console.log('Ignoring speech - not ready for candidate input');
+                return;
+            }
+            
             let interimTranscript = '';
             let finalTranscript = '';
             
+            // Process all results
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
@@ -703,38 +777,36 @@
                 }
             }
 
-            // Only process speech when candidate can speak
-            if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted) {
-                const displayText = collectedText + finalTranscript + 
-                    (interimTranscript ? `<span style="opacity: 0.7; font-style: italic;">${interimTranscript}</span>` : '');
-                
-                if (displayText.trim()) {
-                    document.getElementById('conversationArea').innerHTML = displayText;
+            // Show real-time feedback
+            const displayText = collectedText + finalTranscript + 
+                (interimTranscript ? `<span style="opacity: 0.7; font-style: italic;">${interimTranscript}</span>` : '');
+            
+            if (displayText.trim()) {
+                document.getElementById('conversationArea').innerHTML = displayText;
+                updateSpeechStatus(true, '🎤 Processing your speech...');
+            }
+        
+            // Handle final transcript
+            if (finalTranscript.trim()) {
+                collectedText += finalTranscript;
+                lastSpeechTime = Date.now();
+                console.log('Speech collected:', collectedText.length, 'chars');
+            
+                // Clear existing timeout
+                if (speechTimeout) {
+                    clearTimeout(speechTimeout);
                 }
             
-                if (finalTranscript.trim()) {
-                    collectedText += finalTranscript;
-                    lastSpeechTime = Date.now();
-                    console.log('Speech collected:', collectedText.substring(0, 100) + '...');
-                
-                    // Clear existing timeout
-                    if (speechTimeout) {
-                        clearTimeout(speechTimeout);
+                // FIXED: Auto-submit after speech pause with better timing
+                speechTimeout = setTimeout(() => {
+                    if (collectedText.trim() && speechDetectionActive && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
+                        console.log('Auto-submitting response after speech pause:', collectedText.substring(0, 50) + '...');
+                        autoSubmitResponse();
                     }
+                }, SPEECH_TIMEOUT_MS);
                 
-                    // Auto-submit after speech pause
-                    speechTimeout = setTimeout(() => {
-                        if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
-                            console.log('Auto-submitting response after speech pause');
-                            autoSubmitResponse();
-                        }
-                    }, SPEECH_TIMEOUT_MS);
-                }
-            } else {
-                // Log ignored speech
-                if (isInterviewerSpeaking) {
-                    console.log('Ignoring candidate speech - interviewer is speaking');
-                }
+                // Update status
+                updateSpeechStatus(true, `🎤 Got ${collectedText.split(' ').length} words - keep speaking or wait 3 seconds to submit`);
             }
         };
         
@@ -760,14 +832,21 @@
         }
     }
     
-    // Auto-submit collected speech
+            // FIXED: Auto-submit collected speech with proper state management
     function autoSubmitResponse() {
-        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim() || interviewCompleted) {
+        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim() || interviewCompleted || !speechDetectionActive) {
+            console.log('Skipping auto-submit - conditions not met');
             return;
         }
         
         console.log('Auto-submitting response:', collectedText.substring(0, 100) + '...');
+        
+        // FIXED: Set processing state and disable speech detection
         isProcessingResponse = true;
+        speechDetectionActive = false;
+        
+        // Update UI to show processing
+        updateSpeechStatus(false);
         
         // Clear speech timeout
         if (speechTimeout) {
@@ -780,7 +859,7 @@
         
         // Show processing state
         document.getElementById('conversationArea').innerHTML = 
-            `<div style="opacity: 0.7; font-style: italic;">Processing your response...</div>`;
+            `<div style="opacity: 0.7; font-style: italic;">Processing your response: "${responseText.substring(0, 50)}${responseText.length > 50 ? '...' : ''}"</div>`;
         
         sendResponse(responseText).finally(() => {
             isProcessingResponse = false;
@@ -788,7 +867,7 @@
         });
     }
     
-    // Send response to server with improved error handling
+    // FIXED: Send response to server with improved error handling and proper state management
     async function sendResponse(text) {
         try {
             console.log('Sending response to server:', text.substring(0, 100) + '...');
@@ -851,6 +930,7 @@
         console.log('Completing interview...');
         
         interviewCompleted = true;
+        speechDetectionActive = false; // FIXED: Disable speech detection
         
         // Stop speech recognition
         if (recognition && isListening) {
@@ -870,6 +950,7 @@
         
         // Update UI
         document.getElementById('audioStatus').style.display = 'none';
+        updateSpeechStatus(false);
         
         // Disable controls
         const controls = document.querySelectorAll('.btn');
@@ -883,7 +964,7 @@
         }, 1000);
     }
     
-    // Toggle microphone
+    // FIXED: Toggle microphone with proper state management
     function toggleMic() {
         if (!recognition || interviewCompleted) return;
         
@@ -897,6 +978,7 @@
             // Turn off microphone
             if (confirm('Turn off microphone? This is not recommended during the interview.')) {
                 isListening = false;
+                speechDetectionActive = false;
                 try {
                     recognition.stop();
                 } catch (e) {
@@ -904,6 +986,7 @@
                 }
                 document.getElementById('micBtn').classList.remove('recording');
                 document.getElementById('micBtn').innerHTML = '🎤';
+                updateSpeechStatus(false);
                 
                 // Submit any collected text
                 if (speechTimeout) {
@@ -918,12 +1001,15 @@
         } else {
             // Turn on microphone
             isListening = true;
+            speechDetectionActive = true;
             collectedText = '';
             try {
                 recognition.start();
+                updateSpeechStatus(true, '🎤 Microphone enabled - Ready to listen');
             } catch (e) {
                 console.error('Failed to restart microphone:', e);
                 isListening = false;
+                speechDetectionActive = false;
             }
         }
     }
@@ -960,7 +1046,7 @@
         window.location.href = '{% url "jobseeker_dashboard" %}';
     }
     
-    // Initialize everything when page loads
+    // FIXED: Initialize everything when page loads with proper sequencing
     document.addEventListener('DOMContentLoaded', function() {
         console.log('AI Interview System Starting...');
         
@@ -1005,6 +1091,16 @@
         });
         
         console.log('AI Interview System initialized successfully');
+    });
+    
+    // FIXED: Add keyboard shortcut for manual submission (spacebar)
+    document.addEventListener('keydown', function(e) {
+        // Allow spacebar to manually submit response when candidate can speak
+        if (e.code === 'Space' && speechDetectionActive && !isInterviewerSpeaking && !isProcessingResponse && collectedText.trim()) {
+            e.preventDefault();
+            console.log('Manual submission via spacebar');
+            autoSubmitResponse();
+        }
     });
 </script>
 </body>

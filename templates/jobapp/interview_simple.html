@@ -179,26 +179,6 @@
             background: #4caf50;
             animation: status-pulse 2s ease-in-out infinite;
         }
-        .audio-level-indicator {
-            position: fixed;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 4px;
-            z-index: 999;
-        }
-        .audio-level-bar {
-            width: 4px;
-            height: 20px;
-            background: #4caf50;
-            border-radius: 2px;
-            animation: audio-bar 0.5s ease-in-out infinite alternate;
-        }
-        .audio-level-bar:nth-child(2) { animation-delay: 0.1s; }
-        .audio-level-bar:nth-child(3) { animation-delay: 0.2s; }
-        .audio-level-bar:nth-child(4) { animation-delay: 0.3s; }
-        .audio-level-bar:nth-child(5) { animation-delay: 0.4s; }
         
         /* Animations */
         @keyframes pulse {
@@ -212,10 +192,6 @@
         @keyframes status-pulse {
             0%, 100% { opacity: 0.9; }
             50% { opacity: 1; }
-        }
-        @keyframes audio-bar {
-            0% { height: 20px; }
-            100% { height: 40px; }
         }
         
         /* Interview completion modal */
@@ -298,28 +274,14 @@
 <body>
     <div class="container">
         <!-- Audio status indicator -->
-        <div class="audio-status" id="audioStatus">
-            
-        </div>
+        <div class="audio-status" id="audioStatus"></div>
         
-        {% comment %} <!-- Connection status -->
-        <div class="connection-status connected" id="connectionStatus">
-            
-        </div> {% endcomment %}
+        <!-- Connection status -->
+        <div class="connection-status connected" id="connectionStatus">Connected</div>
         
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
             <div class="stat">Time: <span id="timer">15:00</span></div>
-            {% comment %} <div class="stat">Status: <span id="interviewStatus">In Progress</span></div> {% endcomment %}
-        </div>
-        
-        <!-- Audio Level Indicator -->
-        <div class="audio-level-indicator" id="audioLevelIndicator">
-            <div class="audio-level-bar"></div>
-            <div class="audio-level-bar"></div>
-            <div class="audio-level-bar"></div>
-            <div class="audio-level-bar"></div>
-            <div class="audio-level-bar"></div>
         </div>
         
         <div class="video-grid">
@@ -333,9 +295,9 @@
             </div>
         </div>
 
-        <div class="transcript-section" >
+        <div class="transcript-section">
             <div class="conversation-text" id="conversationArea">
-                
+                Initializing interview system...
             </div>
         </div>
 
@@ -349,7 +311,7 @@
     <!-- Interview completion modal -->
     <div class="interview-complete-modal" id="interviewCompleteModal">
         <div class="modal-content">
-            <h2>🎉 Interview Complete!</h2>
+            <h2>Interview Complete!</h2>
             <p>Thank you for participating in the AI interview. Your responses have been recorded and will be reviewed by our team.</p>
             <p><strong>Next Steps:</strong> You will receive feedback within 2-3 business days via email.</p>
             <button class="modal-btn" onclick="goToDashboard()">Return to Dashboard</button>
@@ -360,6 +322,7 @@
     <audio id="aiAudio" preload="auto"></audio>
     {% csrf_token %}
     
+    <!-- Load typewriter before main script -->
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
 
     <script>
@@ -382,14 +345,13 @@
     // Interview configuration
     const MAX_QUESTIONS = 8;
     const SPEECH_TIMEOUT_MS = 2500; // 2.5 seconds pause before auto-submit
-    const AUDIO_TIMEOUT_MS = 30000; // 30 second max wait for audio
     
-    console.log('🚀 AI Interview System Starting...');
+    console.log('AI Interview System Starting...');
     
     // Initialize camera and microphone
     async function initCamera() {
         try {
-            console.log('🎙️ Requesting camera and microphone permissions...');
+            console.log('Requesting camera and microphone permissions...');
             userStream = await navigator.mediaDevices.getUserMedia({ 
                 video: {
                     width: { ideal: 1280 },
@@ -406,13 +368,12 @@
             
             const videoElement = document.getElementById('userVideo');
             videoElement.srcObject = userStream;
-            console.log('✅ Camera and microphone access granted');
+            console.log('Camera and microphone access granted');
             
-            // Update connection status
             updateConnectionStatus(true);
             
         } catch (error) {
-            console.error('❌ Camera/Microphone error:', error);
+            console.error('Camera/Microphone error:', error);
             updateConnectionStatus(false);
             
             let message = 'Camera/Microphone Error: ';
@@ -444,7 +405,7 @@
     function showError(message) {
         document.getElementById('conversationArea').innerHTML = 
             `<div style="color: #f44336; background: rgba(244, 67, 54, 0.1); padding: 20px; border-radius: 10px; border: 1px solid #f44336;">
-                <strong>⚠️ Error:</strong> ${message}
+                <strong>Error:</strong> ${message}
             </div>`;
     }
     
@@ -474,10 +435,10 @@
             candidateBox.style.background = '#1a1a1a';
         }
         
-        console.log(`📹 Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
+        console.log(`Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
     }
     
-    // FIXED: Enhanced audio playback control with proper TypewriterSync integration
+    // Enhanced audio playback control with proper TypewriterSync integration
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const element = document.getElementById('conversationArea');
         const audioStatus = document.getElementById('audioStatus');
@@ -494,14 +455,17 @@
             audioEndedTimeout = null;
         }
         
-        console.log('📝 Showing AI question:', question.substring(0, 50) + '...');
-        console.log('🔊 Audio URL:', audioUrl);
-        console.log('⏱️ Duration:', audioDuration);
+        console.log('Showing AI question:', question.substring(0, 50) + '...');
+        console.log('Audio URL:', audioUrl);
+        console.log('Duration:', audioDuration);
         
-        if (audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None') {
-            console.log('🔊 Starting controlled audio playback');
+        // Check if we have valid audio
+        const hasValidAudio = audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None' && audioDuration > 0;
+        
+        if (hasValidAudio) {
+            console.log('Starting controlled audio playback');
             
-            // CRITICAL: Disable microphone and show visual feedback
+            // Disable microphone and show visual feedback
             isInterviewerSpeaking = true;
             micBtn.classList.add('disabled');
             micBtn.title = 'Interviewer is speaking - Please listen';
@@ -509,25 +473,32 @@
             // Visual feedback
             aiVideoBox.classList.add('ai-speaking');
             audioStatus.className = 'audio-status playing';
-            audioStatus.textContent = '🔊 Interviewer speaking - Please listen carefully';
+            audioStatus.textContent = 'Interviewer speaking - Please listen carefully';
             audioStatus.style.display = 'block';
             
             // Setup audio element
             const audio = document.getElementById('aiAudio');
             currentAudioElement = audio;
+            
+            // Clear any previous audio
+            audio.pause();
+            audio.currentTime = 0;
             audio.src = audioUrl;
             audio.volume = 0.8;
             
-            // Use TypewriterSync with audio
-            audio.oncanplaythrough = () => {
+            // Better audio event handling
+            const onCanPlayThrough = () => {
+                console.log('Audio ready to play');
+                audio.removeEventListener('canplaythrough', onCanPlayThrough);
+                
                 audio.play().then(() => {
-                    console.log('🔊 Audio playing - starting synchronized typewriter');
+                    console.log('Audio playing - starting synchronized typewriter');
                     
-                    // Use the fixed TypewriterSync with audio support
+                    // Use TypewriterSync with audio
                     if (window.TypewriterSync) {
                         window.TypewriterSync.start(element, question, audio, audioDuration);
                     } else {
-                        // Fallback if TypewriterSync not loaded
+                        console.warn('TypewriterSync not available, using fallback');
                         startFallbackTypewriter(element, question, audioDuration);
                     }
                     
@@ -538,37 +509,44 @@
                 });
             };
             
-            // CRITICAL: Re-enable microphone when audio actually ends
-            audio.onended = () => {
-                console.log('✅ Audio playback ended - enabling candidate response');
+            // Re-enable microphone when audio actually ends
+            const onAudioEnded = () => {
+                console.log('Audio playback ended - enabling candidate response');
+                audio.removeEventListener('ended', onAudioEnded);
                 enableCandidateResponse('Audio completed');
             };
             
-            audio.onerror = (error) => {
-                console.error('❌ Audio error:', error);
+            const onAudioError = (error) => {
+                console.error('Audio error:', error);
+                audio.removeEventListener('error', onAudioError);
                 enableCandidateResponse('Audio error occurred');
                 startFallbackTypewriter(element, question);
             };
             
+            // Attach event listeners
+            audio.addEventListener('canplaythrough', onCanPlayThrough);
+            audio.addEventListener('ended', onAudioEnded);
+            audio.addEventListener('error', onAudioError);
+            
             // Backup timeout in case audio events don't fire
             audioEndedTimeout = setTimeout(() => {
                 if (isInterviewerSpeaking) {
-                    console.warn('⏰ Audio timeout reached - enabling microphone');
+                    console.warn('Audio timeout reached - enabling microphone');
                     enableCandidateResponse('Audio timeout');
                 }
             }, (audioDuration + 5) * 1000); // Extra 5 seconds buffer
             
-            // Load and attempt to play audio
+            // Load audio
             try {
                 audio.load();
             } catch (error) {
-                console.error('❌ Audio load failed:', error);
+                console.error('Audio load failed:', error);
                 enableCandidateResponse('Audio load failed');
                 startFallbackTypewriter(element, question);
             }
             
         } else {
-            console.log('📝 No audio provided, using text-only typewriter');
+            console.log('No valid audio provided, using text-only typewriter');
             if (window.TypewriterSync) {
                 window.TypewriterSync.createTextOnly(element, question, { fast: false }).then(() => {
                     setTimeout(() => enableCandidateResponse('Text completed'), 800);
@@ -581,7 +559,7 @@
     
     // Enhanced fallback typewriter
     function startFallbackTypewriter(element, question, audioDuration = null) {
-        console.log('📝 Using fallback typewriter');
+        console.log('Using fallback typewriter');
         let index = 0;
         
         // Calculate typing speed based on audio duration or use default
@@ -605,7 +583,7 @@
     
     // Enable candidate response after audio completes
     function enableCandidateResponse(reason = 'Audio completed') {
-        console.log('🎤 Enabling candidate response:', reason);
+        console.log('Enabling candidate response:', reason);
         
         isInterviewerSpeaking = false;
         isProcessingResponse = false;
@@ -621,7 +599,7 @@
         aiVideoBox.classList.remove('ai-speaking');
         
         audioStatus.className = 'audio-status listening';
-        audioStatus.textContent = '🎤 Your turn - Please speak your answer';
+        audioStatus.textContent = 'Your turn - Please speak your answer';
         
         // Hide status indicator after delay
         setTimeout(() => {
@@ -636,18 +614,17 @@
             audioEndedTimeout = null;
         }
         
-        console.log('✅ Candidate can now respond');
+        console.log('Candidate can now respond');
     }
     
-    // Initialize speech recognition with improved error handling
+    // Initialize speech recognition
     function initSpeech() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            console.error('❌ Speech recognition not supported in this browser');
+            console.error('Speech recognition not supported in this browser');
             showError('Speech recognition not supported. Please use Chrome, Edge, or Safari.');
             return;
         }
         
-        // Use the appropriate speech recognition class
         const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         recognition = new SpeechRecognition();
         
@@ -661,22 +638,22 @@
             isListening = true;
             document.getElementById('micBtn').classList.add('recording');
             document.getElementById('micBtn').innerHTML = '🔴';
-            console.log('🎙️ Speech recognition started');
+            console.log('Speech recognition started');
         };
         
         recognition.onend = function() {
-            console.log('🎙️ Speech recognition ended');
+            console.log('Speech recognition ended');
             
-            // Auto-restart if still supposed to be listening and interview not completed
+            // Auto-restart if still supposed to be listening
             if (isListening && !interviewCompleted && !isInterviewerSpeaking) {
                 setTimeout(() => {
                     try {
                         if (recognition && isListening) {
                             recognition.start();
-                            console.log('🔄 Speech recognition restarted');
+                            console.log('Speech recognition restarted');
                         }
                     } catch (e) {
-                        console.warn('⚠️ Could not restart recognition:', e.message);
+                        console.warn('Could not restart recognition:', e.message);
                         if (e.name !== 'InvalidStateError') {
                             setTimeout(() => initSpeech(), 1000);
                         }
@@ -686,32 +663,29 @@
         };
         
         recognition.onerror = function(event) {
-            console.error('❌ Speech recognition error:', event.error);
+            console.error('Speech recognition error:', event.error);
             
             switch(event.error) {
                 case 'not-allowed':
                     showError('Microphone access denied. Please allow microphone access and refresh the page.');
                     break;
                 case 'no-speech':
-                    console.log('⚠️ No speech detected, continuing...');
+                    console.log('No speech detected, continuing...');
                     break;
                 case 'audio-capture':
                     showError('Microphone not available. Please check if another application is using it.');
                     break;
                 case 'network':
-                    console.log('🌐 Network error, attempting to restart...');
+                    console.log('Network error, attempting to restart...');
                     setTimeout(() => {
                         if (isListening && recognition) {
                             try {
                                 recognition.start();
                             } catch (e) {
-                                console.log('❌ Network restart failed');
+                                console.log('Network restart failed');
                             }
                         }
                     }, 1000);
-                    break;
-                case 'service-not-allowed':
-                    showError('Speech recognition service not available. Please try refreshing the page.');
                     break;
             }
         };
@@ -729,7 +703,7 @@
                 }
             }
 
-            // CRITICAL: Only process speech when candidate can speak
+            // Only process speech when candidate can speak
             if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted) {
                 const displayText = collectedText + finalTranscript + 
                     (interimTranscript ? `<span style="opacity: 0.7; font-style: italic;">${interimTranscript}</span>` : '');
@@ -741,7 +715,7 @@
                 if (finalTranscript.trim()) {
                     collectedText += finalTranscript;
                     lastSpeechTime = Date.now();
-                    console.log('👤 Speech collected:', collectedText.substring(0, 100) + '...');
+                    console.log('Speech collected:', collectedText.substring(0, 100) + '...');
                 
                     // Clear existing timeout
                     if (speechTimeout) {
@@ -751,7 +725,7 @@
                     // Auto-submit after speech pause
                     speechTimeout = setTimeout(() => {
                         if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
-                            console.log('⚡ Auto-submitting response after speech pause');
+                            console.log('Auto-submitting response after speech pause');
                             autoSubmitResponse();
                         }
                     }, SPEECH_TIMEOUT_MS);
@@ -759,9 +733,7 @@
             } else {
                 // Log ignored speech
                 if (isInterviewerSpeaking) {
-                    console.log('🚫 Ignoring candidate speech - interviewer is speaking');
-                } else if (interviewCompleted) {
-                    console.log('🚫 Ignoring speech - interview completed');
+                    console.log('Ignoring candidate speech - interviewer is speaking');
                 }
             }
         };
@@ -775,11 +747,11 @@
             try {
                 isListening = true;
                 recognition.start();
-                console.log('🎙️ Microphone started successfully');
+                console.log('Microphone started successfully');
             } catch (e) {
-                console.error('❌ Failed to start microphone:', e);
+                console.error('Failed to start microphone:', e);
                 if (e.name === 'InvalidStateError') {
-                    console.log('⚠️ Recognition already running, continuing...');
+                    console.log('Recognition already running, continuing...');
                     isListening = true;
                 } else {
                     isListening = false;
@@ -794,7 +766,7 @@
             return;
         }
         
-        console.log('📤 Auto-submitting response:', collectedText.substring(0, 100) + '...');
+        console.log('Auto-submitting response:', collectedText.substring(0, 100) + '...');
         isProcessingResponse = true;
         
         // Clear speech timeout
@@ -812,14 +784,14 @@
         
         sendResponse(responseText).finally(() => {
             isProcessingResponse = false;
-            console.log('✅ Response processing complete');
+            console.log('Response processing complete');
         });
     }
     
     // Send response to server with improved error handling
     async function sendResponse(text) {
         try {
-            console.log('📡 Sending response to server:', text.substring(0, 100) + '...');
+            console.log('Sending response to server:', text.substring(0, 100) + '...');
             
             updateConnectionStatus(true);
             
@@ -837,10 +809,10 @@
             }
             
             const data = await response.json();
-            console.log('📡 Server response received:', data);
+            console.log('Server response received:', data);
             
             if (data.success) {
-                console.log('✅ Response processed successfully');
+                console.log('Response processed successfully');
                 
                 // Update question count
                 questionCount = data.question_count || questionCount + 1;
@@ -856,18 +828,18 @@
                 
                 // Check if interview is complete
                 if (data.is_final || questionCount >= MAX_QUESTIONS) {
-                    console.log('🏁 Interview completed, scheduling completion...');
+                    console.log('Interview completed, scheduling completion...');
                     setTimeout(() => {
                         completeInterview();
                     }, (data.audio_duration || 5) * 1000 + 3000); // Wait for audio + buffer
                 }
             } else {
-                console.error('❌ Server returned error:', data);
+                console.error('Server returned error:', data);
                 showError('Could not process your response. Please try speaking again.');
                 enableCandidateResponse('Server error');
             }
         } catch (error) {
-            console.error('❌ Network error:', error);
+            console.error('Network error:', error);
             updateConnectionStatus(false);
             showError('Network error. Please check your connection and try again.');
             enableCandidateResponse('Network error');
@@ -876,7 +848,7 @@
     
     // Complete interview
     function completeInterview() {
-        console.log('🏁 Completing interview...');
+        console.log('Completing interview...');
         
         interviewCompleted = true;
         
@@ -897,7 +869,6 @@
         }
         
         // Update UI
-        document.getElementById('interviewStatus').textContent = 'Completed';
         document.getElementById('audioStatus').style.display = 'none';
         
         // Disable controls
@@ -967,7 +938,7 @@
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
         
         if (timeLeft <= 0) {
-            console.log('⏰ Time expired - ending interview');
+            console.log('Time expired - ending interview');
             completeInterview();
             return;
         }
@@ -978,25 +949,25 @@
     // End interview manually
     function endInterview() {
         if (confirm('Are you sure you want to end the interview? This action cannot be undone.')) {
-            console.log('🛑 Interview ended manually');
+            console.log('Interview ended manually');
             completeInterview();
         }
     }
     
     // Go to dashboard
     function goToDashboard() {
-        console.log('🏠 Redirecting to dashboard');
+        console.log('Redirecting to dashboard');
         window.location.href = '{% url "jobseeker_dashboard" %}';
     }
     
     // Initialize everything when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Initializing AI Interview System...');
+        console.log('AI Interview System Starting...');
         
         // Initialize camera and microphone
         initCamera();
         
-        // Initialize speech recognition
+        // Initialize speech recognition after delay
         setTimeout(() => {
             initSpeech();
         }, 1000);
@@ -1014,14 +985,14 @@
         const initialAudio = `{{ audio_url|escapejs|safe }}`;
         const initialDuration = {{ audio_duration|default:"5" }};
         
-        console.log('📝 Initial question prepared');
-        console.log('🔊 Audio URL:', initialAudio);
-        console.log('⏱️ Duration:', initialDuration, 'seconds');
+        console.log('Initial question prepared');
+        console.log('Audio URL:', initialAudio);
+        console.log('Duration:', initialDuration, 'seconds');
         
         // Show initial question after short delay
         setTimeout(() => {
             showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
-            console.log('✅ Interview started successfully');
+            console.log('Interview started successfully');
         }, 1500);
         
         // Prevent page refresh during interview
@@ -1033,7 +1004,7 @@
             }
         });
         
-        console.log('✅ AI Interview System initialized successfully');
+        console.log('AI Interview System initialized successfully');
     });
 </script>
 </body>

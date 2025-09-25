@@ -51,6 +51,10 @@
             border-color: #ff9800 !important;
             box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
         }
+        .candidate-speaking {
+            border-color: #4caf50 !important;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
         video {
             width: 100%;
             height: 100%;
@@ -139,6 +143,14 @@
             max-height: 200px;
             overflow-y: auto;
         }
+        .candidate-response {
+            color: #81c784;
+            font-style: italic;
+        }
+        .interim-text {
+            opacity: 0.7;
+            color: #90a4ae;
+        }
         .stats {
             display: flex;
             justify-content: space-between;
@@ -180,25 +192,6 @@
             animation: status-pulse 2s ease-in-out infinite;
         }
         
-        .speech-status {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(76, 175, 80, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: none;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-        .speech-status.active {
-            display: block;
-            animation: pulse 2s infinite;
-        }
-        
         /* Animations */
         @keyframes pulse {
             0%, 100% { opacity: 0.8; }
@@ -213,6 +206,7 @@
             50% { opacity: 1; }
         }
         
+        /* Interview completion modal */
         .interview-complete-modal {
             position: fixed;
             top: 0;
@@ -264,6 +258,7 @@
             100% { opacity: 1; transform: scale(1); }
         }
         
+        /* Connection status */
         .connection-status {
             position: fixed;
             top: 20px;
@@ -290,8 +285,10 @@
 </head>
 <body>
     <div class="container">
+        <!-- Audio status indicator -->
         <div class="audio-status" id="audioStatus"></div>
-        <div class="speech-status" id="speechStatus">🎤 Listening...</div>
+        
+        <!-- Connection status -->
         <div class="connection-status connected" id="connectionStatus">Connected</div>
         
         <div class="stats">
@@ -323,6 +320,7 @@
         </div>
     </div>
 
+    <!-- Interview completion modal -->
     <div class="interview-complete-modal" id="interviewCompleteModal">
         <div class="modal-content">
             <h2>Interview Complete!</h2>
@@ -332,17 +330,19 @@
         </div>
     </div>
 
+    <!-- Audio element for interviewer questions -->
     <audio id="aiAudio" preload="auto"></audio>
     {% csrf_token %}
     
+    <!-- Load typewriter before main script -->
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
 
     <script>
-    // FIXED: Enhanced global variables with proper state management
+    // Global variables
     let recognition = null;
     let isListening = false;
     let questionCount = 1;
-    let timeLeft = 15 * 60;
+    let timeLeft = 15 * 60; // 15 minutes
     let userStream = null;
     let isCameraOn = true;
     let collectedText = '';
@@ -353,12 +353,14 @@
     let interviewCompleted = false;
     let audioEndedTimeout = null;
     let currentAudioElement = null;
-    let speechDetectionActive = false; // CRITICAL FIX
+    let isCandidateSpeaking = false;
+    let candidateResponseTyping = false;
     
+    // Interview configuration
     const MAX_QUESTIONS = 8;
-    const SPEECH_TIMEOUT_MS = 3000; // 3 seconds
+    const SPEECH_TIMEOUT_MS = 2500; // 2.5 seconds pause before auto-submit
     
-    console.log('🎤 AI Interview System Starting with FIXED speech recognition...');
+    console.log('AI Interview System Starting...');
     
     // Initialize camera and microphone
     async function initCamera() {
@@ -381,6 +383,7 @@
             const videoElement = document.getElementById('userVideo');
             videoElement.srcObject = userStream;
             console.log('Camera and microphone access granted');
+            
             updateConnectionStatus(true);
             
         } catch (error) {
@@ -395,10 +398,12 @@
             } else {
                 message += 'Cannot access camera/microphone. Please check permissions and refresh.';
             }
+            
             showError(message);
         }
     }
     
+    // Update connection status indicator
     function updateConnectionStatus(connected) {
         const statusEl = document.getElementById('connectionStatus');
         if (connected) {
@@ -410,6 +415,7 @@
         }
     }
     
+    // Show error message
     function showError(message) {
         document.getElementById('conversationArea').innerHTML = 
             `<div style="color: #f44336; background: rgba(244, 67, 54, 0.1); padding: 20px; border-radius: 10px; border: 1px solid #f44336;">
@@ -417,17 +423,7 @@
             </div>`;
     }
     
-    // FIXED: Speech status indicator
-    function updateSpeechStatus(isActive, message = '') {
-        const speechStatus = document.getElementById('speechStatus');
-        if (isActive && !isInterviewerSpeaking && speechDetectionActive) {
-            speechStatus.textContent = message || '🎤 Listening...';
-            speechStatus.classList.add('active');
-        } else {
-            speechStatus.classList.remove('active');
-        }
-    }
-    
+    // Toggle camera
     function toggleCamera() {
         if (!userStream) return;
         
@@ -456,19 +452,23 @@
         console.log(`Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
     }
     
+    // FIXED: Show interviewer question with typing animation
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const element = document.getElementById('conversationArea');
         const audioStatus = document.getElementById('audioStatus');
         const micBtn = document.getElementById('micBtn');
         const aiVideoBox = document.getElementById('aiVideoBox');
+        const candidateVideoBox = document.getElementById('candidateVideoBox');
         
+        // Clear previous content and reset state
         element.innerHTML = '';
         isProcessingResponse = true;
-        isInterviewerSpeaking = true; // CRITICAL FIX
-        speechDetectionActive = false; // CRITICAL FIX
+        candidateResponseTyping = false;
         
-        updateSpeechStatus(false);
+        // Remove candidate speaking indicator
+        candidateVideoBox.classList.remove('candidate-speaking');
         
+        // Clear any existing audio timeout
         if (audioEndedTimeout) {
             clearTimeout(audioEndedTimeout);
             audioEndedTimeout = null;
@@ -478,27 +478,34 @@
         console.log('Audio URL:', audioUrl);
         console.log('Duration:', audioDuration);
         
+        // Check if we have valid audio
         const hasValidAudio = audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None' && audioDuration > 0;
         
         if (hasValidAudio) {
             console.log('Starting controlled audio playback');
             
+            // Disable microphone and show visual feedback
+            isInterviewerSpeaking = true;
             micBtn.classList.add('disabled');
             micBtn.title = 'Interviewer is speaking - Please listen';
             
+            // Visual feedback
             aiVideoBox.classList.add('ai-speaking');
             audioStatus.className = 'audio-status playing';
             audioStatus.textContent = 'Interviewer speaking - Please listen carefully';
             audioStatus.style.display = 'block';
             
+            // Setup audio element
             const audio = document.getElementById('aiAudio');
             currentAudioElement = audio;
             
+            // Clear any previous audio
             audio.pause();
             audio.currentTime = 0;
             audio.src = audioUrl;
             audio.volume = 0.8;
             
+            // Better audio event handling
             const onCanPlayThrough = () => {
                 console.log('Audio ready to play');
                 audio.removeEventListener('canplaythrough', onCanPlayThrough);
@@ -506,6 +513,7 @@
                 audio.play().then(() => {
                     console.log('Audio playing - starting synchronized typewriter');
                     
+                    // Use TypewriterSync with audio
                     if (window.TypewriterSync) {
                         window.TypewriterSync.start(element, question, audio, audioDuration);
                     } else {
@@ -520,6 +528,7 @@
                 });
             };
             
+            // Re-enable microphone when audio actually ends
             const onAudioEnded = () => {
                 console.log('Audio playback ended - enabling candidate response');
                 audio.removeEventListener('ended', onAudioEnded);
@@ -533,17 +542,20 @@
                 startFallbackTypewriter(element, question);
             };
             
+            // Attach event listeners
             audio.addEventListener('canplaythrough', onCanPlayThrough);
             audio.addEventListener('ended', onAudioEnded);
             audio.addEventListener('error', onAudioError);
             
+            // Backup timeout in case audio events don't fire
             audioEndedTimeout = setTimeout(() => {
                 if (isInterviewerSpeaking) {
                     console.warn('Audio timeout reached - enabling microphone');
                     enableCandidateResponse('Audio timeout');
                 }
-            }, (audioDuration + 5) * 1000);
+            }, (audioDuration + 5) * 1000); // Extra 5 seconds buffer
             
+            // Load audio
             try {
                 audio.load();
             } catch (error) {
@@ -564,10 +576,12 @@
         }
     }
     
+    // Enhanced fallback typewriter
     function startFallbackTypewriter(element, question, audioDuration = null) {
         console.log('Using fallback typewriter');
         let index = 0;
         
+        // Calculate typing speed based on audio duration or use default
         const targetDuration = audioDuration ? audioDuration * 1000 : Math.min(question.length * 60, 6000);
         const charDelay = Math.max(30, Math.min(100, targetDuration / question.length));
         
@@ -577,6 +591,7 @@
                 index++;
                 setTimeout(typeChar, charDelay);
             } else {
+                // Typewriter finished, enable response after short delay
                 setTimeout(() => {
                     enableCandidateResponse('Fallback typewriter completed');
                 }, 800);
@@ -585,18 +600,19 @@
         typeChar();
     }
     
-    // CRITICAL FIX: Enhanced enable candidate response
+    // FIXED: Enable candidate response after audio completes
     function enableCandidateResponse(reason = 'Audio completed') {
-        console.log('🎤 ENABLING candidate response:', reason);
+        console.log('Enabling candidate response:', reason);
         
         isInterviewerSpeaking = false;
         isProcessingResponse = false;
-        speechDetectionActive = true; // CRITICAL FIX
+        isCandidateSpeaking = false;
         
         const micBtn = document.getElementById('micBtn');
         const audioStatus = document.getElementById('audioStatus');
         const aiVideoBox = document.getElementById('aiVideoBox');
         
+        // Update UI elements
         micBtn.classList.remove('disabled');
         micBtn.title = 'Microphone is ON - Speak your answer';
         
@@ -605,31 +621,70 @@
         audioStatus.className = 'audio-status listening';
         audioStatus.textContent = 'Your turn - Please speak your answer';
         
-        updateSpeechStatus(true, '🎤 Ready to listen - Please start speaking');
-        
+        // Hide status indicator after delay
         setTimeout(() => {
             if (audioStatus.style.display !== 'none') {
                 audioStatus.style.display = 'none';
             }
         }, 4000);
         
+        // Clear any audio timeout
         if (audioEndedTimeout) {
             clearTimeout(audioEndedTimeout);
             audioEndedTimeout = null;
         }
         
-        // CRITICAL FIX: Reset speech state
-        collectedText = '';
-        if (speechTimeout) {
-            clearTimeout(speechTimeout);
-            speechTimeout = null;
-        }
-        
-        console.log('🎤 Candidate response ENABLED - ready for speech');
-        console.log('🎤 State: speechDetectionActive=', speechDetectionActive, 'isInterviewerSpeaking=', isInterviewerSpeaking);
+        console.log('Candidate can now respond');
     }
     
-    // CRITICAL FIX: Enhanced speech recognition
+    // NEW: Show candidate response with typing effect
+    function showCandidateResponse(text, isInterim = false) {
+        const element = document.getElementById('conversationArea');
+        const candidateVideoBox = document.getElementById('candidateVideoBox');
+        
+        if (!candidateResponseTyping && !isInterim) {
+            // Start typing the candidate's response
+            candidateResponseTyping = true;
+            candidateVideoBox.classList.add('candidate-speaking');
+            
+            // Clear element and start typing
+            element.innerHTML = '';
+            
+            if (window.TypewriterSync) {
+                // Use faster typing for candidate responses
+                window.TypewriterSync.createTextOnly(element, text, { fast: true }).then(() => {
+                    candidateResponseTyping = false;
+                    candidateVideoBox.classList.remove('candidate-speaking');
+                    console.log('Candidate response typing completed');
+                });
+            } else {
+                // Fallback typing
+                let index = 0;
+                const charDelay = 40; // Faster typing for candidate
+                
+                const typeChar = () => {
+                    if (index < text.length) {
+                        element.innerHTML = `<div class="candidate-response">${text.substring(0, index + 1)}</div>`;
+                        index++;
+                        setTimeout(typeChar, charDelay);
+                    } else {
+                        candidateResponseTyping = false;
+                        candidateVideoBox.classList.remove('candidate-speaking');
+                    }
+                };
+                typeChar();
+            }
+        } else if (isInterim) {
+            // Show interim results without typing
+            const finalText = collectedText;
+            const interimHtml = finalText ? 
+                `<div class="candidate-response">${finalText}</div><div class="interim-text">${text}</div>` :
+                `<div class="interim-text">${text}</div>`;
+            element.innerHTML = interimHtml;
+        }
+    }
+    
+    // Initialize speech recognition
     function initSpeech() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             console.error('Speech recognition not supported in this browser');
@@ -640,156 +695,139 @@
         const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         recognition = new SpeechRecognition();
         
+        // Configure speech recognition
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
-        recognition.maxAlternatives = 3;
-        
-        console.log('🎤 Speech recognition configured');
+        recognition.maxAlternatives = 1;
         
         recognition.onstart = function() {
             isListening = true;
+            isCandidateSpeaking = true;
             document.getElementById('micBtn').classList.add('recording');
             document.getElementById('micBtn').innerHTML = '🔴';
-            console.log('🎤 Speech recognition STARTED');
-            
-            if (speechDetectionActive && !isInterviewerSpeaking) {
-                updateSpeechStatus(true, '🎤 Listening for your response...');
-            }
+            document.getElementById('candidateVideoBox').classList.add('candidate-speaking');
+            console.log('Speech recognition started');
         };
         
         recognition.onend = function() {
-            console.log('🎤 Speech recognition ENDED - checking for restart...');
+            console.log('Speech recognition ended');
+            isCandidateSpeaking = false;
+            document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
             
-            if (isListening && !interviewCompleted && !isInterviewerSpeaking && speechDetectionActive) {
-                console.log('🎤 Restarting speech recognition');
+            // Auto-restart if still supposed to be listening
+            if (isListening && !interviewCompleted && !isInterviewerSpeaking) {
                 setTimeout(() => {
                     try {
-                        if (recognition && isListening && speechDetectionActive) {
+                        if (recognition && isListening) {
                             recognition.start();
-                            console.log('🎤 Successfully RESTARTED');
+                            console.log('Speech recognition restarted');
                         }
                     } catch (e) {
-                        console.error('🎤 Restart failed:', e);
+                        console.warn('Could not restart recognition:', e.message);
                         if (e.name !== 'InvalidStateError') {
-                            setTimeout(() => initSpeech(), 500);
+                            setTimeout(() => initSpeech(), 1000);
                         }
                     }
-                }, 50);
-            } else {
-                document.getElementById('micBtn').classList.remove('recording');
-                document.getElementById('micBtn').innerHTML = '🎤';
-                updateSpeechStatus(false);
+                }, 100);
             }
         };
         
         recognition.onerror = function(event) {
-            console.error('🎤 Speech error:', event.error);
+            console.error('Speech recognition error:', event.error);
+            isCandidateSpeaking = false;
+            document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
             
             switch(event.error) {
                 case 'not-allowed':
-                    showError('Microphone access denied. Please allow microphone access and refresh.');
+                    showError('Microphone access denied. Please allow microphone access and refresh the page.');
                     break;
                 case 'no-speech':
-                    console.log('🎤 No speech detected - continuing...');
+                    console.log('No speech detected, continuing...');
                     break;
                 case 'audio-capture':
-                    showError('Microphone not available. Check if another app is using it.');
+                    showError('Microphone not available. Please check if another application is using it.');
                     break;
                 case 'network':
-                    console.log('🎤 Network error - attempting restart...');
+                    console.log('Network error, attempting to restart...');
                     setTimeout(() => {
-                        if (isListening && recognition && speechDetectionActive) {
+                        if (isListening && recognition) {
                             try {
                                 recognition.start();
                             } catch (e) {
-                                console.error('🎤 Network recovery failed:', e);
+                                console.log('Network restart failed');
                             }
                         }
                     }, 1000);
                     break;
-                case 'aborted':
-                    console.log('🎤 Recognition aborted - normal during transitions');
-                    break;
             }
         };
         
-        // CRITICAL FIX: Enhanced speech result processing
         recognition.onresult = function(event) {
-            console.log('🎤 Speech result received');
-            console.log('🎤 State check: speechDetectionActive=', speechDetectionActive, 'isInterviewerSpeaking=', isInterviewerSpeaking, 'isProcessingResponse=', isProcessingResponse);
-            
-            // CRITICAL: Only process when ready for candidate input
-            if (!speechDetectionActive || isInterviewerSpeaking || isProcessingResponse || interviewCompleted) {
-                console.log('🎤 IGNORING speech - system not ready');
-                return;
-            }
-            
             let interimTranscript = '';
             let finalTranscript = '';
             
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const result = event.results[i];
-                const transcript = result[0].transcript;
-                
-                if (result.isFinal) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
                     finalTranscript += transcript;
-                    console.log(`🎤 FINAL speech: "${transcript}"`);
                 } else {
                     interimTranscript += transcript;
-                    console.log(`🎤 INTERIM speech: "${transcript}"`);
                 }
             }
 
-            // CRITICAL FIX: Real-time display update
-            const displayText = collectedText + finalTranscript + 
-                (interimTranscript ? `<span style="opacity: 0.7; font-style: italic; color: #88ff88;">${interimTranscript}</span>` : '');
-            
-            if (displayText.trim()) {
-                document.getElementById('conversationArea').innerHTML = `
-                    <div style="text-align: left; padding: 15px; background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; border-radius: 8px;">
-                        <strong>Your Response:</strong><br>
-                        ${displayText}
-                    </div>`;
-            }
-        
-            // CRITICAL FIX: Handle final transcript
-            if (finalTranscript.trim()) {
-                collectedText += finalTranscript.trim() + ' ';
-                lastSpeechTime = Date.now();
-                
-                const wordCount = collectedText.trim().split(/\s+/).length;
-                console.log(`🎤 Collected: ${wordCount} words, ${collectedText.length} chars`);
-            
-                if (speechTimeout) {
-                    clearTimeout(speechTimeout);
+            // FIXED: Only process speech when candidate can speak
+            if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted && !candidateResponseTyping) {
+                // Show interim results in real-time
+                if (interimTranscript.trim()) {
+                    showCandidateResponse(interimTranscript, true);
                 }
             
-                // CRITICAL FIX: Auto-submit timing
-                speechTimeout = setTimeout(() => {
-                    console.log('🎤 Auto-submit timeout triggered');
-                    if (collectedText.trim() && speechDetectionActive && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
-                        console.log('🎤 CONDITIONS MET - Auto-submitting');
-                        autoSubmitResponse();
-                    }
-                }, SPEECH_TIMEOUT_MS);
+                if (finalTranscript.trim()) {
+                    collectedText += finalTranscript;
+                    lastSpeechTime = Date.now();
+                    console.log('Speech collected:', collectedText.substring(0, 100) + '...');
+                    
+                    // Show the collected final text with typing effect
+                    showCandidateResponse(collectedText, false);
                 
-                updateSpeechStatus(true, `🎤 Got ${wordCount} words - keep speaking or wait 3s to submit`);
+                    // Clear existing timeout
+                    if (speechTimeout) {
+                        clearTimeout(speechTimeout);
+                    }
+                
+                    // Auto-submit after speech pause
+                    speechTimeout = setTimeout(() => {
+                        if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
+                            console.log('Auto-submitting response after speech pause');
+                            autoSubmitResponse();
+                        }
+                    }, SPEECH_TIMEOUT_MS);
+                }
+            } else {
+                // Log ignored speech
+                if (isInterviewerSpeaking) {
+                    console.log('Ignoring candidate speech - interviewer is speaking');
+                } else if (candidateResponseTyping) {
+                    console.log('Ignoring candidate speech - response typing in progress');
+                }
             }
         };
         
         startMicrophone();
     }
     
+    // Start microphone
     function startMicrophone() {
         if (recognition && !isListening && !interviewCompleted) {
             try {
                 isListening = true;
                 recognition.start();
-                console.log('🎤 Microphone started');
+                console.log('Microphone started successfully');
             } catch (e) {
-                console.error('🎤 Failed to start microphone:', e);
+                console.error('Failed to start microphone:', e);
                 if (e.name === 'InvalidStateError') {
+                    console.log('Recognition already running, continuing...');
                     isListening = true;
                 } else {
                     isListening = false;
@@ -798,45 +836,37 @@
         }
     }
     
-    // CRITICAL FIX: Enhanced auto-submit
+    // Auto-submit collected speech
     function autoSubmitResponse() {
-        console.log('🎤 AUTO-SUBMIT: Starting...');
-        
-        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim() || interviewCompleted || !speechDetectionActive) {
-            console.log('🎤 AUTO-SUBMIT: Conditions not met');
+        if (isProcessingResponse || isInterviewerSpeaking || !collectedText.trim() || interviewCompleted) {
             return;
         }
         
-        const responseText = collectedText.trim();
-        console.log(`🎤 AUTO-SUBMIT: "${responseText}" (${responseText.length} chars)`);
-        
+        console.log('Auto-submitting response:', collectedText.substring(0, 100) + '...');
         isProcessingResponse = true;
-        speechDetectionActive = false;
         
-        updateSpeechStatus(false);
-        
+        // Clear speech timeout
         if (speechTimeout) {
             clearTimeout(speechTimeout);
             speechTimeout = null;
         }
         
-        collectedText = '';
+        const responseText = collectedText.trim();
+        collectedText = ''; // Clear collected text
         
-        document.getElementById('conversationArea').innerHTML = `
-            <div style="text-align: center; padding: 20px; opacity: 0.8; font-style: italic; background: rgba(33, 150, 243, 0.1); border: 1px solid #2196f3; border-radius: 10px;">
-                <div style="margin-bottom: 10px;"><strong>Processing your response...</strong></div>
-                <div style="font-size: 14px; color: #ccc;">"${responseText.substring(0, 100)}${responseText.length > 100 ? '...' : ''}"</div>
-                <div style="margin-top: 10px; font-size: 12px;">Please wait while I prepare the next question...</div>
-            </div>`;
-        
-        console.log('🎤 AUTO-SUBMIT: Sending to server...');
+        // Show processing state
+        setTimeout(() => {
+            document.getElementById('conversationArea').innerHTML = 
+                `<div style="opacity: 0.7; font-style: italic;">Processing your response...</div>`;
+        }, 1000); // Small delay to let candidate response typing finish
         
         sendResponse(responseText).finally(() => {
             isProcessingResponse = false;
-            console.log('🎤 AUTO-SUBMIT: Complete');
+            console.log('Response processing complete');
         });
     }
     
+    // Send response to server with improved error handling
     async function sendResponse(text) {
         try {
             console.log('Sending response to server:', text.substring(0, 100) + '...');
@@ -862,20 +892,24 @@
             if (data.success) {
                 console.log('Response processed successfully');
                 
+                // Update question count
                 questionCount = data.question_count || questionCount + 1;
                 document.getElementById('questionCount').textContent = `${questionCount}/${MAX_QUESTIONS}`;
                 
+                // Clear conversation area before showing new question
                 document.getElementById('conversationArea').innerHTML = '';
                 
+                // Small delay before showing next question for better UX
                 setTimeout(() => {
                     showCurrentQuestion(data.response, data.audio, data.audio_duration);
                 }, 500);
                 
+                // Check if interview is complete
                 if (data.is_final || questionCount >= MAX_QUESTIONS) {
                     console.log('Interview completed, scheduling completion...');
                     setTimeout(() => {
                         completeInterview();
-                    }, (data.audio_duration || 5) * 1000 + 3000);
+                    }, (data.audio_duration || 5) * 1000 + 3000); // Wait for audio + buffer
                 }
             } else {
                 console.error('Server returned error:', data);
@@ -890,12 +924,13 @@
         }
     }
     
+    // Complete interview
     function completeInterview() {
         console.log('Completing interview...');
         
         interviewCompleted = true;
-        speechDetectionActive = false;
         
+        // Stop speech recognition
         if (recognition && isListening) {
             isListening = false;
             try {
@@ -905,36 +940,45 @@
             }
         }
         
+        // Stop any playing audio
         if (currentAudioElement) {
             currentAudioElement.pause();
             currentAudioElement.currentTime = 0;
         }
         
+        // Update UI
         document.getElementById('audioStatus').style.display = 'none';
-        updateSpeechStatus(false);
+        document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
         
+        // Disable controls
         const controls = document.querySelectorAll('.btn');
         controls.forEach(btn => {
             btn.classList.add('disabled');
         });
         
+        // Show completion modal
         setTimeout(() => {
             document.getElementById('interviewCompleteModal').style.display = 'flex';
         }, 1000);
     }
     
+    // Toggle microphone
     function toggleMic() {
         if (!recognition || interviewCompleted) return;
         
+        // Prevent toggling when interviewer is speaking
         if (isInterviewerSpeaking) {
             alert('Please wait for the interviewer to finish speaking.');
             return;
         }
         
         if (isListening) {
+            // Turn off microphone
             if (confirm('Turn off microphone? This is not recommended during the interview.')) {
                 isListening = false;
-                speechDetectionActive = false;
+                isCandidateSpeaking = false;
+                document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
+                
                 try {
                     recognition.stop();
                 } catch (e) {
@@ -942,8 +986,8 @@
                 }
                 document.getElementById('micBtn').classList.remove('recording');
                 document.getElementById('micBtn').innerHTML = '🎤';
-                updateSpeechStatus(false);
                 
+                // Submit any collected text
                 if (speechTimeout) {
                     clearTimeout(speechTimeout);
                     speechTimeout = null;
@@ -954,20 +998,19 @@
                 }
             }
         } else {
+            // Turn on microphone
             isListening = true;
-            speechDetectionActive = true;
             collectedText = '';
             try {
                 recognition.start();
-                updateSpeechStatus(true, '🎤 Microphone enabled - Ready to listen');
             } catch (e) {
                 console.error('Failed to restart microphone:', e);
                 isListening = false;
-                speechDetectionActive = false;
             }
         }
     }
     
+    // Timer functionality
     function updateTimer() {
         if (interviewCompleted) return;
         
@@ -985,6 +1028,7 @@
         timeLeft--;
     }
     
+    // End interview manually
     function endInterview() {
         if (confirm('Are you sure you want to end the interview? This action cannot be undone.')) {
             console.log('Interview ended manually');
@@ -992,60 +1036,25 @@
         }
     }
     
+    // Go to dashboard
     function goToDashboard() {
         console.log('Redirecting to dashboard');
         window.location.href = '{% url "jobseeker_dashboard" %}';
     }
     
-    // CRITICAL FIX: Add manual submit button for testing
-    function addManualSubmitButton() {
-        const controls = document.querySelector('.controls');
-        if (controls && !document.getElementById('manualSubmitBtn')) {
-            const submitBtn = document.createElement('button');
-            submitBtn.id = 'manualSubmitBtn';
-            submitBtn.className = 'btn';
-            submitBtn.innerHTML = '📤';
-            submitBtn.title = 'Manually Submit Response';
-            submitBtn.style.background = '#2196f3';
-            submitBtn.onclick = function() {
-                if (collectedText.trim() && speechDetectionActive) {
-                    console.log('🎤 MANUAL SUBMIT triggered');
-                    autoSubmitResponse();
-                } else {
-                    alert('No speech collected yet. Please speak first.');
-                }
-            };
-            controls.insertBefore(submitBtn, document.getElementById('endBtn'));
-            console.log('🎤 Manual submit button added');
-        }
-    }
-    
-    // CRITICAL FIX: Debug function
-    function debugSpeechState() {
-        console.log('🎤 === SPEECH DEBUG STATE ===');
-        console.log('🎤 isListening:', isListening);
-        console.log('🎤 speechDetectionActive:', speechDetectionActive);
-        console.log('🎤 isInterviewerSpeaking:', isInterviewerSpeaking);
-        console.log('🎤 isProcessingResponse:', isProcessingResponse);
-        console.log('🎤 interviewCompleted:', interviewCompleted);
-        console.log('🎤 collectedText length:', collectedText.length);
-        console.log('🎤 collectedText:', collectedText.substring(0, 100));
-        console.log('🎤 recognition object:', !!recognition);
-        console.log('🎤 ========================');
-    }
-    
-    window.debugSpeechState = debugSpeechState;
-    
-    // CRITICAL FIX: Initialize everything properly
+    // Initialize everything when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🎤 AI Interview System Starting...');
+        console.log('AI Interview System Starting...');
         
+        // Initialize camera and microphone
         initCamera();
         
+        // Initialize speech recognition after delay
         setTimeout(() => {
             initSpeech();
         }, 1000);
         
+        // Start timer
         const timerInterval = setInterval(() => {
             updateTimer();
             if (interviewCompleted) {
@@ -1053,6 +1062,7 @@
             }
         }, 1000);
         
+        // Get initial question data from template
         const initialQuestion = `{{ ai_question|escapejs|default:"Welcome to your AI interview! Let's begin." }}`;
         const initialAudio = `{{ audio_url|escapejs|safe }}`;
         const initialDuration = {{ audio_duration|default:"5" }};
@@ -1061,30 +1071,13 @@
         console.log('Audio URL:', initialAudio);
         console.log('Duration:', initialDuration, 'seconds');
         
+        // Show initial question after short delay
         setTimeout(() => {
             showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
             console.log('Interview started successfully');
         }, 1500);
         
-        // Add manual submit button after delay
-        setTimeout(() => {
-            addManualSubmitButton();
-        }, 2000);
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'd') {
-                e.preventDefault();
-                debugSpeechState();
-            }
-            
-            if (e.code === 'Space' && speechDetectionActive && !isInterviewerSpeaking && !isProcessingResponse && collectedText.trim()) {
-                e.preventDefault();
-                console.log('🎤 SPACEBAR SUBMIT triggered');
-                autoSubmitResponse();
-            }
-        });
-        
+        // Prevent page refresh during interview
         window.addEventListener('beforeunload', function(e) {
             if (!interviewCompleted) {
                 e.preventDefault();
@@ -1093,8 +1086,8 @@
             }
         });
         
-        console.log('🎤 AI Interview System initialized successfully');
+        console.log('AI Interview System initialized successfully');
     });
-    </script>
+</script>
 </body>
 </html>

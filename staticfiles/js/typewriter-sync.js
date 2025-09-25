@@ -1,30 +1,29 @@
 /**
- * IMPROVED Typewriter System - WITH ENHANCED AUDIO SUPPORT
- * This version provides better audio synchronization and fallback handling
- * Key improvements: More reliable audio event handling, better error recovery
+ * COMPLETE FIXED Typewriter System - Enhanced Audio Support
+ * This version provides reliable audio synchronization and fallback handling
  */
 
 (function() {
     'use strict';
     
-    console.log('📝 Improved Typewriter System Loading - WITH ENHANCED AUDIO SUPPORT...');
+    console.log('📝 Complete Fixed Typewriter System Loading...');
     
     // Configuration
     const CONFIG = {
-        standardSpeed: 45,          // milliseconds per character for standard typing
-        fastSpeed: 25,              // milliseconds per character for fast typing
-        minDuration: 1000,          // minimum duration in milliseconds
-        maxDuration: 12000,         // maximum duration in milliseconds
-        audioSyncBuffer: 0.95       // Use 95% of audio duration for typing
+        standardSpeed: 45,
+        fastSpeed: 25,
+        minDuration: 1000,
+        maxDuration: 12000,
+        audioSyncBuffer: 0.95
     };
     
     /**
-     * Enhanced text-only typewriter
+     * Text-only typewriter
      */
     function createTextOnlyTypewriter(element, text, options = {}) {
         return new Promise((resolve) => {
             if (!element || !text) {
-                console.error('📝 TEXT ONLY: Invalid element or text');
+                console.error('📝 TEXT ONLY: Invalid parameters');
                 resolve();
                 return;
             }
@@ -42,7 +41,7 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('📝 TEXT ONLY: Typewriter completed');
+                    console.log('📝 TEXT ONLY: Completed');
                     resolve();
                 }
             }, speed);
@@ -50,12 +49,12 @@
     }
     
     /**
-     * Smart duration typewriter - adjusts speed based on content length
+     * Smart duration typewriter
      */
     function createSmartTypewriter(element, text, targetDuration = null, options = {}) {
         return new Promise((resolve) => {
             if (!element || !text) {
-                console.error('📝 SMART: Invalid element or text');
+                console.error('📝 SMART: Invalid parameters');
                 resolve();
                 return;
             }
@@ -77,7 +76,7 @@
                     index++;
                 } else {
                     clearInterval(typeInterval);
-                    console.log('📝 SMART: Typewriter completed');
+                    console.log('📝 SMART: Completed');
                     resolve();
                 }
             }, charDelay);
@@ -85,12 +84,12 @@
     }
     
     /**
-     * IMPROVED: Audio-synchronized typewriter with enhanced reliability
+     * Enhanced audio-synchronized typewriter
      */
     function createAudioSyncTypewriter(element, text, audioElement, audioDuration) {
         return new Promise((resolve) => {
             if (!element || !text || !audioElement) {
-                console.error('🔊 AUDIO SYNC: Invalid parameters, falling back to text-only');
+                console.error('🔊 AUDIO SYNC: Invalid parameters, falling back');
                 createTextOnlyTypewriter(element, text).then(resolve);
                 return;
             }
@@ -102,13 +101,11 @@
             let typingStarted = false;
             let isCompleted = false;
             
-            // Enhanced sync duration calculation
             const syncDuration = Math.max(1, audioDuration * CONFIG.audioSyncBuffer);
             const charDelay = Math.max(20, (syncDuration * 1000) / text.length);
             
-            console.log(`🔊 ENHANCED AUDIO SYNC: ${text.length} chars, ${audioDuration}s audio, ${syncDuration}s sync, ${charDelay.toFixed(1)}ms per char`);
+            console.log(`🔊 AUDIO SYNC: ${text.length} chars, ${audioDuration}s audio, ${charDelay.toFixed(1)}ms per char`);
             
-            // Completion function
             const completeTypewriter = (reason = 'completed') => {
                 if (isCompleted) return;
                 isCompleted = true;
@@ -120,7 +117,6 @@
                     typeInterval = null;
                 }
                 
-                // Ensure full text is shown
                 if (element.textContent !== text) {
                     element.textContent = text;
                 }
@@ -129,12 +125,11 @@
                 resolve();
             };
             
-            // Start typewriter function
             const startTypewriter = () => {
                 if (typingStarted || isCompleted) return;
                 typingStarted = true;
                 
-                console.log('🔊 Starting enhanced synchronized typewriter');
+                console.log('🔊 Starting synchronized typewriter');
                 
                 typeInterval = setInterval(() => {
                     if (isCompleted) return;
@@ -148,21 +143,17 @@
                 }, charDelay);
             };
             
-            // Cleanup function
             const cleanup = () => {
                 try {
                     audioElement.removeEventListener('play', onAudioPlay);
                     audioElement.removeEventListener('ended', onAudioEnded);
                     audioElement.removeEventListener('error', onAudioError);
-                    audioElement.removeEventListener('pause', onAudioPause);
                     audioElement.removeEventListener('canplay', onCanPlay);
-                    audioElement.removeEventListener('loadeddata', onLoadedData);
                 } catch (e) {
                     console.warn('🔊 Cleanup warning:', e.message);
                 }
             };
             
-            // Enhanced event handlers
             const onAudioPlay = () => {
                 console.log('🔊 Audio play event detected');
                 audioStarted = true;
@@ -177,89 +168,47 @@
             };
             
             const onAudioError = (error) => {
-                console.error('🔊 Audio error event:', error);
+                console.error('🔊 Audio error:', error);
                 if (!isCompleted) {
-                    console.log('🔊 Falling back to text-only due to audio error');
                     cleanup();
                     createTextOnlyTypewriter(element, text).then(resolve);
                 }
             };
             
-            const onAudioPause = () => {
-                console.log('🔊 Audio paused - continuing typewriter');
-                // Continue typing even if audio pauses
-            };
-            
             const onCanPlay = () => {
-                console.log('🔊 Audio can play event');
-            };
-            
-            const onLoadedData = () => {
-                console.log('🔊 Audio data loaded event');
-            };
-            
-            // Enhanced audio state detection
-            const checkAudioState = () => {
-                if (isCompleted) return;
-                
-                try {
-                    console.log(`🔊 Audio state check: readyState=${audioElement.readyState}, paused=${audioElement.paused}, ended=${audioElement.ended}, currentTime=${audioElement.currentTime}`);
-                    
-                    // If audio is already playing, start immediately
-                    if (!audioElement.paused && audioElement.currentTime > 0 && !audioElement.ended) {
-                        console.log('🔊 Audio already playing, starting typewriter');
-                        audioStarted = true;
-                        startTypewriter();
-                        return true;
-                    }
-                } catch (e) {
-                    console.warn('🔊 Audio state check error:', e.message);
-                }
-                return false;
+                console.log('🔊 Audio can play');
             };
             
             try {
-                // Attach all event listeners
                 audioElement.addEventListener('play', onAudioPlay);
                 audioElement.addEventListener('ended', onAudioEnded);
                 audioElement.addEventListener('error', onAudioError);
-                audioElement.addEventListener('pause', onAudioPause);
                 audioElement.addEventListener('canplay', onCanPlay);
-                audioElement.addEventListener('loadeddata', onLoadedData);
                 
-                // Check if audio is already in a ready/playing state
-                if (checkAudioState()) {
-                    // Audio already detected as playing
-                } else {
-                    // Set up fallback timers
-                    
-                    // Primary fallback - start typing if audio doesn't start soon
-                    setTimeout(() => {
-                        if (!audioStarted && !typingStarted && !isCompleted) {
-                            console.warn('🔊 Primary timeout - starting typewriter without audio sync');
-                            startTypewriter();
-                        }
-                    }, 2000); // 2 second timeout
-                    
-                    // Secondary fallback - ensure completion
-                    setTimeout(() => {
-                        if (!isCompleted) {
-                            console.warn('🔊 Secondary timeout - force completing typewriter');
-                            completeTypewriter('timeout fallback');
-                        }
-                    }, (audioDuration + 3) * 1000); // Audio duration + 3 second buffer
-                    
-                    // Ultimate safety net
-                    setTimeout(() => {
-                        if (!isCompleted) {
-                            console.warn('🔊 Ultimate safety net - force completion');
-                            completeTypewriter('safety net');
-                        }
-                    }, Math.max(10000, (audioDuration + 5) * 1000)); // At least 10s or audio + 5s
+                // Check if audio is already playing
+                if (!audioElement.paused && audioElement.currentTime > 0) {
+                    console.log('🔊 Audio already playing');
+                    audioStarted = true;
+                    startTypewriter();
                 }
                 
+                // Fallback timers
+                setTimeout(() => {
+                    if (!audioStarted && !typingStarted && !isCompleted) {
+                        console.warn('🔊 Primary timeout - starting without audio sync');
+                        startTypewriter();
+                    }
+                }, 2000);
+                
+                setTimeout(() => {
+                    if (!isCompleted) {
+                        console.warn('🔊 Ultimate timeout - force completion');
+                        completeTypewriter('timeout');
+                    }
+                }, (audioDuration + 5) * 1000);
+                
             } catch (error) {
-                console.error('🔊 Error setting up enhanced audio sync:', error);
+                console.error('🔊 Error setting up audio sync:', error);
                 cleanup();
                 createTextOnlyTypewriter(element, text).then(resolve);
             }
@@ -267,73 +216,50 @@
     }
     
     /**
-     * IMPROVED: Main typewriter function with enhanced audio support
+     * Main typewriter function
      */
     function startTypewriter(element, text, audioElement = null, duration = null, options = {}) {
         if (!element || !text) {
-            console.error('📝 MAIN: Invalid element or text');
+            console.error('📝 MAIN: Invalid parameters');
             return Promise.resolve();
         }
         
-        // Clear element immediately
         element.textContent = '';
         
-        // Enhanced audio validation
         if (audioElement && isAudioValid(audioElement, duration)) {
-            console.log('🔊 MAIN: Starting enhanced audio-synchronized typewriter');
-            console.log(`🔊 Audio details: src=${audioElement.src ? audioElement.src.substring(0, 50) + '...' : 'none'}, duration=${duration}s`);
-            
-            // Additional debugging
-            if (window.TypewriterSync && window.TypewriterSync.debug) {
-                window.TypewriterSync.debug.logAudioState(audioElement);
-            }
-            
+            console.log('🔊 MAIN: Starting audio-synchronized typewriter');
             return createAudioSyncTypewriter(element, text, audioElement, duration);
         } else {
-            console.log('📝 MAIN: Starting smart text-only typewriter (no valid audio)');
-            if (audioElement) {
-                console.log(`📝 Audio validation failed - src: ${audioElement.src || 'none'}, duration: ${duration || 'none'}`);
-            }
+            console.log('📝 MAIN: Starting smart text typewriter');
             return createSmartTypewriter(element, text, duration ? duration * 1000 : null, options);
         }
     }
     
     /**
-     * Enhanced audio validation
+     * Audio validation
      */
     function isAudioValid(audioElement, duration) {
         if (!audioElement) {
-            console.log('🔊 VALIDATION: No audio element provided');
+            console.log('🔊 VALIDATION: No audio element');
             return false;
         }
         
         if (!audioElement.src || audioElement.src.trim() === '' || audioElement.src.toLowerCase().includes('none')) {
-            console.log('🔊 VALIDATION: Invalid audio src:', audioElement.src);
+            console.log('🔊 VALIDATION: Invalid audio src');
             return false;
         }
         
         if (!duration || duration <= 0 || isNaN(duration)) {
-            console.log('🔊 VALIDATION: Invalid duration:', duration);
+            console.log('🔊 VALIDATION: Invalid duration');
             return false;
         }
         
-        // Additional checks
-        try {
-            // Check if element is properly attached to DOM
-            if (!audioElement.parentNode && !document.contains(audioElement)) {
-                console.log('🔊 VALIDATION: Audio element not in DOM');
-                return false;
-            }
-        } catch (e) {
-            console.warn('🔊 VALIDATION: DOM check failed:', e.message);
-        }
-        
-        console.log('🔊 VALIDATION: Audio validation passed');
+        console.log('🔊 VALIDATION: Audio valid');
         return true;
     }
     
     /**
-     * Estimate natural reading duration
+     * Estimate reading duration
      */
     function estimateReadingDuration(text, wordsPerMinute = 150) {
         if (!text || !text.trim()) {
@@ -342,12 +268,12 @@
         
         const wordCount = text.split(/\s+/).length;
         const baseDuration = (wordCount / wordsPerMinute) * 60;
-        const withPauses = baseDuration * 1.3; // Add 30% for natural pauses
+        const withPauses = baseDuration * 1.3;
         
         return Math.max(2.0, Math.min(withPauses, 25.0));
     }
     
-    // Export enhanced functionality to global scope
+    // Export to global scope
     window.TypewriterSync = {
         start: startTypewriter,
         createTextOnly: createTextOnlyTypewriter,
@@ -357,7 +283,6 @@
         isAudioValid: isAudioValid,
         config: CONFIG,
         
-        // Enhanced debugging utilities
         debug: {
             logAudioState: function(audioElement) {
                 if (!audioElement) {
@@ -365,61 +290,22 @@
                     return;
                 }
                 
-                console.log('🔊 DEBUG: Enhanced Audio State Analysis:');
+                console.log('🔊 DEBUG: Audio State:');
                 console.log('  - src:', audioElement.src || 'none');
-                console.log('  - readyState:', audioElement.readyState, '(0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA)');
-                console.log('  - networkState:', audioElement.networkState, '(0=EMPTY, 1=IDLE, 2=LOADING, 3=NO_SOURCE)');
+                console.log('  - readyState:', audioElement.readyState);
                 console.log('  - paused:', audioElement.paused);
                 console.log('  - ended:', audioElement.ended);
                 console.log('  - duration:', audioElement.duration || 'unknown');
                 console.log('  - currentTime:', audioElement.currentTime);
                 console.log('  - volume:', audioElement.volume);
-                console.log('  - muted:', audioElement.muted);
                 console.log('  - error:', audioElement.error);
-                console.log('  - seeking:', audioElement.seeking);
-                console.log('  - played ranges:', audioElement.played.length);
-                console.log('  - buffered ranges:', audioElement.buffered.length);
-                
-                // Check if element is in DOM
-                try {
-                    console.log('  - inDOM:', document.contains(audioElement));
-                    console.log('  - parentNode:', !!audioElement.parentNode);
-                } catch (e) {
-                    console.log('  - DOM check failed:', e.message);
-                }
-            },
-            
-            testAudioPlayback: function(audioElement) {
-                if (!audioElement) {
-                    console.log('🔊 TEST: No audio element provided');
-                    return;
-                }
-                
-                console.log('🔊 TEST: Starting audio playback test...');
-                this.logAudioState(audioElement);
-                
-                audioElement.play().then(() => {
-                    console.log('🔊 TEST: Audio playback started successfully');
-                }).catch(error => {
-                    console.error('🔊 TEST: Audio playback failed:', error);
-                });
             }
         }
     };
     
-    console.log('✅ Enhanced Typewriter System Loaded - WITH IMPROVED AUDIO SUPPORT');
-    console.log('📋 Available methods:');
-    console.log('  - window.TypewriterSync.start(element, text, audioElement, duration)');
-    console.log('  - window.TypewriterSync.createTextOnly(element, text, options)');
-    console.log('  - window.TypewriterSync.createSmart(element, text, duration, options)');
-    console.log('  - window.TypewriterSync.createAudioSync(element, text, audio, duration)');
-    console.log('  - window.TypewriterSync.estimateDuration(text, wpm)');
-    console.log('  - window.TypewriterSync.isAudioValid(audio, duration)');
-    console.log('  - window.TypewriterSync.debug.logAudioState(audio)');
-    console.log('  - window.TypewriterSync.debug.testAudioPlayback(audio)');
+    console.log('✅ Complete Fixed Typewriter System Loaded');
     
 })();
-
 
 
 // /**

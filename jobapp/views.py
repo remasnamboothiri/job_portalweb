@@ -2139,6 +2139,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'Interview system temporarily unavailable. Please try again later.',
                 status=500
             )
+        
             
 # ADD THESE COMPLETE FUNCTIONS TO YOUR views.py FILE
 

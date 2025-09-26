@@ -1,157 +1,4 @@
-// Initialize everything with proper sequencing and debugging
-    document.addEventListener('DOMContentLoaded', async function() {
-        debugLog('🚀 DOM LOADED - Starting enhanced initialization sequence...', 'info');
-        
-        // Validate template data first
-        debugLog('📋 TEMPLATE VALIDATION:', 'info');
-        debugLog(`- Question available: ${TEMPLATE_DATA.initialQuestion ? 'YES' : 'NO'} (${TEMPLATE_DATA.initialQuestion.length} chars)`, 'info');
-        debugLog(`- Audio available: ${TEMPLATE_DATA.initialAudio ? 'YES' : 'NO'} (${TEMPLATE_DATA.initialAudio})`, 'info');
-        debugLog(`- Duration: ${TEMPLATE_DATA.initialDuration}s`, 'info');
-        debugLog(`- Has Audio flag: ${TEMPLATE_DATA.hasAudio}`, 'info');
-        
-        try {
-            // STEP 1: Initialize camera and microphone (CRITICAL)
-            debugLog('🎯 STARTING STEP 1: Camera and Microphone initialization...', 'info');
-            const cameraSuccess = await initCamera();
-            
-            if (!cameraSuccess) {
-                debugLog('❌ CRITICAL FAILURE: Camera/microphone initialization failed', 'error');
-                debugLog('❌ Cannot proceed without microphone access', 'error');
-                return;
-            }
-            
-            debugLog('✅ STEP 1 COMPLETE: Camera and microphone ready', 'success');
-            
-            // STEP 2: Wait and initialize speech recognition
-            debugLog('🎯 STARTING STEP 2: Speech recognition initialization (2 second delay)...', 'info');
-            await new Promise(resolve => {
-                setTimeout(() => {
-                    const speechSuccess = initSpeech();
-                    if (speechSuccess) {
-                        debugLog('✅ STEP 2 COMPLETE: Speech recognition initialized', 'success');
-                    } else {
-                        debugLog('❌ STEP 2 FAILED: Speech recognition initialization failed', 'error');
-                    }
-                    resolve();
-                }, 2000);
-            });
-            
-            // STEP 3: Start microphone with delay
-            debugLog('🎯 STARTING STEP 3: Microphone activation (1 second delay)...', 'info');
-            setTimeout(() => {
-                const micSuccess = startMicrophone();
-                if (micSuccess) {
-                    debugLog('✅ STEP 3 COMPLETE: Microphone activated and listening', 'success');
-                } else {
-                    debugLog('❌ STEP 3 FAILED: Microphone activation failed', 'error');
-                }
-            }, 1000);
-            
-            // STEP 4: Start timer
-            debugLog('🎯 STARTING STEP 4: Timer initialization...', 'info');
-            setInterval(updateTimer, 1000);
-            debugLog('✅ STEP 4 COMPLETE: Timer started', 'success');
-            
-            // STEP 5: Show initial question with delay
-            debugLog('🎯 STARTING STEP 5: Initial question display (4 second delay)...', 'info');
-            setTimeout(() => {
-                debugLog('📝 Preparing to show initial question...', 'info');
-                
-                const question = TEMPLATE_DATA.initialQuestion || "Welcome to your AI interview! Let's begin with your introduction.";
-                const audioUrl = TEMPLATE_DATA.initialAudio || null;
-                const duration = TEMPLATE_DATA.initialDuration || 5;
-                
-                if (question.length < 10) {
-                    debugLog('⚠️ Question too short, using enhanced fallback', 'warning');
-                    const fallbackQuestion = `Hello ${TEMPLATE_DATA.candidateName}! Welcome to your AI interview. I'm excited to learn about your background and experience. Could you please start by telling me about yourself, your education, and what interests you most about this position?`;
-                    showCurrentQuestion(fallbackQuestion, audioUrl, duration);
-                } else {
-                    showCurrentQuestion(question, audioUrl, duration);
-                }
-                
-                debugLog('✅ STEP 5 COMPLETE: Initial question displayed', 'success');
-            }, 4000);
-            
-            debugLog('✅ ALL STEPS COMPLETED: Enhanced interview system fully initialized!', 'success');
-            debugLog('🎤 System should now be listening for candidate speech...', 'success');
-            
-        } catch (error) {
-            debugLog(`❌ CRITICAL ERROR during initialization: ${error.message}`, 'error');
-            debugLog(`Error stack: ${error.stack}`, 'error');
-            
-            document.getElementById('conversationArea').innerHTML = 
-                `<div style="color: #f44336; padding: 20px; text-align: center;">
-                    <h3>System Initialization Failed</h3>
-                    <p>Critical error during interview system setup.</p>
-                    <p>Error: ${error.message}</p>
-                    <button onclick="location.reload()" style="background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;">
-                        Restart Interview
-                    </button>
-                </div>`;
-        }
-    });
-    
-    // Enhanced error handling
-    window.addEventListener('error', function(e) {
-        debugLog(`JavaScript error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
-        console.error('Global error:', e);
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        debugLog(`Unhandled promise rejection: ${e.reason}`, 'error');
-        console.error('Unhandled rejection:', e);
-    });
-    
-    // Page visibility handler - restart microphone when page becomes visible
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            debugLog('Page hidden - pausing microphone', 'warning');
-        } else {
-            debugLog('Page visible - checking microphone state', 'info');
-            // Restart microphone if it should be running
-            setTimeout(() => {
-                if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted && !isListening) {
-                    debugLog('Restarting microphone after page visibility change', 'info');
-                    startMicrophone();
-                }
-            }, 1000);
-        }
-    });
-    
-    // Add manual microphone test function
-    window.testMicrophone = function() {
-        debugLog('MANUAL MICROPHONE TEST INITIATED', 'info');
-        
-        if (!recognition) {
-            debugLog('No recognition object available for testing', 'error');
-            return;
-        }
-        
-        // Stop current recognition
-        if (isListening) {
-            try {
-                recognition.stop();
-                isListening = false;
-            } catch (e) {
-                debugLog('Error stopping current recognition for test', 'warning');
-            }
-        }
-        
-        setTimeout(() => {
-            debugLog('Starting manual microphone test...', 'info');
-            startMicrophone();
-        }, 1000);
-    };
-    
-    console.log('Enhanced Interview System Loaded');
-    console.log('Available debugging commands:');
-    console.log('- testMicrophone() - Test microphone manually');
-    console.log('- Check console for detailed logs');
-    
-    </script>
-</body>
-</html>
-                {% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,10 +77,9 @@
             text-align: center;
             z-index: 1000;
             display: flex;
-            gap: 15px;
+            gap: 20px;
         }
         .btn {
-            background: #34a853;
             color: white;
             border: none;
             padding: 15px 20px;
@@ -241,8 +87,8 @@
             font-size: 24px;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 60px;
-            height: 60px;
+            min-width: 70px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -251,18 +97,26 @@
             transform: scale(1.05);
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .btn.recording {
+        .btn.mic {
+            background: #4caf50;
+        }
+        .btn.mic.recording {
             background: #ea4335;
             animation: recording-pulse 1s infinite;
         }
-        .btn.disabled {
+        .btn.mic.disabled {
             background: #666;
             cursor: not-allowed;
             opacity: 0.5;
-            pointer-events: none;
+        }
+        .btn.camera {
+            background: #2196f3;
+        }
+        .btn.camera.off {
+            background: #666;
         }
         .btn.end-call {
-            background: #ea4335;
+            background: #f44336;
         }
         .transcript-section {
             background: #303134;
@@ -286,28 +140,6 @@
             flex: 1;
             overflow-y: auto;
         }
-        .debug-panel {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-size: 12px;
-            font-family: 'Courier New', monospace;
-            color: #90a4ae;
-            max-height: 150px;
-            overflow-y: auto;
-            display: block; /* Show during debugging */
-        }
-        .debug-panel .status {
-            margin: 5px 0;
-            padding: 3px 8px;
-            border-radius: 4px;
-        }
-        .debug-panel .status.success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
-        .debug-panel .status.warning { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
-        .debug-panel .status.error { background: rgba(244, 67, 54, 0.2); color: #e57373; }
-        .debug-panel .status.info { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
-        
         .stats {
             display: flex;
             justify-content: space-between;
@@ -376,7 +208,7 @@
         <div class="video-grid">
             <div class="video-box" id="aiVideoBox">
                 <div class="ai-avatar" id="aiAvatar">🤖</div>
-                <div class="participant-name">Alex - AI Interviewer</div>
+                <div class="participant-name">AI Interviewer</div>
             </div>
             <div class="video-box" id="candidateVideoBox">
                 <video id="userVideo" autoplay muted playsinline></video>
@@ -388,23 +220,18 @@
             <div class="conversation-text" id="conversationArea">
                 Welcome! Preparing your interview...
             </div>
-            
-            <!-- DEBUG PANEL - Hidden by default -->
-            <div class="debug-panel" id="debugPanel">
-                <strong>Debug Log:</strong><br>
-                <div id="debugLog">System starting...</div>
-            </div>
         </div>
 
+        <!-- Simple 3-button controls -->
         <div class="controls">
-            <button class="btn recording" id="micBtn" onclick="toggleMic()" title="Microphone">🎤</button>
-            <button class="btn" id="cameraBtn" onclick="toggleCamera()" title="Camera">📹</button>
-            <button class="btn end-call" id="endCallBtn" onclick="endInterview()" title="End Interview">📞</button>
+            <button class="btn mic" id="micBtn" onclick="toggleMic()" title="Toggle Microphone">🎤</button>
+            <button class="btn camera" id="cameraBtn" onclick="toggleCamera()" title="Toggle Camera">📹</button>
+            <button class="btn end-call" onclick="endInterview()" title="End Interview">📞</button>
         </div>
     </div>
 
     <!-- Audio element for playing interviewer's voice -->
-    <audio id="aiAudio" preload="auto" style="display: none;"></audio>
+    <audio id="aiAudio" preload="auto"></audio>
     
     <!-- CSRF Token -->
     {% csrf_token %}
@@ -437,42 +264,24 @@
     let isInterviewerSpeaking = false;
     let interviewCompleted = false;
     let audioEndedTimeout = null;
-    let currentAudioElement = null;
     
-    // DEBUG: Enhanced logging (can be disabled by setting debug panel to display:none)
-    function debugLog(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const logElement = document.getElementById('debugLog');
-        const statusClass = type;
-        
-        console.log(`[${timestamp}] ${message}`);
-        
-        // Only show debug panel if it's visible
-        if (logElement && logElement.parentElement.style.display !== 'none') {
-            const logEntry = document.createElement('div');
-            logEntry.className = `status ${statusClass}`;
-            logEntry.innerHTML = `<span style="color: #666;">${timestamp}</span> ${message}`;
-            
-            logElement.appendChild(logEntry);
-            logElement.scrollTop = logElement.scrollHeight;
-            
-            // Keep only last 20 entries
-            while (logElement.children.length > 20) {
-                logElement.removeChild(logElement.firstChild);
-            }
-        }
+    // UI Elements
+    const conversationArea = document.getElementById('conversationArea');
+    const audioStatus = document.getElementById('audioStatus');
+    const micBtn = document.getElementById('micBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    
+    // Simple logging for debugging
+    function log(message) {
+        console.log(`[${new Date().toLocaleTimeString()}] ${message}`);
     }
     
-    debugLog('AI Interview System Starting...', 'info');
+    log('AI Interview System Starting...');
     
-    // Enhanced camera initialization with explicit microphone access
+    // Initialize camera and microphone
     async function initCamera() {
         try {
-            debugLog('STEP 1: Requesting camera and microphone permissions...', 'info');
-            
-            // First, check if permissions are already granted
-            const permissions = await navigator.permissions.query({name: 'microphone'});
-            debugLog(`Current microphone permission: ${permissions.state}`, 'info');
+            log('Requesting camera and microphone permissions...');
             
             userStream = await navigator.mediaDevices.getUserMedia({ 
                 video: {
@@ -483,343 +292,143 @@
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 44100
+                    autoGainControl: true
                 }
             });
             
             const videoElement = document.getElementById('userVideo');
             videoElement.srcObject = userStream;
             
-            const audioTracks = userStream.getAudioTracks();
-            const videoTracks = userStream.getVideoTracks();
-            
-            debugLog(`SUCCESS: Media access granted`, 'success');
-            debugLog(`Video tracks: ${videoTracks.length}`, 'info');
-            debugLog(`Audio tracks: ${audioTracks.length}`, 'info');
-            
-            if (audioTracks.length > 0) {
-                const track = audioTracks[0];
-                debugLog(`Microphone: "${track.label}"`, 'info');
-                debugLog(`Microphone enabled: ${track.enabled}`, 'info');
-                debugLog(`Microphone ready state: ${track.readyState}`, 'info');
-                debugLog(`Microphone constraints: ${JSON.stringify(track.getConstraints())}`, 'info');
-            } else {
-                debugLog('WARNING: No audio tracks found!', 'error');
-                throw new Error('No microphone access - audio tracks missing');
-            }
-            
-            return true;
+            log('Camera and microphone access granted');
             
         } catch (error) {
-            debugLog(`CAMERA/MIC ERROR: ${error.name} - ${error.message}`, 'error');
-            
-            let message = 'Camera and Microphone Required';
-            let details = 'Please allow access to continue with the interview.';
-            
-            if (error.name === 'NotAllowedError') {
-                details = 'Permission denied. Please click "Allow" when prompted and refresh.';
-            } else if (error.name === 'NotFoundError') {
-                details = 'No camera or microphone found. Please connect devices and refresh.';
-            } else if (error.name === 'NotReadableError') {
-                details = 'Camera/microphone is already in use by another application.';
-            } else {
-                details = `Error: ${error.message}`;
-            }
-            
-            document.getElementById('conversationArea').innerHTML = 
-                `<div style="color: #f44336; padding: 20px; text-align: center;">
-                    <h3>${message}</h3>
-                    <p>${details}</p>
-                    <button onclick="location.reload()" style="background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;">
-                        Grant Access & Retry
-                    </button>
-                </div>`;
-            return false;
+            log(`Media access error: ${error.message}`);
+            conversationArea.innerHTML = 
+                `<div style="color: #f44336; padding: 20px;">Please allow camera and microphone access, then refresh this page.</div>`;
         }
     }
     
-    // ENHANCED: Speech recognition with aggressive debugging and fixes
+    // Initialize speech recognition
     function initSpeech() {
-        debugLog('STEP 2: Initializing speech recognition...', 'info');
+        log('Initializing speech recognition...');
         
-        // Check browser support with detailed logging
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if (!SpeechRecognition) {
-            debugLog('FATAL: Speech recognition not supported in this browser', 'error');
-            debugLog(`User agent: ${navigator.userAgent}`, 'info');
-            document.getElementById('conversationArea').innerHTML = 
-                `<div style="color: #f44336; padding: 20px; text-align: center;">
-                    <h3>Speech Recognition Not Supported</h3>
-                    <p>This browser doesn't support speech recognition.</p>
-                    <p>Please use Chrome, Edge, or Safari.</p>
-                    <p>Current browser: ${navigator.userAgent.split(' ').pop()}</p>
-                </div>`;
-            return false;
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            log('Speech recognition not supported');
+            conversationArea.innerHTML = 
+                `<div style="color: #f44336; padding: 20px;">Speech recognition not supported. Please use Chrome, Edge, or Safari.</div>`;
+            return;
         }
         
-        debugLog('Speech Recognition API available', 'success');
-        
         try {
+            const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
             recognition = new SpeechRecognition();
-            debugLog('SpeechRecognition object created successfully', 'success');
             
-            // Enhanced configuration
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
             recognition.maxAlternatives = 1;
             
-            debugLog('Speech recognition configured:', 'info');
-            debugLog(`- continuous: ${recognition.continuous}`, 'info');
-            debugLog(`- interimResults: ${recognition.interimResults}`, 'info');
-            debugLog(`- lang: ${recognition.lang}`, 'info');
-            
-            // ENHANCED EVENT HANDLERS with detailed logging
             recognition.onstart = function() {
                 isListening = true;
-                document.getElementById('micBtn').classList.add('recording');
+                micBtn.classList.add('recording');
                 document.getElementById('candidateVideoBox').classList.add('candidate-speaking');
-                debugLog('✅ SPEECH RECOGNITION STARTED SUCCESSFULLY', 'success');
-                debugLog('Microphone is now actively listening...', 'success');
+                log('Speech recognition started');
             };
             
             recognition.onend = function() {
                 document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
-                debugLog('⚠️ Speech recognition ended', 'warning');
+                log('Speech recognition ended');
                 
-                // Auto-restart logic with detailed logging
+                // Auto-restart if still listening and not during interviewer speech
                 if (isListening && !interviewCompleted && !isInterviewerSpeaking) {
-                    debugLog('Conditions met for restart:', 'info');
-                    debugLog(`- isListening: ${isListening}`, 'info');
-                    debugLog(`- interviewCompleted: ${interviewCompleted}`, 'info');
-                    debugLog(`- isInterviewerSpeaking: ${isInterviewerSpeaking}`, 'info');
-                    
                     setTimeout(() => {
-                        if (recognition && isListening) {
-                            try {
-                                debugLog('🔄 RESTARTING speech recognition...', 'info');
+                        try {
+                            if (recognition && isListening) {
                                 recognition.start();
-                            } catch (e) {
-                                debugLog(`❌ Restart failed: ${e.message}`, 'error');
-                                debugLog('Will retry in 2 seconds...', 'warning');
-                                setTimeout(() => {
-                                    try {
-                                        recognition.start();
-                                    } catch (e2) {
-                                        debugLog(`❌ Second restart failed: ${e2.message}`, 'error');
-                                    }
-                                }, 2000);
+                                log('Speech recognition restarted');
                             }
-                        } else {
-                            debugLog('❌ Cannot restart - conditions not met', 'error');
+                        } catch (e) {
+                            log(`Could not restart recognition: ${e.message}`);
                         }
                     }, 100);
-                } else {
-                    debugLog('❌ Not restarting speech recognition - conditions not met', 'warning');
                 }
             };
             
             recognition.onerror = function(event) {
-                debugLog(`❌ SPEECH RECOGNITION ERROR: ${event.error}`, 'error');
+                log(`Speech recognition error: ${event.error}`);
                 document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
                 
-                switch(event.error) {
-                    case 'not-allowed':
-                        debugLog('❌ CRITICAL: Microphone access denied by user', 'error');
-                        document.getElementById('conversationArea').innerHTML = 
-                            `<div style="color: #f44336; padding: 20px; text-align: center;">
-                                <h3>❌ Microphone Access Denied</h3>
-                                <p>Speech recognition requires microphone access.</p>
-                                <p>Please:</p>
-                                <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
-                                    <li>Check the microphone icon in your browser's address bar</li>
-                                    <li>Click "Allow" when prompted for microphone access</li>
-                                    <li>Refresh the page and try again</li>
-                                </ul>
-                                <button onclick="location.reload()" style="background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;">
-                                    Grant Access & Retry
-                                </button>
-                            </div>`;
-                        break;
-                    case 'no-speech':
-                        debugLog('⚠️ No speech detected - this is normal', 'warning');
-                        break;
-                    case 'audio-capture':
-                        debugLog('❌ CRITICAL: Microphone unavailable or in use', 'error');
-                        break;
-                    case 'network':
-                        debugLog('❌ Network error during speech recognition', 'error');
-                        break;
-                    case 'aborted':
-                        debugLog('⚠️ Speech recognition aborted', 'warning');
-                        break;
-                    default:
-                        debugLog(`❌ Unknown error: ${event.error}`, 'error');
+                if (event.error === 'not-allowed') {
+                    conversationArea.innerHTML = 
+                        `<div style="color: #f44336; padding: 20px;">Microphone access denied. Please allow microphone access and refresh.</div>`;
                 }
             };
             
             recognition.onresult = function(event) {
-                debugLog(`🎤 SPEECH RESULT EVENT FIRED (${event.results.length} results)`, 'success');
-                
                 let interimTranscript = '';
                 let finalTranscript = '';
                 
-                // Process all results
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const result = event.results[i];
-                    const transcript = result[0].transcript;
-                    const confidence = result[0].confidence;
-                    
-                    debugLog(`Result ${i}: "${transcript}" (final: ${result.isFinal}, confidence: ${confidence?.toFixed(2) || 'N/A'})`, 'info');
-                    
-                    if (result.isFinal) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
                         finalTranscript += transcript;
                     } else {
                         interimTranscript += transcript;
                     }
                 }
                 
-                // Check if we should process the speech
-                const canProcessSpeech = !isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted;
-                debugLog(`Can process speech: ${canProcessSpeech}`, 'info');
-                debugLog(`- isInterviewerSpeaking: ${isInterviewerSpeaking}`, 'info');
-                debugLog(`- isProcessingResponse: ${isProcessingResponse}`, 'info');
-                debugLog(`- interviewCompleted: ${interviewCompleted}`, 'info');
-                
-                if (canProcessSpeech) {
+                // Only process speech when candidate can speak
+                if (!isInterviewerSpeaking && !isProcessingResponse && !interviewCompleted) {
+                    
                     // Show live transcription
                     const displayText = collectedText + finalTranscript + 
                         (interimTranscript ? `<span style="opacity: 0.7; font-style: italic; color: #90a4ae;">${interimTranscript}</span>` : '');
                     
                     if (displayText.trim()) {
-                        debugLog(`💬 Displaying speech: "${displayText.replace(/<[^>]*>/g, '')}"`, 'success');
-                        document.getElementById('conversationArea').innerHTML = 
-                            `<div style="color: #81c784; font-style: italic; text-align: left; padding: 20px;">
-                                <strong>You're saying:</strong><br>
-                                ${displayText}
-                            </div>`;
+                        conversationArea.innerHTML = 
+                            `<div style="color: #81c784; font-style: italic;">"${displayText}"</div>`;
                     }
                 
-                    // Handle final transcript
                     if (finalTranscript.trim()) {
                         collectedText += finalTranscript;
-                        debugLog(`📝 Added to collected text. Total length: ${collectedText.length}`, 'success');
-                        debugLog(`📝 Current collected text: "${collectedText}"`, 'info');
+                        log(`Speech captured: "${finalTranscript}"`);
                     
                         // Clear existing timeout
                         if (speechTimeout) {
                             clearTimeout(speechTimeout);
-                            debugLog('⏱️ Cleared previous speech timeout', 'info');
                         }
                     
-                        // Set new timeout for auto-submission
+                        // Auto-submit after pause
                         speechTimeout = setTimeout(() => {
                             if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
-                                debugLog('⚡ AUTO-SUBMITTING RESPONSE after pause', 'info');
                                 autoSubmitResponse();
-                            } else {
-                                debugLog('⚠️ Auto-submit conditions not met at timeout', 'warning');
                             }
-                        }, 2500);
-                        
-                        debugLog('⏱️ Set new speech timeout (2.5 seconds)', 'info');
+                        }, 3000);
                     }
-                } else {
-                    debugLog('🚫 Speech ignored - system not ready for candidate input', 'warning');
                 }
             };
             
-            // Additional event for debugging
-            recognition.onaudiostart = function() {
-                debugLog('🔊 Audio capture started', 'success');
-            };
-            
-            recognition.onaudioend = function() {
-                debugLog('🔊 Audio capture ended', 'warning');
-            };
-            
-            recognition.onspeechstart = function() {
-                debugLog('🗣️ Speech detected!', 'success');
-            };
-            
-            recognition.onspeechend = function() {
-                debugLog('🗣️ Speech ended', 'warning');
-            };
-            
-            debugLog('✅ Speech recognition fully configured', 'success');
-            return true;
+            startMicrophone();
             
         } catch (error) {
-            debugLog(`❌ Error initializing speech: ${error.message}`, 'error');
-            debugLog(`Error stack: ${error.stack}`, 'error');
-            return false;
+            log(`Error initializing speech: ${error.message}`);
         }
     }
     
-    // ENHANCED: Start microphone with comprehensive debugging
+    // Start microphone
     function startMicrophone() {
-        debugLog('STEP 3: Starting microphone...', 'info');
-        
-        if (!recognition) {
-            debugLog('❌ Cannot start microphone - recognition not initialized', 'error');
-            return false;
-        }
-        
-        if (isListening) {
-            debugLog('⚠️ Microphone already listening', 'warning');
-            return true;
-        }
-        
-        if (interviewCompleted) {
-            debugLog('⚠️ Cannot start microphone - interview completed', 'warning');
-            return false;
-        }
-        
-        // Check if we have audio tracks
-        if (userStream) {
-            const audioTracks = userStream.getAudioTracks();
-            debugLog(`Audio tracks available: ${audioTracks.length}`, 'info');
-            if (audioTracks.length > 0) {
-                debugLog(`Primary audio track enabled: ${audioTracks[0].enabled}`, 'info');
-            }
-        } else {
-            debugLog('⚠️ No userStream available when starting microphone', 'warning');
-        }
-        
-        try {
-            isListening = true;
-            debugLog('🎤 Calling recognition.start()...', 'info');
-            recognition.start();
-            debugLog('🎤 recognition.start() called successfully', 'success');
-            return true;
-        } catch (e) {
-            debugLog(`❌ Failed to start microphone: ${e.name} - ${e.message}`, 'error');
-            
-            if (e.name === 'InvalidStateError') {
-                debugLog('⚠️ Recognition already running, setting listening flag', 'warning');
+        if (recognition && !isListening && !interviewCompleted) {
+            try {
                 isListening = true;
-                return true;
-            } else if (e.name === 'NotAllowedError') {
-                debugLog('❌ CRITICAL: Microphone permission denied', 'error');
-                document.getElementById('conversationArea').innerHTML = 
-                    `<div style="color: #f44336; padding: 20px; text-align: center;">
-                        <h3>Microphone Permission Required</h3>
-                        <p>Please allow microphone access and refresh the page.</p>
-                        <button onclick="location.reload()" style="background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;">
-                            Refresh & Grant Access
-                        </button>
-                    </div>`;
-                isListening = false;
-                return false;
-            } else {
-                isListening = false;
-                debugLog('❌ Will retry microphone in 2 seconds...', 'warning');
-                setTimeout(() => {
-                    startMicrophone();
-                }, 2000);
-                return false;
+                recognition.start();
+                log('Microphone started');
+            } catch (e) {
+                log(`Failed to start microphone: ${e.message}`);
+                if (e.name === 'InvalidStateError') {
+                    isListening = true; // Already running
+                } else {
+                    isListening = false;
+                }
             }
         }
     }
@@ -830,7 +439,7 @@
             return;
         }
         
-        debugLog(`Submitting response: "${collectedText.substring(0, 50)}..."`, 'info');
+        log(`Submitting response: "${collectedText.substring(0, 50)}..."`);
         isProcessingResponse = true;
         
         if (speechTimeout) {
@@ -841,8 +450,7 @@
         const responseText = collectedText.trim();
         collectedText = '';
         
-        // Show processing state
-        document.getElementById('conversationArea').innerHTML = 
+        conversationArea.innerHTML = 
             `<div style="opacity: 0.7; font-style: italic;">Processing your response...</div>`;
         
         sendResponse(responseText).finally(() => {
@@ -853,7 +461,7 @@
     // Send response to server
     async function sendResponse(text) {
         try {
-            debugLog('Sending response to server', 'info');
+            log('Sending response to server');
             
             const response = await fetch(window.location.href, {
                 method: 'POST',
@@ -865,11 +473,11 @@
             });
             
             if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`);
+                throw new Error(`Server error: ${response.status}`);
             }
             
             const data = await response.json();
-            debugLog('Server response received', 'success');
+            log('Server response received');
             
             if (data.success) {
                 questionCount = data.question_count || questionCount + 1;
@@ -880,131 +488,114 @@
                 }, 500);
                 
                 if (data.is_final || questionCount >= 8) {
-                    debugLog('Interview completed', 'success');
+                    log('Interview completed');
                     interviewCompleted = true;
                 }
             } else {
-                debugLog('Server returned error', 'error');
-                document.getElementById('conversationArea').innerHTML = 
-                    `<div style="color: #f44336; padding: 20px;">There was an issue processing your response. Please try again.</div>`;
+                log('Server returned error');
+                conversationArea.innerHTML = 
+                    `<div style="color: #f44336; padding: 20px;">Error processing response. Please try again.</div>`;
             }
         } catch (error) {
-            debugLog(`Network error: ${error.message}`, 'error');
-            document.getElementById('conversationArea').innerHTML = 
-                `<div style="color: #f44336; padding: 20px;">Network error. Please check your connection and try again.</div>`;
+            log(`Network error: ${error.message}`);
+            conversationArea.innerHTML = 
+                `<div style="color: #f44336; padding: 20px;">Network error. Please check connection and try again.</div>`;
         }
     }
     
-    // Show current question with audio handling
+    // Show current question
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
-        debugLog(`Showing question: ${question.substring(0, 50)}...`, 'info');
+        log(`Showing question: ${question.substring(0, 50)}...`);
         
-        const element = document.getElementById('conversationArea');
-        const audioStatus = document.getElementById('audioStatus');
-        const micBtn = document.getElementById('micBtn');
-        const aiVideoBox = document.getElementById('aiVideoBox');
-        
-        element.innerHTML = '';
+        conversationArea.innerHTML = '';
         isProcessingResponse = true;
+        
+        // Stop speech recognition during interviewer speaking
+        if (recognition && isListening) {
+            try {
+                recognition.stop();
+            } catch (e) {
+                log(`Error stopping recognition: ${e.message}`);
+            }
+        }
         
         if (audioEndedTimeout) {
             clearTimeout(audioEndedTimeout);
             audioEndedTimeout = null;
         }
         
-        // Check if we have valid audio
+        // Check for valid audio
         const hasValidAudio = audioUrl && 
                               audioUrl.trim() !== '' && 
                               audioUrl !== 'None' && 
-                              audioUrl !== 'null' &&
                               audioDuration && 
                               audioDuration > 0;
         
         if (hasValidAudio) {
-            debugLog('Starting audio playback', 'info');
+            log('Playing audio with question');
             
             isInterviewerSpeaking = true;
             micBtn.classList.add('disabled');
-            aiVideoBox.classList.add('ai-speaking');
+            document.getElementById('aiVideoBox').classList.add('ai-speaking');
             audioStatus.className = 'audio-status playing';
             audioStatus.textContent = 'Interviewer speaking - Please listen';
             audioStatus.style.display = 'block';
             
             const audio = document.getElementById('aiAudio');
-            currentAudioElement = audio;
-            
-            // Setup audio
             audio.pause();
             audio.currentTime = 0;
-            audio.src = audioUrl.startsWith('/media/') ? audioUrl : '/media/' + audioUrl.replace(/^\/+/, '');
+            audio.src = audioUrl.startsWith('/media/') ? audioUrl : `/media/${audioUrl.replace(/^\/+/, '')}`;
             audio.volume = 0.8;
             
-            const onCanPlayThrough = () => {
-                audio.removeEventListener('canplaythrough', onCanPlayThrough);
-                
+            const onCanPlay = () => {
+                audio.removeEventListener('canplaythrough', onCanPlay);
                 audio.play().then(() => {
-                    debugLog('Audio playing successfully', 'success');
-                    // Start typewriter with audio sync
+                    log('Audio playing');
                     if (window.TypewriterSync) {
-                        window.TypewriterSync.start(element, question, audio, audioDuration);
+                        window.TypewriterSync.start(conversationArea, question, audio, audioDuration);
                     } else {
-                        startFallbackTypewriter(element, question, audioDuration);
+                        startFallbackTypewriter(conversationArea, question, audioDuration);
                     }
                 }).catch(error => {
-                    debugLog(`Audio play failed: ${error.message}`, 'error');
+                    log(`Audio play failed: ${error.message}`);
                     enableCandidateResponse();
-                    startFallbackTypewriter(element, question);
+                    startFallbackTypewriter(conversationArea, question);
                 });
             };
             
             const onAudioEnded = () => {
-                debugLog('Audio playback ended', 'success');
+                log('Audio ended');
                 audio.removeEventListener('ended', onAudioEnded);
                 enableCandidateResponse();
             };
             
-            const onAudioError = (error) => {
-                debugLog(`Audio error: ${error}`, 'error');
-                audio.removeEventListener('error', onAudioError);
-                enableCandidateResponse();
-                startFallbackTypewriter(element, question);
-            };
-            
-            // Attach event listeners
-            audio.addEventListener('canplaythrough', onCanPlayThrough);
+            audio.addEventListener('canplaythrough', onCanPlay);
             audio.addEventListener('ended', onAudioEnded);
-            audio.addEventListener('error', onAudioError);
             
-            // Timeout fallback
+            // Fallback timeout
             audioEndedTimeout = setTimeout(() => {
                 if (isInterviewerSpeaking) {
-                    debugLog('Audio timeout - enabling microphone', 'warning');
+                    log('Audio timeout - enabling microphone');
                     enableCandidateResponse();
                 }
             }, (audioDuration + 5) * 1000);
             
-            try {
-                audio.load();
-            } catch (error) {
-                debugLog(`Audio load failed: ${error.message}`, 'error');
-                enableCandidateResponse();
-                startFallbackTypewriter(element, question);
-            }
+            audio.load();
             
         } else {
-            debugLog('No valid audio, using text-only typewriter', 'info');
+            log('No audio, showing text only');
             if (window.TypewriterSync) {
-                window.TypewriterSync.createTextOnly(element, question, { fast: false }).then(() => {
+                window.TypewriterSync.createTextOnly(conversationArea, question, { fast: false }).then(() => {
                     setTimeout(() => enableCandidateResponse(), 800);
                 });
             } else {
-                startFallbackTypewriter(element, question);
+                startFallbackTypewriter(conversationArea, question);
             }
         }
     }
     
     function startFallbackTypewriter(element, question, audioDuration = null) {
-        debugLog('Using fallback typewriter', 'info');
+        log('Using fallback typewriter');
         let index = 0;
         const targetDuration = audioDuration ? audioDuration * 1000 : Math.min(question.length * 60, 6000);
         const charDelay = Math.max(30, Math.min(100, targetDuration / question.length));
@@ -1021,18 +612,15 @@
         typeChar();
     }
     
+    // Enable candidate response
     function enableCandidateResponse() {
-        debugLog('Enabling candidate response', 'success');
+        log('Enabling candidate response');
         
         isInterviewerSpeaking = false;
         isProcessingResponse = false;
         
-        const micBtn = document.getElementById('micBtn');
-        const audioStatus = document.getElementById('audioStatus');
-        const aiVideoBox = document.getElementById('aiVideoBox');
-        
         micBtn.classList.remove('disabled');
-        aiVideoBox.classList.remove('ai-speaking');
+        document.getElementById('aiVideoBox').classList.remove('ai-speaking');
         audioStatus.className = 'audio-status listening';
         audioStatus.textContent = 'Your turn - Speak your answer';
         
@@ -1044,13 +632,24 @@
             clearTimeout(audioEndedTimeout);
             audioEndedTimeout = null;
         }
+        
+        // Restart speech recognition
+        setTimeout(() => {
+            if (!interviewCompleted && recognition && !isListening) {
+                try {
+                    isListening = true;
+                    recognition.start();
+                    log('Speech recognition restarted for candidate');
+                } catch (e) {
+                    log(`Error restarting recognition: ${e.message}`);
+                }
+            }
+        }, 1000);
     }
     
     // Toggle microphone
     function toggleMic() {
-        if (!recognition || interviewCompleted) {
-            return;
-        }
+        if (!recognition || interviewCompleted) return;
         
         if (isInterviewerSpeaking) {
             alert('Please wait for the interviewer to finish speaking.');
@@ -1058,26 +657,26 @@
         }
         
         if (isListening) {
-            debugLog('Turning off microphone', 'warning');
+            log('Stopping microphone');
             isListening = false;
             try {
                 recognition.stop();
             } catch (e) {
-                debugLog(`Error stopping recognition: ${e.message}`, 'error');
+                log(`Error stopping recognition: ${e.message}`);
             }
-            document.getElementById('micBtn').classList.remove('recording');
+            micBtn.classList.remove('recording');
             
             if (collectedText.trim()) {
                 autoSubmitResponse();
             }
         } else {
-            debugLog('Turning on microphone', 'success');
+            log('Starting microphone');
             isListening = true;
             collectedText = '';
             try {
                 recognition.start();
             } catch (e) {
-                debugLog(`Error starting recognition: ${e.message}`, 'error');
+                log(`Error starting recognition: ${e.message}`);
                 isListening = false;
             }
         }
@@ -1094,40 +693,38 @@
             track.enabled = isCameraOn;
         });
         
-        const btn = document.getElementById('cameraBtn');
-        btn.style.background = isCameraOn ? '#34a853' : '#666';
-        btn.title = isCameraOn ? 'Camera ON' : 'Camera OFF';
+        if (isCameraOn) {
+            cameraBtn.classList.remove('off');
+            cameraBtn.title = 'Camera ON - Click to turn off';
+        } else {
+            cameraBtn.classList.add('off');
+            cameraBtn.title = 'Camera OFF - Click to turn on';
+        }
         
-        debugLog(`Camera ${isCameraOn ? 'enabled' : 'disabled'}`, 'info');
+        log(`Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
     }
     
     // End interview
     function endInterview() {
         if (confirm('Are you sure you want to end the interview?')) {
-            debugLog('Interview ended by user', 'warning');
+            log('Interview ended by candidate');
             interviewCompleted = true;
             
-            // Stop all systems
-            if (recognition) {
+            if (recognition && isListening) {
                 try {
                     recognition.stop();
-                } catch (e) {}
+                    isListening = false;
+                } catch (e) {
+                    log(`Error stopping recognition: ${e.message}`);
+                }
             }
             
-            if (userStream) {
-                userStream.getTracks().forEach(track => track.stop());
-            }
-            
-            document.getElementById('conversationArea').innerHTML = 
+            conversationArea.innerHTML = 
                 `<div style="text-align: center; padding: 40px;">
                     <h2>Interview Ended</h2>
-                    <p>Thank you for your time. You may now close this window.</p>
+                    <p>Thank you for participating in the AI interview.</p>
+                    <p>You can close this window now.</p>
                 </div>`;
-            
-            // Redirect after a delay
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 3000);
         }
     }
     
@@ -1141,7 +738,7 @@
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
         
         if (timeLeft <= 0) {
-            debugLog('Time expired', 'warning');
+            log('Time expired');
             return;
         }
         
@@ -1150,55 +747,34 @@
     
     // Initialize everything
     document.addEventListener('DOMContentLoaded', function() {
-        debugLog('DOM loaded, initializing systems...', 'info');
+        log('Initializing interview system...');
         
         // Initialize camera first
         initCamera().then(() => {
-            debugLog('Camera initialization complete', 'success');
+            log('Camera initialization complete');
             
-            // Then initialize speech with delay
+            // Initialize speech after camera
             setTimeout(() => {
-                debugLog('Starting speech recognition initialization...', 'info');
+                log('Starting speech recognition...');
                 initSpeech();
             }, 2000);
         });
         
         // Start timer
-        setInterval(() => {
-            updateTimer();
-        }, 1000);
+        setInterval(updateTimer, 1000);
         
-        // Show initial question with proper validation
+        // Show initial question
         setTimeout(() => {
-            debugLog('Showing initial question...', 'info');
-            
-            const question = TEMPLATE_DATA.initialQuestion || "Welcome to your AI interview! Let's begin with your introduction.";
+            log('Showing initial question...');
+            const question = TEMPLATE_DATA.initialQuestion || "Welcome to your AI interview! Please tell me about yourself.";
             const audioUrl = TEMPLATE_DATA.initialAudio || null;
             const duration = TEMPLATE_DATA.initialDuration || 5;
             
-            if (question.length < 10) {
-                debugLog('Question too short, using fallback', 'warning');
-                const fallbackQuestion = `Hello ${TEMPLATE_DATA.candidateName}! Welcome to your AI interview. Could you please start by telling me about yourself and your background?`;
-                showCurrentQuestion(fallbackQuestion, audioUrl, duration);
-            } else {
-                showCurrentQuestion(question, audioUrl, duration);
-            }
+            showCurrentQuestion(question, audioUrl, duration);
         }, 3000);
         
-        debugLog('System initialization complete', 'success');
+        log('System initialization complete');
     });
-    
-    // Error handling
-    window.addEventListener('error', function(e) {
-        debugLog(`JavaScript error: ${e.message}`, 'error');
-        console.error('Global error:', e);
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        debugLog(`Unhandled promise rejection: ${e.reason}`, 'error');
-        console.error('Unhandled rejection:', e);
-    });
-    
     </script>
 </body>
 </html>

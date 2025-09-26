@@ -140,6 +140,7 @@
             color: #90a4ae;
             max-height: 150px;
             overflow-y: auto;
+            display: none; /* Hidden by default, can be shown for debugging */
         }
         .debug-panel .status {
             margin: 5px 0;
@@ -214,7 +215,6 @@
         <div class="stats">
             <div class="stat">Question: <span id="questionCount">1/8</span></div>
             <div class="stat">Time: <span id="timer">15:00</span></div>
-            {% comment %} <div class="stat">Debug Mode</div> {% endcomment %}
         </div>
         
         <div class="video-grid">
@@ -230,15 +230,15 @@
 
         <div class="transcript-section">
             <div class="conversation-text" id="conversationArea">
-                
+                Welcome! Preparing your interview...
             </div>
             
-            {% comment %} <!-- DEBUG PANEL -->
+            <!-- DEBUG PANEL - Uncomment to enable debugging -->
             <div class="debug-panel" id="debugPanel">
                 <strong>Debug Log:</strong><br>
                 <div id="debugLog">System starting...</div>
             </div>
-        </div> {% endcomment %}
+        </div>
 
         <div class="controls">
             <button class="btn recording" id="micBtn" onclick="toggleMic()" title="Microphone">🎤</button>
@@ -247,13 +247,28 @@
         </div>
     </div>
 
-    <!-- Audio element -->
-    <audio id="aiAudio" preload="auto"></audio>
+    <!-- Audio element for playing interviewer's voice -->
+    <audio id="aiAudio" preload="auto" style="display: none;"></audio>
+    
+    <!-- CSRF Token -->
     {% csrf_token %}
     
+    <!-- Load typewriter script -->
     <script src="{% static 'js/typewriter-sync.js' %}"></script>
 
+    <!-- FIXED: Pass template variables to JavaScript properly -->
     <script>
+    // Template data passed from Django - FIXED
+    const TEMPLATE_DATA = {
+        initialQuestion: `{{ ai_question|escapejs|default:"Welcome to your AI interview! Let's begin." }}`,
+        initialAudio: `{{ audio_url|escapejs|safe }}`,
+        initialDuration: {{ audio_duration|default:5 }},
+        candidateName: `{{ candidate_name|escapejs|default:"Candidate" }}`,
+        interviewUuid: `{{ interview.uuid|default:"" }}`,
+        hasAudio: {{ has_audio|yesno:"true,false" }},
+        csrfToken: `{{ csrf_token }}`
+    };
+    
     // Global variables
     let recognition = null;
     let isListening = false;
@@ -277,20 +292,24 @@
         
         console.log(`[${timestamp}] ${message}`);
         
-        const logEntry = document.createElement('div');
-        logEntry.className = `status ${statusClass}`;
-        logEntry.innerHTML = `<span style="color: #666;">${timestamp}</span> ${message}`;
-        
-        logElement.appendChild(logEntry);
-        logElement.scrollTop = logElement.scrollHeight;
-        
-        // Keep only last 20 entries
-        while (logElement.children.length > 20) {
-            logElement.removeChild(logElement.firstChild);
+        // Only show debug panel if it exists and is visible
+        if (logElement && logElement.parentElement.style.display !== 'none') {
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${statusClass}`;
+            logEntry.innerHTML = `<span style="color: #666;">${timestamp}</span> ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            // Keep only last 20 entries
+            while (logElement.children.length > 20) {
+                logElement.removeChild(logElement.firstChild);
+            }
         }
     }
     
     debugLog('AI Interview System Starting...', 'info');
+    debugLog(`Template data loaded: question=${TEMPLATE_DATA.initialQuestion.length} chars, audio=${TEMPLATE_DATA.initialAudio}, duration=${TEMPLATE_DATA.initialDuration}s`, 'info');
     
     // Test speech recognition availability
     function testSpeechRecognition() {
@@ -572,7 +591,7 @@
         });
     }
     
-    // Send response to server
+    // Send response to server - FIXED
     async function sendResponse(text) {
         try {
             debugLog('📡 Sending response to server', 'info');
@@ -581,7 +600,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': TEMPLATE_DATA.csrfToken,
                 },
                 body: new URLSearchParams({ text: text })
             });
@@ -592,6 +611,7 @@
             
             const data = await response.json();
             debugLog('✅ Server response received', 'success');
+            debugLog(`Response data: ${JSON.stringify(data)}`, 'info');
             
             if (data.success) {
                 questionCount = data.question_count || questionCount + 1;
@@ -603,16 +623,21 @@
                 
                 if (data.is_final || questionCount >= 8) {
                     debugLog('🏁 Interview completed', 'success');
+                    interviewCompleted = true;
                 }
             } else {
                 debugLog('❌ Server returned error', 'error');
+                document.getElementById('conversationArea').innerHTML = 
+                    `<div style="color: #f44336; padding: 20px;">There was an issue processing your response. Please try again.</div>`;
             }
         } catch (error) {
             debugLog(`❌ Network error: ${error.message}`, 'error');
+            document.getElementById('conversationArea').innerHTML = 
+                `<div style="color: #f44336; padding: 20px;">Network error. Please check your connection and try again.</div>`;
         }
     }
     
-    // Show current question with debugging
+    // FIXED: Show current question with proper audio handling
     function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         debugLog(`📝 Showing question: ${question.substring(0, 50)}...`, 'info');
         debugLog(`🔊 Audio URL: ${audioUrl || 'none'}`, 'info');
@@ -631,7 +656,13 @@
             audioEndedTimeout = null;
         }
         
-        const hasValidAudio = audioUrl && audioUrl.trim() !== '' && audioUrl !== 'None' && audioDuration > 0;
+        // FIXED: Better audio validation
+        const hasValidAudio = audioUrl && 
+                              audioUrl.trim() !== '' && 
+                              audioUrl !== 'None' && 
+                              audioUrl !== 'null' &&
+                              audioDuration && 
+                              audioDuration > 0;
         
         if (hasValidAudio) {
             debugLog('🔊 Starting audio playback', 'info');
@@ -645,17 +676,32 @@
             
             const audio = document.getElementById('aiAudio');
             currentAudioElement = audio;
+            
+            // FIXED: Proper audio setup
             audio.pause();
             audio.currentTime = 0;
-            audio.src = audioUrl;
+            
+            // Handle relative and absolute URLs
+            if (audioUrl.startsWith('/media/')) {
+                audio.src = audioUrl;
+            } else if (audioUrl.startsWith('http')) {
+                audio.src = audioUrl;
+            } else {
+                audio.src = '/media/' + audioUrl.replace(/^\/+/, '');
+            }
+            
             audio.volume = 0.8;
+            audio.preload = 'auto';
+            
+            debugLog(`🔊 Audio src set to: ${audio.src}`, 'info');
             
             const onCanPlayThrough = () => {
                 debugLog('🔊 Audio ready, starting playback', 'success');
                 audio.removeEventListener('canplaythrough', onCanPlayThrough);
                 
                 audio.play().then(() => {
-                    debugLog('🔊 Audio playing', 'success');
+                    debugLog('🔊 Audio playing successfully', 'success');
+                    // Start typewriter with audio sync
                     if (window.TypewriterSync) {
                         window.TypewriterSync.start(element, question, audio, audioDuration);
                     } else {
@@ -675,16 +721,28 @@
             };
             
             const onAudioError = (error) => {
-                debugLog(`❌ Audio error: ${error.message}`, 'error');
+                debugLog(`❌ Audio error: ${error}`, 'error');
                 audio.removeEventListener('error', onAudioError);
                 enableCandidateResponse();
                 startFallbackTypewriter(element, question);
             };
             
+            const onLoadStart = () => {
+                debugLog('🔊 Audio load started', 'info');
+            };
+            
+            const onLoadedData = () => {
+                debugLog('🔊 Audio data loaded', 'info');
+            };
+            
+            // FIXED: Attach all necessary event listeners
             audio.addEventListener('canplaythrough', onCanPlayThrough);
             audio.addEventListener('ended', onAudioEnded);
             audio.addEventListener('error', onAudioError);
+            audio.addEventListener('loadstart', onLoadStart);
+            audio.addEventListener('loadeddata', onLoadedData);
             
+            // Timeout fallback
             audioEndedTimeout = setTimeout(() => {
                 if (isInterviewerSpeaking) {
                     debugLog('⏰ Audio timeout - enabling microphone', 'warning');
@@ -701,7 +759,7 @@
             }
             
         } else {
-            debugLog('📝 No audio, using text-only typewriter', 'info');
+            debugLog('📝 No valid audio, using text-only typewriter', 'info');
             if (window.TypewriterSync) {
                 window.TypewriterSync.createTextOnly(element, question, { fast: false }).then(() => {
                     setTimeout(() => enableCandidateResponse(), 800);
@@ -834,9 +892,14 @@
         timeLeft--;
     }
     
-    // Initialize everything
+    // FIXED: Initialize everything with proper timing and validation
     document.addEventListener('DOMContentLoaded', function() {
         debugLog('🚀 DOM loaded, initializing systems...', 'info');
+        debugLog(`Template data validation:`, 'info');
+        debugLog(`- Question: ${TEMPLATE_DATA.initialQuestion ? 'available' : 'missing'} (${TEMPLATE_DATA.initialQuestion.length} chars)`, 'info');
+        debugLog(`- Audio: ${TEMPLATE_DATA.initialAudio ? 'available' : 'missing'} (${TEMPLATE_DATA.initialAudio})`, 'info');
+        debugLog(`- Duration: ${TEMPLATE_DATA.initialDuration}s`, 'info');
+        debugLog(`- Has Audio: ${TEMPLATE_DATA.hasAudio}`, 'info');
         
         // Initialize camera first
         initCamera().then(() => {
@@ -854,22 +917,35 @@
             updateTimer();
         }, 1000);
         
-        // Get initial question data
-        const initialQuestion = `{{ ai_question|escapejs|default:"Welcome to your AI interview! Let's begin." }}`;
-        const initialAudio = `{{ audio_url|escapejs|safe }}`;
-        const initialDuration = {{ audio_duration|default:"5" }};
-        
-        debugLog(`Initial question length: ${initialQuestion.length}`, 'info');
-        debugLog(`Initial audio: ${initialAudio ? 'available' : 'none'}`, 'info');
-        debugLog(`Initial duration: ${initialDuration}s`, 'info');
-        
-        // Show initial question after delay
+        // FIXED: Show initial question with proper validation
         setTimeout(() => {
             debugLog('Showing initial question...', 'info');
-            showCurrentQuestion(initialQuestion, initialAudio, initialDuration);
+            
+            const question = TEMPLATE_DATA.initialQuestion || "Welcome to your AI interview! Let's begin with your introduction.";
+            const audioUrl = TEMPLATE_DATA.initialAudio || null;
+            const duration = TEMPLATE_DATA.initialDuration || 5;
+            
+            if (question.length < 10) {
+                debugLog('⚠️ Question too short, using fallback', 'warning');
+                const fallbackQuestion = `Hello ${TEMPLATE_DATA.candidateName}! Welcome to your AI interview. Could you please start by telling me about yourself and your background?`;
+                showCurrentQuestion(fallbackQuestion, audioUrl, duration);
+            } else {
+                showCurrentQuestion(question, audioUrl, duration);
+            }
         }, 3000);
         
         debugLog('✅ System initialization complete', 'success');
+    });
+    
+    // FIXED: Add error handling for unhandled errors
+    window.addEventListener('error', function(e) {
+        debugLog(`❌ JavaScript error: ${e.message}`, 'error');
+        console.error('Global error:', e);
+    });
+    
+    window.addEventListener('unhandledrejection', function(e) {
+        debugLog(`❌ Unhandled promise rejection: ${e.reason}`, 'error');
+        console.error('Unhandled rejection:', e);
     });
 </script>
 </body>

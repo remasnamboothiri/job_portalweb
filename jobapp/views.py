@@ -1297,7 +1297,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 # Generate dynamic follow-up questions based on conversation flow
                 # These questions will cycle throughout the 15 minutes
                 
-                interview_questions_pool = [
+                    interview_questions_pool = [
                     # Introduction and Background (Early questions)
                     f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
                     

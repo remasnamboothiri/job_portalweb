@@ -1025,7 +1025,8 @@ def start_interview_by_uuid(request, interview_uuid):
                 'is_registered_candidate': interview.is_registered_candidate,
                 'conversation_history': [],
                 'started_at': timezone.now().isoformat(),
-                'interview_completed': False
+                'interview_completed': False,
+                'interview_duration_minutes': 15  # 15-minute interview
             }
         
         request.session.modified = True
@@ -1036,10 +1037,13 @@ def start_interview_by_uuid(request, interview_uuid):
                 if request.content_type == 'application/json':
                     data = json.loads(request.body)
                     user_text = data.get("text") or data.get("message")
+                    time_remaining = data.get("time_remaining", 900)  # Get time from frontend
                 else:
                     user_text = request.POST.get("text", "")
+                    time_remaining = int(request.POST.get("time_remaining", 900))
             except:
                 user_text = request.POST.get("text", "")
+                time_remaining = 900  # Default 15 minutes
     
             if not user_text.strip():
                 return JsonResponse({
@@ -1050,7 +1054,7 @@ def start_interview_by_uuid(request, interview_uuid):
                     'success': False
                 })
     
-            logger.info(f"User input for interview {interview_uuid}: {user_text[:100]}...")
+            logger.info(f"User input for interview {interview_uuid}: {user_text[:100]}... (Time remaining: {time_remaining}s)")
     
             # Get current context
             context = request.session.get(session_key, {})
@@ -1082,7 +1086,7 @@ def start_interview_by_uuid(request, interview_uuid):
     
             context['last_processed_input'] = current_input_hash
     
-            # Get current question count and increment properly
+            # Get current question count and increment
             current_count = context.get('question_count', 0)
             question_count = current_count + 1
     
@@ -1099,13 +1103,17 @@ def start_interview_by_uuid(request, interview_uuid):
                 'speaker': 'candidate',
                 'message': user_text,
                 'question_number': question_count,
-                'timestamp': timezone.now().isoformat()
+                'timestamp': timezone.now().isoformat(),
+                'time_remaining': time_remaining
             })
     
-            # FIXED: Better audio issue detection that doesn't interfere with real responses
+            # Check if this should be the last question (2 minutes or less remaining)
+            is_last_question = time_remaining <= 120  # 2 minutes = 120 seconds
+            is_time_up = time_remaining <= 30  # 30 seconds or less
+    
+            # FIXED: Better audio issue detection
             user_text_lower = user_text.lower().strip()
             
-            # Only detect very simple audio test phrases
             simple_audio_phrases = [
                 'can you hear me', 'can you hear me can you hear me',
                 'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
@@ -1114,7 +1122,6 @@ def start_interview_by_uuid(request, interview_uuid):
             
             is_simple_audio_issue = any(phrase == user_text_lower for phrase in simple_audio_phrases)
             
-            # Don't treat legitimate responses as audio issues
             has_substantial_content = len(user_text.split()) > 4 or any(word in user_text_lower for word in [
                 'experience', 'project', 'work', 'skill', 'technology', 'challenge', 'team', 'develop',
                 'position', 'company', 'career', 'goal', 'learn', 'python', 'django', 'javascript',
@@ -1123,65 +1130,121 @@ def start_interview_by_uuid(request, interview_uuid):
                 'university', 'college', 'degree', 'certificate', 'training', 'portfolio', 'github'
             ])
             
-            # Generate appropriate AI response based on question number and content
-            if is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
-                logger.info(f"Audio issue detected for interview {interview_uuid}: {user_text}")
+            # Generate appropriate AI response
+            if is_time_up:
+                # Time is up - end the interview
+                ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
                 
+                context['interview_completed'] = True
+                logger.info(f"Interview time completed for {interview_uuid}")
+                
+            elif is_last_question:
+                # 2 minutes or less - notify this is the last question
+                follow_up_questions = [
+                    f"We're coming to the end of our time together, {candidate_name}. For my final question: Is there anything important about your skills, experience, or qualifications that we haven't discussed yet that you'd like me to know about?",
+                    
+                    f"This will be our last question today, {candidate_name}. Before we wrap up: What makes you particularly excited about this {job_title} opportunity, and why do you think you'd be a great fit for our team at {company_name}?",
+                    
+                    f"We have just a couple of minutes left, {candidate_name}. As a final question: If you were to start in this role next week, what would be your top priority in your first 30 days?",
+                    
+                    f"For our final question today, {candidate_name}: What's one professional achievement you're most proud of, and what did you learn from that experience?",
+                ]
+                
+                import random
+                ai_response = random.choice(follow_up_questions)
+                logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
+                
+            elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
+                # Audio test response
                 if question_count <= 2:
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you the first question: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
-                elif question_count <= 5:
-                    ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with our interview with the next question."
+                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
                 else:
-                    ai_response = f"Yes, I can hear you well, {candidate_name}! Let's proceed with another question."
+                    ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
                 
                 logger.info(f"Using audio issue response for question {question_count}")
-            
+                
             else:
-                # FIXED: Use structured interview flow with proper question generation
-                interview_questions = {
-                    1: f"Thank you for that introduction, {candidate_name}! That's great to hear about your background. Now I'd like to learn more about your technical experience. Can you tell me about the programming languages, frameworks, or technologies you've been working with recently? What projects have you used them for?",
+                # Generate dynamic follow-up questions based on conversation flow
+                # These questions will cycle throughout the 15 minutes
+                
+                interview_questions_pool = [
+                    # Introduction and Background (Early questions)
+                    f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
                     
-                    2: "Excellent technical background! I'd love to hear about a specific project you've worked on. Can you walk me through a challenging project or problem you encountered recently? What approach did you take to solve it, and what technologies did you use?",
+                    "That's great! Can you walk me through a specific project you've worked on that you're particularly proud of? What was your role, and what technologies did you use?",
                     
-                    3: "That's impressive problem-solving! Teamwork is crucial in development roles. Can you tell me about your experience working in a team environment? How do you handle situations where team members have different opinions or approaches to solving a problem?",
+                    # Technical Deep Dive
+                    "Interesting project! Can you describe a challenging technical problem you encountered recently? How did you approach solving it, and what was the outcome?",
                     
-                    4: "Great teamwork insights! Now let's talk about your career goals. Where do you see yourself professionally in the next 3-5 years? What skills would you like to develop further, and how does this position align with your career aspirations?",
+                    "When you're learning a new technology or framework, what's your approach? Do you have any preferred resources or methods for picking up new skills quickly?",
                     
-                    5: "Perfect career vision! The tech industry evolves rapidly. How do you stay updated with the latest technologies and industry trends? Do you have any preferred learning resources, courses, or methods for professional development?",
+                    # Teamwork and Collaboration
+                    "Tell me about your experience working in a team environment. How do you handle situations where team members have different opinions about how to solve a problem?",
                     
-                    6: f"That's a wonderful approach to continuous learning! Given this {job_title} role at {company_name}, what specific aspects of the position interest you most? Do you have experience with any technologies or methodologies that would be directly relevant to this role?",
+                    "Can you share an example of a time when you had to explain a complex technical concept to someone non-technical? How did you approach it?",
                     
-                    7: f"Thank you for sharing those insights about your interests and experience! Before we wrap up, do you have any questions about this {job_title} position, our company culture, the team you'd be working with, growth opportunities, or anything else about this opportunity?",
+                    # Problem Solving and Process
+                    "When you encounter a bug or issue in your code that's difficult to track down, what's your debugging process?",
                     
-                    8: f"Thank you for those thoughtful questions, {candidate_name}! I really enjoyed our conversation today and learning about your background, technical skills, and career goals. You've provided some great insights into your experience and approach to problem-solving. We'll review everything we discussed and get back to you with next steps within the next 2-3 business days. Thank you for your time today, and have a wonderful day!"
-                }
-        
-                if question_count <= 8:
-                    ai_response = interview_questions.get(question_count, "Thank you for sharing that. Can you tell me more about your experience?")
-                    logger.info(f"Using structured question {question_count}")
-                else:
-                    ai_response = f"Thank you for the comprehensive interview, {candidate_name}! We appreciate your time and detailed responses. We'll be in touch soon with next steps."
-                    logger.info(f"Interview exceeded 8 questions for {interview_uuid}")
+                    "How do you prioritize your work when you're juggling multiple tasks or features? Do you have a particular system or methodology you follow?",
+                    
+                    # Professional Growth
+                    f"Where do you see yourself professionally in the next few years? What skills are you most interested in developing, and how does this {job_title} role fit into your career goals?",
+                    
+                    "How do you stay current with industry trends and new technologies? Are there any blogs, podcasts, courses, or communities you're part of?",
+                    
+                    # Situational Questions
+                    "Tell me about a time when you had to work under pressure or meet a tight deadline. How did you handle it?",
+                    
+                    "Can you describe a situation where you made a mistake in your work? What happened, and what did you learn from it?",
+                    
+                    "Have you ever had to adapt to a significant change in project requirements or direction? How did you handle that transition?",
+                    
+                    # Role-Specific Interest
+                    f"What specific aspects of this {job_title} position at {company_name} interest you most? What excites you about this opportunity?",
+                    
+                    f"Based on what you know about this role, do you have experience with any specific technologies or methodologies that would be particularly relevant to this {job_title} position?",
+                    
+                    # Soft Skills and Work Style
+                    "How would you describe your work style? Are you someone who prefers to work independently or collaboratively?",
+                    
+                    "Tell me about a time when you received constructive feedback. How did you respond to it?",
+                    
+                    # Additional Technical Topics
+                    "What's your experience with version control systems like Git? Can you describe your workflow for managing code changes?",
+                    
+                    "Have you worked with databases? What database systems are you familiar with, and what kind of queries or operations have you performed?",
+                    
+                    "Are you familiar with testing practices? What's your approach to ensuring code quality?",
+                    
+                    # Candidate Questions
+                    f"Before we continue, do you have any questions about the {job_title} role, the team structure, the technologies we use, or anything else about this opportunity?",
+                ]
+                
+                # Select a question based on conversation flow
+                # Use modulo to cycle through questions if interview goes longer
+                question_index = (question_count - 1) % len(interview_questions_pool)
+                ai_response = interview_questions_pool[question_index]
+                
+                logger.info(f"Using dynamic question {question_index + 1} for question count {question_count}")
     
             # Add AI response to history
             conversation_history.append({
                 'speaker': 'interviewer', 
                 'message': ai_response,
                 'question_number': question_count,
-                'timestamp': timezone.now().isoformat()
+                'timestamp': timezone.now().isoformat(),
+                'time_remaining': time_remaining
             })
     
             # Keep conversation history manageable
-            if len(conversation_history) > 20:
-                conversation_history = conversation_history[-20:]
+            if len(conversation_history) > 40:
+                conversation_history = conversation_history[-40:]
                 
             context['conversation_history'] = conversation_history
             
-            # Check if interview should be completed
-            if question_count >= 8:
-                logger.info(f"Interview completion triggered for {interview_uuid} at question {question_count}")
-                context['interview_completed'] = True
-                
+            # Generate interview results if completed
+            if context.get('interview_completed', False):
                 try:
                     generate_interview_results(interview, conversation_history)
                     logger.info(f"Interview results generation completed for {interview_uuid}")
@@ -1192,20 +1255,17 @@ def start_interview_by_uuid(request, interview_uuid):
             request.session[session_key] = context
             request.session.modified = True
         
-            # FIXED: Generate TTS audio for EVERY response
+            # Generate TTS audio for the response
             audio_path = None
             audio_duration = None
             try:
                 logger.info(f"Starting TTS generation for interview {interview_uuid}")
                 
-                # Import TTS functions
                 from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
                 
-                # Generate audio for the AI response
                 audio_path = generate_tts(ai_response, "female_interview")
                 
                 if audio_path and audio_path != 'None':
-                    # Get actual duration
                     try:
                         full_audio_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
                         if os.path.exists(full_audio_path):
@@ -1236,25 +1296,26 @@ def start_interview_by_uuid(request, interview_uuid):
                     from jobapp.tts import estimate_audio_duration
                     audio_duration = estimate_audio_duration(ai_response)
                 except:
-                    audio_duration = max(6.0, len(ai_response) * 0.05)  # Fallback: ~50ms per character
+                    audio_duration = max(6.0, len(ai_response) * 0.05)
     
             # Ensure we have a valid duration
             if not audio_duration or audio_duration <= 0:
                 audio_duration = max(3.0, len(ai_response) * 0.05)
     
-            # FIXED: Return proper response data with audio
+            # Return response data
             response_data = {
                 'response': ai_response,
                 'audio': audio_path if audio_path else '',
                 'audio_duration': audio_duration,
                 'success': True,
                 'question_count': question_count,
-                'is_final': question_count >= 8,
+                'is_final': context.get('interview_completed', False),
                 'has_audio': bool(audio_path),
-                'interview_completed': context.get('interview_completed', False)
+                'interview_completed': context.get('interview_completed', False),
+                'time_remaining': time_remaining
             }
     
-            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}, is_final={response_data['is_final']}, has_audio={response_data['has_audio']}, audio_duration={audio_duration:.2f}s")
+            logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}, time_remaining={time_remaining}s, is_final={response_data['is_final']}")
     
             # Clear duplicate prevention
             if 'last_processed_input' in context:
@@ -1283,7 +1344,7 @@ def start_interview_by_uuid(request, interview_uuid):
         request.session[session_key] = context
         request.session.modified = True
         
-        # FIXED: Generate initial TTS with proper error handling
+        # Generate initial TTS
         audio_path = None
         audio_duration = None
         try:
@@ -1326,11 +1387,10 @@ def start_interview_by_uuid(request, interview_uuid):
             except:
                 audio_duration = max(6.0, len(ai_question) * 0.05)
 
-        # Ensure we have a valid duration for initial question
         if not audio_duration or audio_duration <= 0:
             audio_duration = max(5.0, len(ai_question) * 0.05)
 
-        # FIXED: Template context with proper validation
+        # Template context
         context_data = {
             'interview': interview,
             'ai_question': ai_question,
@@ -1344,7 +1404,7 @@ def start_interview_by_uuid(request, interview_uuid):
             'is_registered_candidate': interview.is_registered_candidate,
         }
         
-        logger.info(f"Template context for interview {interview_uuid} - audio_url: '{context_data['audio_url']}', has_audio: {context_data['has_audio']}, duration: {audio_duration:.2f}s")
+        logger.info(f"Template context for interview {interview_uuid} - has_audio: {context_data['has_audio']}, duration: {audio_duration:.2f}s")
         
         return render(request, 'jobapp/interview_simple.html', context_data)
         
@@ -1376,7 +1436,6 @@ def start_interview_by_uuid(request, interview_uuid):
                 'Interview system temporarily unavailable. Please try again in a few minutes.',
                 status=500
             )
-
 
 
 

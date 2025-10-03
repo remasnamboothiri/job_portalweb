@@ -1152,108 +1152,108 @@ def start_interview_by_uuid(request, interview_uuid):
             
             # Generate AI response - WRAP IN TRY-CATCH
             try:
-            if is_time_up:
-                # Time is up - end the interview
-                ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
-                
-                context['interview_completed'] = True
-                logger.info(f"Interview time completed for {interview_uuid}")
-                
-            elif is_last_question:
-                # 2 minutes or less - notify this is the last question
-                follow_up_questions = [
-                    f"We're coming to the end of our time together, {candidate_name}. For my final question: Is there anything important about your skills, experience, or qualifications that we haven't discussed yet that you'd like me to know about?",
+                if is_time_up:
+                    # Time is up - end the interview
+                    ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
                     
-                    f"This will be our last question today, {candidate_name}. Before we wrap up: What makes you particularly excited about this {job_title} opportunity, and why do you think you'd be a great fit for our team at {company_name}?",
+                    context['interview_completed'] = True
+                    logger.info(f"Interview time completed for {interview_uuid}")
                     
-                    f"We have just a couple of minutes left, {candidate_name}. As a final question: If you were to start in this role next week, what would be your top priority in your first 30 days?",
-                    
-                    f"For our final question today, {candidate_name}: What's one professional achievement you're most proud of, and what did you learn from that experience?",
-                ]
-                
-                import random
-                ai_response = random.choice(follow_up_questions)
-                logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
-                
-            elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
-                # Audio test response
-                if question_count <= 2:
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
-                else:
-                    ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
-                
-                logger.info(f"Using audio issue response for question {question_count}")
-                
-            else:
-                # Generate dynamic follow-up questions based on conversation flow
-                logger.info(f"Generating regular interview question for count {question_count}")
-                
-                try:
-                    # These questions will cycle throughout the 15 minutes
-                    interview_questions_pool = [
-                        # Introduction and Background (Early questions)
-                        f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
+                elif is_last_question:
+                    # 2 minutes or less - notify this is the last question
+                    follow_up_questions = [
+                        f"We're coming to the end of our time together, {candidate_name}. For my final question: Is there anything important about your skills, experience, or qualifications that we haven't discussed yet that you'd like me to know about?",
                         
-                        "That's great! Can you walk me through a specific project you've worked on that you're particularly proud of? What was your role, and what technologies did you use?",
+                        f"This will be our last question today, {candidate_name}. Before we wrap up: What makes you particularly excited about this {job_title} opportunity, and why do you think you'd be a great fit for our team at {company_name}?",
                         
-                        # Technical Deep Dive
-                        "Interesting project! Can you describe a challenging technical problem you encountered recently? How did you approach solving it, and what was the outcome?",
+                        f"We have just a couple of minutes left, {candidate_name}. As a final question: If you were to start in this role next week, what would be your top priority in your first 30 days?",
                         
-                        "When you're learning a new technology or framework, what's your approach? Do you have any preferred resources or methods for picking up new skills quickly?",
-                        
-                        # Teamwork and Collaboration
-                        "Tell me about your experience working in a team environment. How do you handle situations where team members have different opinions about how to solve a problem?",
-                        
-                        "Can you share an example of a time when you had to explain a complex technical concept to someone non-technical? How did you approach it?",
-                        
-                        # Problem Solving and Process
-                        "When you encounter a bug or issue in your code that's difficult to track down, what's your debugging process?",
-                        
-                        "How do you prioritize your work when you're juggling multiple tasks or features? Do you have a particular system or methodology you follow?",
-                        
-                        # Professional Growth
-                        f"Where do you see yourself professionally in the next few years? What skills are you most interested in developing, and how does this {job_title} role fit into your career goals?",
-                        
-                        "How do you stay current with industry trends and new technologies? Are there any blogs, podcasts, courses, or communities you're part of?",
-                        
-                        # Situational Questions
-                        "Tell me about a time when you had to work under pressure or meet a tight deadline. How did you handle it?",
-                        
-                        "Can you describe a situation where you made a mistake in your work? What happened, and what did you learn from it?",
-                        
-                        "Have you ever had to adapt to a significant change in project requirements or direction? How did you handle that transition?",
-                        
-                        # Role-Specific Interest
-                        f"What specific aspects of this {job_title} position at {company_name} interest you most? What excites you about this opportunity?",
-                        
-                        f"Based on what you know about this role, do you have experience with any specific technologies or methodologies that would be particularly relevant to this {job_title} position?",
-                        
-                        # Soft Skills and Work Style
-                        "How would you describe your work style? Are you someone who prefers to work independently or collaboratively?",
-                        
-                        "Tell me about a time when you received constructive feedback. How did you respond to it?",
-                        
-                        # Additional Technical Topics
-                        "What's your experience with version control systems like Git? Can you describe your workflow for managing code changes?",
-                        
-                        "Have you worked with databases? What database systems are you familiar with, and what kind of queries or operations have you performed?",
-                        
-                        "Are you familiar with testing practices? What's your approach to ensuring code quality?",
-                        
-                        # Candidate Questions
-                        f"Before we continue, do you have any questions about the {job_title} role, the team structure, the technologies we use, or anything else about this opportunity?",
+                        f"For our final question today, {candidate_name}: What's one professional achievement you're most proud of, and what did you learn from that experience?",
                     ]
                     
-                    # Select a question based on conversation flow
-                    # Use modulo to cycle through questions if interview goes longer
-                    question_index = (question_count - 1) % len(interview_questions_pool)
-                    ai_response = interview_questions_pool[question_index]
+                    import random
+                    ai_response = random.choice(follow_up_questions)
+                    logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
                     
-                    logger.info(f"Selected question index {question_index} (question #{question_count})")
+                elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
+                    # Audio test response
+                    if question_count <= 2:
+                        ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
+                    else:
+                        ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
                     
-                except Exception as qgen_error:
-                    logger.error(f"Error selecting question: {qgen_error}")
-                    ai_response = f"Thank you for sharing that, {candidate_name}. Can you tell me more about your relevant experience and skills?"
+                    logger.info(f"Using audio issue response for question {question_count}")
+                    
+                else:
+                    # Generate dynamic follow-up questions based on conversation flow
+                    logger.info(f"Generating regular interview question for count {question_count}")
+                    
+                    try:
+                        # These questions will cycle throughout the 15 minutes
+                        interview_questions_pool = [
+                            # Introduction and Background (Early questions)
+                            f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
+                            
+                            "That's great! Can you walk me through a specific project you've worked on that you're particularly proud of? What was your role, and what technologies did you use?",
+                            
+                            # Technical Deep Dive
+                            "Interesting project! Can you describe a challenging technical problem you encountered recently? How did you approach solving it, and what was the outcome?",
+                            
+                            "When you're learning a new technology or framework, what's your approach? Do you have any preferred resources or methods for picking up new skills quickly?",
+                            
+                            # Teamwork and Collaboration
+                            "Tell me about your experience working in a team environment. How do you handle situations where team members have different opinions about how to solve a problem?",
+                            
+                            "Can you share an example of a time when you had to explain a complex technical concept to someone non-technical? How did you approach it?",
+                            
+                            # Problem Solving and Process
+                            "When you encounter a bug or issue in your code that's difficult to track down, what's your debugging process?",
+                            
+                            "How do you prioritize your work when you're juggling multiple tasks or features? Do you have a particular system or methodology you follow?",
+                            
+                            # Professional Growth
+                            f"Where do you see yourself professionally in the next few years? What skills are you most interested in developing, and how does this {job_title} role fit into your career goals?",
+                            
+                            "How do you stay current with industry trends and new technologies? Are there any blogs, podcasts, courses, or communities you're part of?",
+                            
+                            # Situational Questions
+                            "Tell me about a time when you had to work under pressure or meet a tight deadline. How did you handle it?",
+                            
+                            "Can you describe a situation where you made a mistake in your work? What happened, and what did you learn from it?",
+                            
+                            "Have you ever had to adapt to a significant change in project requirements or direction? How did you handle that transition?",
+                            
+                            # Role-Specific Interest
+                            f"What specific aspects of this {job_title} position at {company_name} interest you most? What excites you about this opportunity?",
+                            
+                            f"Based on what you know about this role, do you have experience with any specific technologies or methodologies that would be particularly relevant to this {job_title} position?",
+                            
+                            # Soft Skills and Work Style
+                            "How would you describe your work style? Are you someone who prefers to work independently or collaboratively?",
+                            
+                            "Tell me about a time when you received constructive feedback. How did you respond to it?",
+                            
+                            # Additional Technical Topics
+                            "What's your experience with version control systems like Git? Can you describe your workflow for managing code changes?",
+                            
+                            "Have you worked with databases? What database systems are you familiar with, and what kind of queries or operations have you performed?",
+                            
+                            "Are you familiar with testing practices? What's your approach to ensuring code quality?",
+                            
+                            # Candidate Questions
+                            f"Before we continue, do you have any questions about the {job_title} role, the team structure, the technologies we use, or anything else about this opportunity?",
+                        ]
+                        
+                        # Select a question based on conversation flow
+                        # Use modulo to cycle through questions if interview goes longer
+                        question_index = (question_count - 1) % len(interview_questions_pool)
+                        ai_response = interview_questions_pool[question_index]
+                        
+                        logger.info(f"Selected question index {question_index} (question #{question_count})")
+                        
+                    except Exception as qgen_error:
+                        logger.error(f"Error selecting question: {qgen_error}")
+                        ai_response = f"Thank you for sharing that, {candidate_name}. Can you tell me more about your relevant experience and skills?"
             
             except Exception as response_gen_error:
                 logger.error(f"CRITICAL: Error generating AI response: {response_gen_error}")
@@ -1262,101 +1262,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 ai_response = f"Thank you for that response, {candidate_name}. Could you tell me more about your background and experience?"
             
             logger.info(f"AI response generated successfully ({len(ai_response)} chars)")
-                # Time is up - end the interview
-                ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
-                
-                context['interview_completed'] = True
-                logger.info(f"Interview time completed for {interview_uuid}")
-                
-            elif is_last_question:
-                # 2 minutes or less - notify this is the last question
-                follow_up_questions = [
-                    f"We're coming to the end of our time together, {candidate_name}. For my final question: Is there anything important about your skills, experience, or qualifications that we haven't discussed yet that you'd like me to know about?",
-                    
-                    f"This will be our last question today, {candidate_name}. Before we wrap up: What makes you particularly excited about this {job_title} opportunity, and why do you think you'd be a great fit for our team at {company_name}?",
-                    
-                    f"We have just a couple of minutes left, {candidate_name}. As a final question: If you were to start in this role next week, what would be your top priority in your first 30 days?",
-                    
-                    f"For our final question today, {candidate_name}: What's one professional achievement you're most proud of, and what did you learn from that experience?",
-                ]
-                
-                import random
-                ai_response = random.choice(follow_up_questions)
-                logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
-                
-            elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
-                # Audio test response
-                if question_count <= 2:
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
-                else:
-                    ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
-                
-                logger.info(f"Using audio issue response for question {question_count}")
-                
-            else:
-                # Generate dynamic follow-up questions based on conversation flow
-                # These questions will cycle throughout the 15 minutes
-                
-                    interview_questions_pool = [
-                    # Introduction and Background (Early questions)
-                    f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
-                    
-                    "That's great! Can you walk me through a specific project you've worked on that you're particularly proud of? What was your role, and what technologies did you use?",
-                    
-                    # Technical Deep Dive
-                    "Interesting project! Can you describe a challenging technical problem you encountered recently? How did you approach solving it, and what was the outcome?",
-                    
-                    "When you're learning a new technology or framework, what's your approach? Do you have any preferred resources or methods for picking up new skills quickly?",
-                    
-                    # Teamwork and Collaboration
-                    "Tell me about your experience working in a team environment. How do you handle situations where team members have different opinions about how to solve a problem?",
-                    
-                    "Can you share an example of a time when you had to explain a complex technical concept to someone non-technical? How did you approach it?",
-                    
-                    # Problem Solving and Process
-                    "When you encounter a bug or issue in your code that's difficult to track down, what's your debugging process?",
-                    
-                    "How do you prioritize your work when you're juggling multiple tasks or features? Do you have a particular system or methodology you follow?",
-                    
-                    # Professional Growth
-                    f"Where do you see yourself professionally in the next few years? What skills are you most interested in developing, and how does this {job_title} role fit into your career goals?",
-                    
-                    "How do you stay current with industry trends and new technologies? Are there any blogs, podcasts, courses, or communities you're part of?",
-                    
-                    # Situational Questions
-                    "Tell me about a time when you had to work under pressure or meet a tight deadline. How did you handle it?",
-                    
-                    "Can you describe a situation where you made a mistake in your work? What happened, and what did you learn from it?",
-                    
-                    "Have you ever had to adapt to a significant change in project requirements or direction? How did you handle that transition?",
-                    
-                    # Role-Specific Interest
-                    f"What specific aspects of this {job_title} position at {company_name} interest you most? What excites you about this opportunity?",
-                    
-                    f"Based on what you know about this role, do you have experience with any specific technologies or methodologies that would be particularly relevant to this {job_title} position?",
-                    
-                    # Soft Skills and Work Style
-                    "How would you describe your work style? Are you someone who prefers to work independently or collaboratively?",
-                    
-                    "Tell me about a time when you received constructive feedback. How did you respond to it?",
-                    
-                    # Additional Technical Topics
-                    "What's your experience with version control systems like Git? Can you describe your workflow for managing code changes?",
-                    
-                    "Have you worked with databases? What database systems are you familiar with, and what kind of queries or operations have you performed?",
-                    
-                    "Are you familiar with testing practices? What's your approach to ensuring code quality?",
-                    
-                    # Candidate Questions
-                    f"Before we continue, do you have any questions about the {job_title} role, the team structure, the technologies we use, or anything else about this opportunity?",
-                ]
-                
-                # Select a question based on conversation flow
-                # Use modulo to cycle through questions if interview goes longer
-                question_index = (question_count - 1) % len(interview_questions_pool)
-                ai_response = interview_questions_pool[question_index]
-                
-                logger.info(f"Using dynamic question {question_index + 1} for question count {question_count}")
+
     
             # Add AI response to history
             conversation_history.append({

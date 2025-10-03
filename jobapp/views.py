@@ -1037,13 +1037,20 @@ def start_interview_by_uuid(request, interview_uuid):
                 if request.content_type == 'application/json':
                     data = json.loads(request.body)
                     user_text = data.get("text") or data.get("message")
-                    time_remaining = data.get("time_remaining", 900)  # Get time from frontend
+                    time_remaining = int(data.get("time_remaining", 900))
                 else:
                     user_text = request.POST.get("text", "")
-                    time_remaining = int(request.POST.get("time_remaining", 900))
-            except:
+                    try:
+                        time_remaining = int(request.POST.get("time_remaining", 900))
+                    except (ValueError, TypeError):
+                        time_remaining = 900
+            except Exception as e:
+                logger.error(f"Error parsing request data: {e}")
                 user_text = request.POST.get("text", "")
                 time_remaining = 900  # Default 15 minutes
+                
+            # LOG for debugging
+            logger.info(f"Parsed time_remaining: {time_remaining} seconds ({time_remaining/60:.1f} minutes)")
     
             if not user_text.strip():
                 return JsonResponse({
@@ -1110,6 +1117,9 @@ def start_interview_by_uuid(request, interview_uuid):
             # Check if this should be the last question (2 minutes or less remaining)
             is_last_question = time_remaining <= 120  # 2 minutes = 120 seconds
             is_time_up = time_remaining <= 30  # 30 seconds or less
+            
+            # LOG the decision logic
+            logger.info(f"Interview timing check - Time: {time_remaining}s, Last Question: {is_last_question}, Time Up: {is_time_up}")
     
             # FIXED: Better audio issue detection
             user_text_lower = user_text.lower().strip()
@@ -1436,7 +1446,6 @@ def start_interview_by_uuid(request, interview_uuid):
                 'Interview system temporarily unavailable. Please try again in a few minutes.',
                 status=500
             )
-
 
 
 #FIXED VERSION - Key changes in start_interview_by_uuid function

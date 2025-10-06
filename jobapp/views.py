@@ -1012,22 +1012,22 @@ def start_interview_by_uuid(request, interview_uuid):
         # Use unique session key per interview
         session_key = f'interview_context_{interview_uuid}'
         
-        if session_key not in request.session:
-            logger.info(f"Created new session context for interview {interview_uuid}")
-            request.session[session_key] = {
-                'candidate_name': candidate_name,
-                'job_title': job_title,
-                'company_name': company_name,
-                'resume_text': resume_text,
-                'job_description': interview.job.description if interview.job else "",
-                'job_location': interview.job.location if interview.job else "",
-                'question_count': 0,
-                'is_registered_candidate': interview.is_registered_candidate,
-                'conversation_history': [],
-                'started_at': timezone.now().isoformat(),
-                'interview_completed': False,
-                'interview_duration_minutes': 15  # 15-minute interview
-            }
+        # CRITICAL FIX: Always reset session for fresh interview start
+        logger.info(f"Resetting session context for interview {interview_uuid}")
+        request.session[session_key] = {
+            'candidate_name': candidate_name,
+            'job_title': job_title,
+            'company_name': company_name,
+            'resume_text': resume_text,
+            'job_description': interview.job.description if interview.job else "",
+            'job_location': interview.job.location if interview.job else "",
+            'question_count': 0,
+            'is_registered_candidate': interview.is_registered_candidate,
+            'conversation_history': [],
+            'started_at': timezone.now().isoformat(),
+            'interview_completed': False,
+            'interview_duration_minutes': 15  # 15-minute interview
+        }
         
         request.session.modified = True
         
@@ -1071,6 +1071,7 @@ def start_interview_by_uuid(request, interview_uuid):
             
             # Check if interview is already completed
             if context.get('interview_completed', False):
+                logger.warning(f"Interview {interview_uuid} already marked as completed, returning completion message")
                 return JsonResponse({
                     'error': 'Interview already completed',
                     'response': 'Thank you! Your interview has been completed.',

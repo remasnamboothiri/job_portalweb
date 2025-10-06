@@ -1112,21 +1112,6 @@ def start_interview_by_uuid(request, interview_uuid):
     
             logger.info(f"Question count incremented from {current_count} to {question_count} for interview {interview_uuid}")
     
-            # Build conversation history
-            conversation_history = context.get('conversation_history', [])
-            
-            # Only add to conversation history if it's not a simple audio test
-            if not (is_simple_audio_issue and not has_substantial_content and len(user_text_lower) <= 25):
-                conversation_history.append({
-                    'speaker': 'candidate',
-                    'message': user_text,
-                    'question_number': question_count,
-                    'timestamp': timezone.now().isoformat(),
-                    'time_remaining': time_remaining
-                })
-            else:
-                logger.info(f"Skipping conversation history for audio test: {user_text}")
-    
             # Check if this should be the last question (2 minutes or less remaining)
             is_last_question = time_remaining <= 120  # 2 minutes = 120 seconds
             is_time_up = time_remaining <= 30  # 30 seconds or less
@@ -1141,24 +1126,31 @@ def start_interview_by_uuid(request, interview_uuid):
                 'can you hear me', 'can you hear me can you hear me',
                 'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
                 'testing testing', 'test test', 'hello', 'testing', 'test',
-                'i am can you hear me', 'hello hello hello'
+                'i am can you hear me', 'hello hello hello', 'hello mam can you hear me'
             ]
             
             # More precise audio issue detection - must be exact match and short
             is_simple_audio_issue = (
                 any(phrase == user_text_lower for phrase in simple_audio_phrases) and 
-                len(user_text_lower) <= 25  # Must be short
+                len(user_text_lower) <= 30  # Must be short
             )
             
-            has_substantial_content = len(user_text.split()) > 4 or any(word in user_text_lower for word in [
-                'experience', 'project', 'work', 'skill', 'technology', 'challenge', 'team', 'develop',
-                'position', 'company', 'career', 'goal', 'learn', 'python', 'django', 'javascript',
-                'course', 'fresher', 'transcript', 'question', 'doubt', 'currently', 'internship',
-                'framework', 'interested', 'application', 'software', 'developer', 'programming',
-                'university', 'college', 'degree', 'certificate', 'training', 'portfolio', 'github'
-            ])
+            # Build conversation history
+            conversation_history = context.get('conversation_history', [])
             
-            logger.info(f"Content analysis - Audio issue: {is_simple_audio_issue}, Has substance: {has_substantial_content}")
+            # Only add to conversation history if it's not a simple audio test
+            if not is_simple_audio_issue:
+                conversation_history.append({
+                    'speaker': 'candidate',
+                    'message': user_text,
+                    'question_number': question_count,
+                    'timestamp': timezone.now().isoformat(),
+                    'time_remaining': time_remaining
+                })
+            else:
+                logger.info(f"Skipping conversation history for audio test: {user_text}")
+            
+            logger.info(f"Content analysis - Audio issue: {is_simple_audio_issue}, User text: '{user_text_lower}'")
             
             # Generate AI response - WRAP IN TRY-CATCH
             try:
@@ -1185,12 +1177,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     ai_response = random.choice(follow_up_questions)
                     logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
                     
-                elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
+                elif is_simple_audio_issue:
                     # Audio test response - DON'T increment question count for audio tests
-                    if question_count <= 2:
-                        ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
-                    else:
-                        ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
+                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
                     
                     # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
                     context['question_count'] = max(0, question_count - 1)  # Don't count audio tests as real questions
@@ -1278,7 +1267,7 @@ def start_interview_by_uuid(request, interview_uuid):
 
     
             # Add AI response to history (skip for audio tests)
-            if not (is_simple_audio_issue and not has_substantial_content and len(user_text_lower) <= 25):
+            if not is_simple_audio_issue:
                 conversation_history.append({
                     'speaker': 'interviewer', 
                     'message': ai_response,

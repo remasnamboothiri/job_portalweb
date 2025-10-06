@@ -1065,6 +1065,9 @@ def start_interview_by_uuid(request, interview_uuid):
     
             # Get current context
             context = request.session.get(session_key, {})
+            logger.info(f"Retrieved session context: {context.keys() if context else 'None'}")
+            logger.info(f"Current question count in context: {context.get('question_count', 'Not found')}")
+            logger.info(f"Interview completed flag: {context.get('interview_completed', 'Not found')}")
             
             # Check if interview is already completed
             if context.get('interview_completed', False):
@@ -1154,6 +1157,7 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"Content analysis - Audio issue: {is_simple_audio_issue}, User text: '{user_text_lower}'")
             
             # Generate AI response - WRAP IN TRY-CATCH
+            logger.info(f"About to generate AI response - Audio issue: {is_simple_audio_issue}, Time up: {is_time_up}, Last question: {is_last_question}")
             try:
                 if is_time_up:
                     # Time is up - end the interview
@@ -1263,6 +1267,8 @@ def start_interview_by_uuid(request, interview_uuid):
                 import traceback
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 ai_response = f"Thank you for that response, {candidate_name}. Could you tell me more about your background and experience?"
+                # Mark as completion error to prevent interview from ending
+                context['interview_completed'] = False
             
             logger.info(f"AI response generated successfully ({len(ai_response)} chars)")
 
@@ -1363,6 +1369,8 @@ def start_interview_by_uuid(request, interview_uuid):
             }
     
             logger.info(f"Sending response for interview {interview_uuid}: question_count={question_count}, time_remaining={time_remaining}s, is_final={response_data['is_final']}")
+            logger.info(f"Response data keys: {list(response_data.keys())}")
+            logger.info(f"AI response length: {len(ai_response)} characters")
     
             # Clear duplicate prevention
             if 'last_processed_input' in context:
@@ -1370,6 +1378,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 request.session[session_key] = context
                 request.session.modified = True
             
+            logger.info(f"About to return JsonResponse for interview {interview_uuid}")
             return JsonResponse(response_data)
         
         # HANDLE GET REQUEST - Show interview UI with first question
@@ -1469,7 +1478,20 @@ def start_interview_by_uuid(request, interview_uuid):
             'request_method': request.method,
         }
         
-        logger.error(f"Interview Error Details: {error_details}")
+        logger.error(f"CRITICAL INTERVIEW ERROR: {error_details}")
+        
+        # If this is a POST request (user response), return JSON error instead of completing interview
+        if request.method == "POST":
+            logger.error(f"POST request failed for interview {interview_uuid}, returning error response")
+            return JsonResponse({
+                'success': False,
+                'error': 'Interview processing error',
+                'response': 'I apologize, there was a technical issue. Could you please repeat your response?',
+                'audio': '',
+                'audio_duration': 3.0,
+                'interview_completed': False,
+                'is_final': False
+            })
         
         if settings.DEBUG:
             return HttpResponse(

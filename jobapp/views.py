@@ -1126,7 +1126,8 @@ def start_interview_by_uuid(request, interview_uuid):
                 'can you hear me', 'can you hear me can you hear me',
                 'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
                 'testing testing', 'test test', 'hello', 'testing', 'test',
-                'i am can you hear me', 'hello hello hello', 'hello mam can you hear me'
+                'i am can you hear me', 'hello hello hello', 'hello mam can you hear me',
+                'can you hear me mam', 'hello mam', 'mam can you hear me'
             ]
             
             # More precise audio issue detection - must be exact match and short

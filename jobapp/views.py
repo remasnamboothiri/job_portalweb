@@ -1114,13 +1114,18 @@ def start_interview_by_uuid(request, interview_uuid):
     
             # Build conversation history
             conversation_history = context.get('conversation_history', [])
-            conversation_history.append({
-                'speaker': 'candidate',
-                'message': user_text,
-                'question_number': question_count,
-                'timestamp': timezone.now().isoformat(),
-                'time_remaining': time_remaining
-            })
+            
+            # Only add to conversation history if it's not a simple audio test
+            if not (is_simple_audio_issue and not has_substantial_content and len(user_text_lower) <= 25):
+                conversation_history.append({
+                    'speaker': 'candidate',
+                    'message': user_text,
+                    'question_number': question_count,
+                    'timestamp': timezone.now().isoformat(),
+                    'time_remaining': time_remaining
+                })
+            else:
+                logger.info(f"Skipping conversation history for audio test: {user_text}")
     
             # Check if this should be the last question (2 minutes or less remaining)
             is_last_question = time_remaining <= 120  # 2 minutes = 120 seconds
@@ -1135,10 +1140,15 @@ def start_interview_by_uuid(request, interview_uuid):
             simple_audio_phrases = [
                 'can you hear me', 'can you hear me can you hear me',
                 'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
-                'testing testing', 'test test', 'hello', 'testing', 'test'
+                'testing testing', 'test test', 'hello', 'testing', 'test',
+                'i am can you hear me', 'hello hello hello'
             ]
             
-            is_simple_audio_issue = any(phrase == user_text_lower for phrase in simple_audio_phrases)
+            # More precise audio issue detection - must be exact match and short
+            is_simple_audio_issue = (
+                any(phrase == user_text_lower for phrase in simple_audio_phrases) and 
+                len(user_text_lower) <= 25  # Must be short
+            )
             
             has_substantial_content = len(user_text.split()) > 4 or any(word in user_text_lower for word in [
                 'experience', 'project', 'work', 'skill', 'technology', 'challenge', 'team', 'develop',
@@ -1176,13 +1186,16 @@ def start_interview_by_uuid(request, interview_uuid):
                     logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
                     
                 elif is_simple_audio_issue and not has_substantial_content and len(user_text_lower) < 20:
-                    # Audio test response
+                    # Audio test response - DON'T increment question count for audio tests
                     if question_count <= 2:
                         ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
                     else:
                         ai_response = f"I can hear you clearly, {candidate_name}! Your audio is working fine. Let me continue with the next question."
                     
-                    logger.info(f"Using audio issue response for question {question_count}")
+                    # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
+                    context['question_count'] = max(0, question_count - 1)  # Don't count audio tests as real questions
+                    question_count = context['question_count']
+                    logger.info(f"Audio test detected - resetting question count to {question_count}")
                     
                 else:
                     # Generate dynamic follow-up questions based on conversation flow
@@ -1264,14 +1277,17 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"AI response generated successfully ({len(ai_response)} chars)")
 
     
-            # Add AI response to history
-            conversation_history.append({
-                'speaker': 'interviewer', 
-                'message': ai_response,
-                'question_number': question_count,
-                'timestamp': timezone.now().isoformat(),
-                'time_remaining': time_remaining
-            })
+            # Add AI response to history (skip for audio tests)
+            if not (is_simple_audio_issue and not has_substantial_content and len(user_text_lower) <= 25):
+                conversation_history.append({
+                    'speaker': 'interviewer', 
+                    'message': ai_response,
+                    'question_number': question_count,
+                    'timestamp': timezone.now().isoformat(),
+                    'time_remaining': time_remaining
+                })
+            else:
+                logger.info(f"Skipping AI response history for audio test response")
     
             # Keep conversation history manageable
             if len(conversation_history) > 40:
@@ -1286,6 +1302,11 @@ def start_interview_by_uuid(request, interview_uuid):
                     logger.info(f"Interview results generation completed for {interview_uuid}")
                 except Exception as e:
                     logger.error(f"Failed to generate interview results for {interview_uuid}: {e}")
+            
+            # CRITICAL FIX: Don't complete interview unless time is actually up or we have substantial conversation
+            elif question_count >= 15 and time_remaining > 60:  # Only complete if we have many questions AND time is running out
+                logger.info(f"Interview has {question_count} questions but {time_remaining}s remaining - continuing interview")
+                # Don't complete yet, let time run out naturally
             
             # Save updated context
             request.session[session_key] = context

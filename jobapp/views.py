@@ -1012,24 +1012,26 @@ def start_interview_by_uuid(request, interview_uuid):
         # Use unique session key per interview
         session_key = f'interview_context_{interview_uuid}'
         
-        # CRITICAL FIX: Always reset session for fresh interview start
-        logger.info(f"Resetting session context for interview {interview_uuid}")
-        request.session[session_key] = {
-            'candidate_name': candidate_name,
-            'job_title': job_title,
-            'company_name': company_name,
-            'resume_text': resume_text,
-            'job_description': interview.job.description if interview.job else "",
-            'job_location': interview.job.location if interview.job else "",
-            'question_count': 0,
-            'is_registered_candidate': interview.is_registered_candidate,
-            'conversation_history': [],
-            'started_at': timezone.now().isoformat(),
-            'interview_completed': False,
-            'interview_duration_minutes': 15  # 15-minute interview
-        }
-        
-        request.session.modified = True
+        # CRITICAL FIX: Only initialize session if it doesn't exist (don't reset on every request)
+        if session_key not in request.session:
+            logger.info(f"Creating new session context for interview {interview_uuid}")
+            request.session[session_key] = {
+                'candidate_name': candidate_name,
+                'job_title': job_title,
+                'company_name': company_name,
+                'resume_text': resume_text,
+                'job_description': interview.job.description if interview.job else "",
+                'job_location': interview.job.location if interview.job else "",
+                'question_count': 0,
+                'is_registered_candidate': interview.is_registered_candidate,
+                'conversation_history': [],
+                'started_at': timezone.now().isoformat(),
+                'interview_completed': False,
+                'interview_duration_minutes': 15  # 15-minute interview
+            }
+            request.session.modified = True
+        else:
+            logger.info(f"Using existing session context for interview {interview_uuid}")
         
         # HANDLE POST REQUEST - Process candidate responses
         if request.method == "POST":
@@ -1154,6 +1156,9 @@ def start_interview_by_uuid(request, interview_uuid):
                 })
             else:
                 logger.info(f"Skipping conversation history for audio test: {user_text}")
+                # For audio tests, don't increment question count
+                context['question_count'] = max(0, context.get('question_count', 0) - 1)
+                question_count = context['question_count']
             
             logger.info(f"Content analysis - Audio issue: {is_simple_audio_issue}, User text: '{user_text_lower}'")
             
@@ -1188,8 +1193,8 @@ def start_interview_by_uuid(request, interview_uuid):
                     ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
                     
                     # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
-                    context['question_count'] = max(0, question_count - 1)  # Don't count audio tests as real questions
-                    question_count = context['question_count']
+                    context['question_count'] = 0  # Reset to 0 for audio tests
+                    question_count = 0
                     logger.info(f"Audio test detected - resetting question count to {question_count}")
                     
                 else:
@@ -1373,7 +1378,11 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"Response data keys: {list(response_data.keys())}")
             logger.info(f"AI response length: {len(ai_response)} characters")
     
-            # Clear duplicate prevention
+            # Save updated context to session
+            request.session[session_key] = context
+            request.session.modified = True
+            
+            # Clear duplicate prevention after a delay
             if 'last_processed_input' in context:
                 context['last_processed_input'] = ''
                 request.session[session_key] = context

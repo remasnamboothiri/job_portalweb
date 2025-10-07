@@ -1190,7 +1190,7 @@ def start_interview_by_uuid(request, interview_uuid):
                     
                 elif is_simple_audio_issue:
                     # Audio test response - DON'T increment question count for audio tests
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great. Let me ask you: Can you tell me about yourself and your background? What experiences have brought you to apply for this {job_title} position?"
+                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great and your voice comes through clearly. I'm excited to get to know you better! Let's start with you telling me about yourself - your background, experience, and what brought you to apply for this {job_title} position?"
                     
                     # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
                     context['question_count'] = 0  # Reset to 0 for audio tests
@@ -1198,75 +1198,144 @@ def start_interview_by_uuid(request, interview_uuid):
                     logger.info(f"Audio test detected - resetting question count to {question_count}")
                     
                 else:
-                    # Generate dynamic follow-up questions based on conversation flow
-                    logger.info(f"Generating regular interview question for count {question_count}")
+                    # Generate intelligent follow-up questions based on candidate's response and conversation flow
+                    logger.info(f"Generating conversational response for question {question_count}")
                     
                     try:
-                        # These questions will cycle throughout the 15 minutes
-                        interview_questions_pool = [
-                            # Introduction and Background (Early questions)
-                            f"Thank you for that introduction, {candidate_name}! I'd like to learn more about your technical skills. Can you tell me about the programming languages, frameworks, or technologies you've been working with? What projects have you used them for?",
-                            
-                            "That's great! Can you walk me through a specific project you've worked on that you're particularly proud of? What was your role, and what technologies did you use?",
-                            
-                            # Technical Deep Dive
-                            "Interesting project! Can you describe a challenging technical problem you encountered recently? How did you approach solving it, and what was the outcome?",
-                            
-                            "When you're learning a new technology or framework, what's your approach? Do you have any preferred resources or methods for picking up new skills quickly?",
-                            
-                            # Teamwork and Collaboration
-                            "Tell me about your experience working in a team environment. How do you handle situations where team members have different opinions about how to solve a problem?",
-                            
-                            "Can you share an example of a time when you had to explain a complex technical concept to someone non-technical? How did you approach it?",
-                            
-                            # Problem Solving and Process
-                            "When you encounter a bug or issue in your code that's difficult to track down, what's your debugging process?",
-                            
-                            "How do you prioritize your work when you're juggling multiple tasks or features? Do you have a particular system or methodology you follow?",
-                            
-                            # Professional Growth
-                            f"Where do you see yourself professionally in the next few years? What skills are you most interested in developing, and how does this {job_title} role fit into your career goals?",
-                            
-                            "How do you stay current with industry trends and new technologies? Are there any blogs, podcasts, courses, or communities you're part of?",
-                            
-                            # Situational Questions
-                            "Tell me about a time when you had to work under pressure or meet a tight deadline. How did you handle it?",
-                            
-                            "Can you describe a situation where you made a mistake in your work? What happened, and what did you learn from it?",
-                            
-                            "Have you ever had to adapt to a significant change in project requirements or direction? How did you handle that transition?",
-                            
-                            # Role-Specific Interest
-                            f"What specific aspects of this {job_title} position at {company_name} interest you most? What excites you about this opportunity?",
-                            
-                            f"Based on what you know about this role, do you have experience with any specific technologies or methodologies that would be particularly relevant to this {job_title} position?",
-                            
-                            # Soft Skills and Work Style
-                            "How would you describe your work style? Are you someone who prefers to work independently or collaboratively?",
-                            
-                            "Tell me about a time when you received constructive feedback. How did you respond to it?",
-                            
-                            # Additional Technical Topics
-                            "What's your experience with version control systems like Git? Can you describe your workflow for managing code changes?",
-                            
-                            "Have you worked with databases? What database systems are you familiar with, and what kind of queries or operations have you performed?",
-                            
-                            "Are you familiar with testing practices? What's your approach to ensuring code quality?",
-                            
-                            # Candidate Questions
-                            f"Before we continue, do you have any questions about the {job_title} role, the team structure, the technologies we use, or anything else about this opportunity?",
-                        ]
+                        # Get conversation context and candidate's responses
+                        candidate_last_response = ""
+                        previous_topics = []
+                        candidate_responses = []
                         
-                        # Select a question based on conversation flow
-                        # Use modulo to cycle through questions if interview goes longer
-                        question_index = (question_count - 1) % len(interview_questions_pool)
-                        ai_response = interview_questions_pool[question_index]
+                        if conversation_history:
+                            for entry in conversation_history:
+                                if entry['speaker'] == 'candidate':
+                                    candidate_responses.append(entry['message'])
+                                    candidate_last_response = entry['message']  # Keep updating to get the latest
+                                elif entry['speaker'] == 'interviewer':
+                                    # Extract topics already covered
+                                    msg_lower = entry['message'].lower()
+                                    if any(word in msg_lower for word in ['technical', 'technology', 'programming', 'language']):
+                                        previous_topics.append('technical_skills')
+                                    if any(word in msg_lower for word in ['project', 'built', 'developed']):
+                                        previous_topics.append('projects')
+                                    if any(word in msg_lower for word in ['team', 'collaborate', 'work together']):
+                                        previous_topics.append('teamwork')
+                                    if any(word in msg_lower for word in ['goal', 'future', 'career']):
+                                        previous_topics.append('career_goals')
                         
-                        logger.info(f"Selected question index {question_index} (question #{question_count})")
+                        # Build comprehensive context for AI conversation
+                        conversation_summary = "\n".join([f"- {resp[:100]}..." for resp in candidate_responses[-3:]]) if candidate_responses else "No previous responses"
+                        
+                        conversation_context = f"""
+You are Sarah, a warm and professional AI interviewer conducting a job interview for a {job_title} position at {company_name}.
+
+INTERVIEW CONTEXT:
+Candidate: {candidate_name}
+Position: {job_title} 
+Company: {company_name}
+Current question: #{question_count}
+Topics already discussed: {', '.join(set(previous_topics)) if previous_topics else 'None yet'}
+
+YOUR INTERVIEWING STYLE:
+- Be genuinely interested and enthusiastic about their responses
+- Acknowledge what they shared before asking new questions
+- Ask follow-up questions that build naturally on their answers
+- Show empathy and create a comfortable atmosphere
+- Avoid repeating topics already covered
+- Keep responses conversational and under 250 characters
+- Use encouraging phrases like "That's fascinating!", "I love that approach!", "Great example!"
+
+CANDIDATE'S RECENT RESPONSES:
+{conversation_summary}
+
+MOST RECENT RESPONSE: "{candidate_last_response}"
+
+Based on their latest response and the conversation flow, generate your next comment/question. Make it feel like you're genuinely listening and interested in learning more about them as a person and professional.
+"""
+                        
+                        # Use AI to generate contextual response
+                        try:
+                            ai_response = ask_ai_question(
+                                conversation_context,
+                                candidate_name=candidate_name,
+                                job_title=job_title,
+                                company_name=company_name,
+                                timeout=15
+                            )
+                            
+                            # Clean and validate the AI response
+                            if ai_response:
+                                # Remove any quotes or formatting that might have slipped through
+                                ai_response = ai_response.replace('"', '').replace("'", "").strip()
+                                
+                                # Ensure it's not too long
+                                if len(ai_response) > 350:
+                                    sentences = ai_response.split('. ')
+                                    if len(sentences) > 1:
+                                        ai_response = sentences[0] + '. ' + sentences[1] + '.'
+                                    else:
+                                        ai_response = ai_response[:347] + "..."
+                                
+                                # Ensure it ends properly
+                                if not ai_response.endswith(('?', '.', '!')):
+                                    ai_response += "?"
+                                
+                                logger.info(f"Generated AI conversational response: {ai_response[:100]}...")
+                            else:
+                                raise Exception("AI returned empty response")
+                            
+                        except Exception as ai_error:
+                            logger.warning(f"AI response generation failed: {ai_error}, using fallback")
+                            
+                            # Intelligent fallback responses that acknowledge candidate's input
+                            response_lower = candidate_last_response.lower()
+                            
+                            # Analyze candidate's response for emotional tone and content
+                            if any(word in response_lower for word in ['nervous', 'anxious', 'worried', 'scared']):
+                                ai_response = f"I completely understand, {candidate_name}. Interviews can feel nerve-wracking, but you're doing great! Let's keep this conversational. "
+                            elif any(word in response_lower for word in ['excited', 'passionate', 'love', 'enjoy']):
+                                ai_response = f"I can hear the enthusiasm in your voice, {candidate_name}! That's wonderful. "
+                            else:
+                                ai_response = f"Thank you for sharing that, {candidate_name}. "
+                            
+                            # Add contextual follow-up based on question progression
+                            if question_count <= 2:
+                                if any(word in response_lower for word in ['experience', 'work', 'project', 'develop', 'code', 'program']):
+                                    ai_response += "I'd love to dive deeper into your technical experience. What programming languages or frameworks have you been working with recently?"
+                                elif any(word in response_lower for word in ['student', 'graduate', 'fresh', 'new', 'learning']):
+                                    ai_response += "It's great to see someone eager to start their career! What technologies or programming languages have you been learning or working with?"
+                                else:
+                                    ai_response += "Can you tell me about your technical background? What programming languages or technologies are you most comfortable with?"
+                            
+                            elif question_count <= 4:
+                                if any(word in response_lower for word in ['python', 'javascript', 'java', 'react', 'django', 'node', 'html', 'css']):
+                                    ai_response += "Excellent technical foundation! Can you walk me through a specific project where you used these technologies? What was the most challenging part?"
+                                elif any(word in response_lower for word in ['project', 'built', 'created', 'developed']):
+                                    ai_response += "That sounds like an interesting project! What was the most challenging technical problem you encountered, and how did you solve it?"
+                                else:
+                                    ai_response += "I'd love to hear about a project you've worked on. Can you describe something you built and the challenges you faced?"
+                            
+                            elif question_count <= 6:
+                                if any(word in response_lower for word in ['team', 'collaborate', 'group', 'together']):
+                                    ai_response += "Collaboration is so important in development! How do you handle it when team members have different approaches to solving a problem?"
+                                elif any(word in response_lower for word in ['problem', 'challenge', 'difficult', 'bug', 'issue']):
+                                    ai_response += "Great problem-solving mindset! Tell me about how you work with others. How do you collaborate in team environments?"
+                                else:
+                                    ai_response += "How do you approach working in team environments? Can you share an example of successful collaboration?"
+                            
+                            else:
+                                if any(word in response_lower for word in ['goal', 'future', 'career', 'grow', 'learn']):
+                                    ai_response += f"I love your ambition! What specifically excites you about this {job_title} role at {company_name}?"
+                                elif any(word in response_lower for word in ['company', 'role', 'position', 'opportunity']):
+                                    ai_response += "That's exactly the kind of thinking we value! Do you have any questions about the role, our team, or the company culture?"
+                                else:
+                                    ai_response += f"What draws you to this {job_title} position? What aspects of working at {company_name} interest you most?"
                         
                     except Exception as qgen_error:
-                        logger.error(f"Error selecting question: {qgen_error}")
-                        ai_response = f"Thank you for sharing that, {candidate_name}. Can you tell me more about your relevant experience and skills?"
+                        logger.error(f"Error generating conversational response: {qgen_error}")
+                        # Even the fallback should be conversational and acknowledge their response
+                        ai_response = f"Thank you for sharing that, {candidate_name}. That's really insightful! I'd love to learn more about what drives your passion for technology and development. What motivates you most in your work?"
             
             except Exception as response_gen_error:
                 logger.error(f"CRITICAL: Error generating AI response: {response_gen_error}")
@@ -1392,7 +1461,7 @@ def start_interview_by_uuid(request, interview_uuid):
             return JsonResponse(response_data)
         
         # HANDLE GET REQUEST - Show interview UI with first question
-        ai_question = f"Hi {candidate_name}, great to meet you and thanks for joining me today! I'm excited to learn more about you and discuss this {job_title} position at {company_name}. Could you start by telling me a bit about yourself - your background, education, and what interests you most about this role?"
+        ai_question = f"Hi {candidate_name}! It's wonderful to meet you, and thank you so much for taking the time to speak with me today. I'm Sarah, and I'll be conducting your interview for the {job_title} position at {company_name}. I'm really excited to learn more about you and your background! To get us started, could you tell me a bit about yourself - your experience, what you're passionate about, and what drew you to apply for this role?"
         
         logger.info(f"Generated AI initial question for interview {interview_uuid}")
         
@@ -1403,10 +1472,14 @@ def start_interview_by_uuid(request, interview_uuid):
             'speaker': 'interviewer',
             'message': ai_question,
             'question_number': 0,
-            'timestamp': timezone.now().isoformat()
+            'timestamp': timezone.now().isoformat(),
+            'response_type': 'initial_greeting',
+            'response_length': len(ai_question)
         })
         
         context['conversation_history'] = conversation_history
+        context['interview_started_at'] = timezone.now().isoformat()
+        context['interviewer_name'] = 'Sarah'
         request.session[session_key] = context
         request.session.modified = True
         

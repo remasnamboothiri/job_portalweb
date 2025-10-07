@@ -1493,9 +1493,6 @@ Based on their latest response and the conversation flow, generate your next com
         context['conversation_history'] = conversation_history
         context['interview_started_at'] = timezone.now().isoformat()
         context['interviewer_name'] = 'Sarah'
-        # Initialize voice service tracking
-        if audio_path and 'gtts' in audio_path:
-            context['voice_service'] = 'gtts_only'
         request.session[session_key] = context
         request.session.modified = True
         
@@ -1512,6 +1509,8 @@ Based on their latest response and the conversation flow, generate your next com
             # Track which service was used for consistency
             if audio_path and 'gtts' in audio_path:
                 context['voice_service'] = 'gtts_only'
+                request.session[session_key] = context
+                request.session.modified = True
             
             if audio_path and audio_path != 'None':
                 try:

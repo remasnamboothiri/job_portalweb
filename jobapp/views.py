@@ -1190,7 +1190,7 @@ def start_interview_by_uuid(request, interview_uuid):
                     
                 elif is_simple_audio_issue:
                     # Audio test response - DON'T increment question count for audio tests
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your microphone is working great and your voice comes through clearly. I'm excited to get to know you better! Let's start with you telling me about yourself - your background, experience, and what brought you to apply for this {job_title} position?"
+                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your audio is crystal clear and you sound great. I'm Sarah, and I'm so excited to get to know you better today! Let's dive in - could you tell me about your background, your experience with {job_title} work, and what specifically drew you to apply for this position with {company_name}?"
                     
                     # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
                     context['question_count'] = 0  # Reset to 0 for audio tests
@@ -1225,33 +1225,21 @@ def start_interview_by_uuid(request, interview_uuid):
                                         previous_topics.append('career_goals')
                         
                         # Build comprehensive context for AI conversation
-                        conversation_summary = "\n".join([f"- {resp[:100]}..." for resp in candidate_responses[-3:]]) if candidate_responses else "No previous responses"
+                        conversation_summary = "\n".join([f"- {resp[:150]}..." for resp in candidate_responses[-3:]]) if candidate_responses else "No previous responses"
                         
                         conversation_context = f"""
-You are Sarah, a warm and professional AI interviewer conducting a job interview for a {job_title} position at {company_name}.
-
 INTERVIEW CONTEXT:
 Candidate: {candidate_name}
-Position: {job_title} 
-Company: {company_name}
-Current question: #{question_count}
-Topics already discussed: {', '.join(set(previous_topics)) if previous_topics else 'None yet'}
-
-YOUR INTERVIEWING STYLE:
-- Be genuinely interested and enthusiastic about their responses
-- Acknowledge what they shared before asking new questions
-- Ask follow-up questions that build naturally on their answers
-- Show empathy and create a comfortable atmosphere
-- Avoid repeating topics already covered
-- Keep responses conversational and under 250 characters
-- Use encouraging phrases like "That's fascinating!", "I love that approach!", "Great example!"
+Position: {job_title} at {company_name}
+Question #{question_count}
+Topics covered: {', '.join(set(previous_topics)) if previous_topics else 'None yet'}
 
 CANDIDATE'S RECENT RESPONSES:
 {conversation_summary}
 
-MOST RECENT RESPONSE: "{candidate_last_response}"
+LATEST RESPONSE: "{candidate_last_response}"
 
-Based on their latest response and the conversation flow, generate your next comment/question. Make it feel like you're genuinely listening and interested in learning more about them as a person and professional.
+As Sarah, respond to what they just shared. Acknowledge their answer, show genuine interest, and ask a follow-up question that builds naturally on what they said. Focus on their experience, skills, and fit for the {job_title} role.
 """
                         
                         # Use AI to generate contextual response
@@ -1288,54 +1276,64 @@ Based on their latest response and the conversation flow, generate your next com
                         except Exception as ai_error:
                             logger.warning(f"AI response generation failed: {ai_error}, using fallback")
                             
-                            # Intelligent fallback responses that acknowledge candidate's input
+                            # Enhanced fallback responses that acknowledge candidate's input
                             response_lower = candidate_last_response.lower()
                             
                             # Analyze candidate's response for emotional tone and content
                             if any(word in response_lower for word in ['nervous', 'anxious', 'worried', 'scared']):
-                                ai_response = f"I completely understand, {candidate_name}. Interviews can feel nerve-wracking, but you're doing great! Let's keep this conversational. "
-                            elif any(word in response_lower for word in ['excited', 'passionate', 'love', 'enjoy']):
-                                ai_response = f"I can hear the enthusiasm in your voice, {candidate_name}! That's wonderful. "
+                                ai_response = f"I completely understand, {candidate_name}. Interviews can feel nerve-wracking, but you're doing fantastic! Let's keep this conversational and relaxed. "
+                            elif any(word in response_lower for word in ['excited', 'passionate', 'love', 'enjoy', 'enthusiastic']):
+                                ai_response = f"I can really hear the passion in your voice, {candidate_name}! That enthusiasm is exactly what we love to see. "
+                            elif any(word in response_lower for word in ['challenge', 'difficult', 'problem', 'struggle']):
+                                ai_response = f"That sounds like a great learning experience, {candidate_name}. I appreciate you sharing that challenge with me. "
                             else:
-                                ai_response = f"Thank you for sharing that, {candidate_name}. "
+                                ai_response = f"Thank you for sharing that, {candidate_name}. That's really insightful! "
                             
-                            # Add contextual follow-up based on question progression
+                            # Add contextual follow-up based on question progression and content
                             if question_count <= 2:
-                                if any(word in response_lower for word in ['experience', 'work', 'project', 'develop', 'code', 'program']):
-                                    ai_response += "I'd love to dive deeper into your technical experience. What programming languages or frameworks have you been working with recently?"
-                                elif any(word in response_lower for word in ['student', 'graduate', 'fresh', 'new', 'learning']):
-                                    ai_response += "It's great to see someone eager to start their career! What technologies or programming languages have you been learning or working with?"
+                                if any(word in response_lower for word in ['experience', 'work', 'project', 'develop', 'code', 'program', 'software']):
+                                    ai_response += f"I'd love to dive deeper into your technical experience. What specific technologies or programming languages have you been working with that would be relevant to this {job_title} role?"
+                                elif any(word in response_lower for word in ['student', 'graduate', 'fresh', 'new', 'learning', 'bootcamp', 'course']):
+                                    ai_response += "It's wonderful to see someone eager to start their career! What technologies or programming languages have you been learning, and what excites you most about development?"
+                                elif any(word in response_lower for word in ['career', 'transition', 'change', 'switch']):
+                                    ai_response += f"Career transitions can be exciting! What drew you specifically to {job_title}, and what skills from your previous experience do you think will transfer well?"
                                 else:
-                                    ai_response += "Can you tell me about your technical background? What programming languages or technologies are you most comfortable with?"
+                                    ai_response += f"Can you tell me more about your technical background? What programming languages or technologies are you most comfortable with for {job_title} work?"
                             
                             elif question_count <= 4:
-                                if any(word in response_lower for word in ['python', 'javascript', 'java', 'react', 'django', 'node', 'html', 'css']):
-                                    ai_response += "Excellent technical foundation! Can you walk me through a specific project where you used these technologies? What was the most challenging part?"
-                                elif any(word in response_lower for word in ['project', 'built', 'created', 'developed']):
-                                    ai_response += "That sounds like an interesting project! What was the most challenging technical problem you encountered, and how did you solve it?"
+                                if any(word in response_lower for word in ['python', 'javascript', 'java', 'react', 'django', 'node', 'html', 'css', 'sql']):
+                                    ai_response += "Excellent technical foundation! Can you walk me through a specific project where you used these technologies? I'm particularly interested in any challenges you faced and how you overcame them."
+                                elif any(word in response_lower for word in ['project', 'built', 'created', 'developed', 'application', 'website']):
+                                    ai_response += "That sounds like a fascinating project! What was the most challenging technical problem you encountered while building it, and how did you approach solving it?"
+                                elif any(word in response_lower for word in ['framework', 'library', 'tool', 'database']):
+                                    ai_response += "Great choice of technologies! Can you describe a specific project where you implemented these tools? What made you choose them for that particular solution?"
                                 else:
-                                    ai_response += "I'd love to hear about a project you've worked on. Can you describe something you built and the challenges you faced?"
+                                    ai_response += "I'd love to hear about a project you've worked on that you're particularly proud of. Can you walk me through the technical challenges and how you solved them?"
                             
                             elif question_count <= 6:
-                                if any(word in response_lower for word in ['team', 'collaborate', 'group', 'together']):
-                                    ai_response += "Collaboration is so important in development! How do you handle it when team members have different approaches to solving a problem?"
-                                elif any(word in response_lower for word in ['problem', 'challenge', 'difficult', 'bug', 'issue']):
-                                    ai_response += "Great problem-solving mindset! Tell me about how you work with others. How do you collaborate in team environments?"
+                                if any(word in response_lower for word in ['team', 'collaborate', 'group', 'together', 'pair']):
+                                    ai_response += "Collaboration is so crucial in development! Can you give me an example of a time when you had to work through a technical disagreement with a team member? How did you handle it?"
+                                elif any(word in response_lower for word in ['problem', 'challenge', 'difficult', 'bug', 'issue', 'debug']):
+                                    ai_response += "Great problem-solving approach! How do you typically approach debugging complex issues, especially when working with a team? Do you have a systematic process?"
+                                elif any(word in response_lower for word in ['agile', 'scrum', 'methodology', 'process']):
+                                    ai_response += "Excellent experience with development methodologies! How do you handle changing requirements or tight deadlines while maintaining code quality?"
                                 else:
-                                    ai_response += "How do you approach working in team environments? Can you share an example of successful collaboration?"
+                                    ai_response += "How do you approach working in team environments, especially when collaborating on complex technical projects? Can you share an example?"
                             
                             else:
-                                if any(word in response_lower for word in ['goal', 'future', 'career', 'grow', 'learn']):
-                                    ai_response += f"I love your ambition! What specifically excites you about this {job_title} role at {company_name}?"
-                                elif any(word in response_lower for word in ['company', 'role', 'position', 'opportunity']):
-                                    ai_response += "That's exactly the kind of thinking we value! Do you have any questions about the role, our team, or the company culture?"
+                                if any(word in response_lower for word in ['goal', 'future', 'career', 'grow', 'learn', 'aspiration']):
+                                    ai_response += f"I love hearing about career aspirations! What specifically excites you about this {job_title} role at {company_name}, and how does it align with your professional goals?"
+                                elif any(word in response_lower for word in ['company', 'role', 'position', 'opportunity', 'culture']):
+                                    ai_response += "That's exactly the kind of thinking we value! Do you have any questions about the day-to-day responsibilities, our team dynamics, or the company culture?"
+                                elif any(word in response_lower for word in ['technology', 'innovation', 'cutting-edge', 'latest']):
+                                    ai_response += f"Your interest in technology trends is great! How do you stay updated with the latest developments in {job_title}, and what emerging technologies are you most excited about?"
                                 else:
-                                    ai_response += f"What draws you to this {job_title} position? What aspects of working at {company_name} interest you most?"
+                                    ai_response += f"What draws you most to this {job_title} position at {company_name}? What aspects of the role or our company culture interest you the most?"
                         
                     except Exception as qgen_error:
                         logger.error(f"Error generating conversational response: {qgen_error}")
-                        # Even the fallback should be conversational and acknowledge their response
-                        ai_response = f"Thank you for sharing that, {candidate_name}. That's really insightful! I'd love to learn more about what drives your passion for technology and development. What motivates you most in your work?"
+                        # Enhanced fallback that's more engaging and job-focused
+                        ai_response = f"Thank you for sharing that, {candidate_name}. That's really valuable insight! I'd love to learn more about your passion for {job_title} work. What aspects of technology and development motivate you most, and how do you see yourself contributing to our team?"
             
             except Exception as response_gen_error:
                 logger.error(f"CRITICAL: Error generating AI response: {response_gen_error}")
@@ -1509,8 +1507,6 @@ Based on their latest response and the conversation flow, generate your next com
             # Track which service was used for consistency
             if audio_path and 'gtts' in audio_path:
                 context['voice_service'] = 'gtts_only'
-                request.session[session_key] = context
-                request.session.modified = True
             
             if audio_path and audio_path != 'None':
                 try:

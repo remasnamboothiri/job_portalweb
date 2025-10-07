@@ -1391,7 +1391,20 @@ Based on their latest response and the conversation flow, generate your next com
                 
                 from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
                 
-                audio_path = generate_tts(ai_response, "female_interview")
+                # Ensure consistent voice throughout interview
+                voice_preference = context.get('voice_service', None)
+                if voice_preference == 'gtts_only':
+                    # Force gTTS if already using it
+                    from jobapp.tts import generate_gtts_fallback
+                    audio_path = generate_gtts_fallback(ai_response)
+                else:
+                    audio_path = generate_tts(ai_response, "female_interview")
+                    
+                    # Track which service was used
+                    if audio_path and 'gtts' in audio_path:
+                        context['voice_service'] = 'gtts_only'
+                        request.session[session_key] = context
+                        request.session.modified = True
                 
                 if audio_path and audio_path != 'None':
                     try:
@@ -1480,6 +1493,9 @@ Based on their latest response and the conversation flow, generate your next com
         context['conversation_history'] = conversation_history
         context['interview_started_at'] = timezone.now().isoformat()
         context['interviewer_name'] = 'Sarah'
+        # Initialize voice service tracking
+        if audio_path and 'gtts' in audio_path:
+            context['voice_service'] = 'gtts_only'
         request.session[session_key] = context
         request.session.modified = True
         
@@ -1492,6 +1508,10 @@ Based on their latest response and the conversation flow, generate your next com
             from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
             
             audio_path = generate_tts(ai_question, "female_interview")
+            
+            # Track which service was used for consistency
+            if audio_path and 'gtts' in audio_path:
+                context['voice_service'] = 'gtts_only'
             
             if audio_path and audio_path != 'None':
                 try:

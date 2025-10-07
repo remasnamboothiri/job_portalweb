@@ -23,40 +23,34 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         
     if not prompt or not prompt.strip():
         logger.error("Empty prompt provided to AI function")
-        return f"Hi {candidate_name}! I'm Sarah, and I'm so excited to meet you today. Thanks for taking the time to interview for the {job_title} position at {company_name}. Could you start by telling me a bit about yourself and what interests you about this role?"
+        return f"Hi {candidate_name}! I'm Sarah. Tell me about yourself."
             
-    # Professional interviewer system prompt
+    # Simple, direct interviewer prompt
     system_prompt = f"""
-You are Sarah, a professional HR interviewer at {company_name} conducting an interview for the {job_title} position.
+You are Sarah, an HR interviewer at {company_name}. You are interviewing {candidate_name} for the {job_title} position.
 
-CRITICAL INSTRUCTIONS:
-- Respond ONLY as Sarah speaking directly to the candidate
-- NEVER use phrases like "Response as Sarah" or "Here's my response"
-- NEVER mention that you are an AI or reference your role as an assistant
-- Speak naturally and conversationally as if you are a real person
+RULES:
+1. Speak directly as Sarah - no labels, no "Response as Sarah", no stage directions
+2. Keep responses SHORT (1-2 sentences maximum)
+3. ALWAYS acknowledge what the candidate just said first
+4. Ask ONE simple, clear question at a time
+5. Be friendly and encouraging
+6. Focus on job-relevant topics
 
-YOUR ROLE:
-- You are an experienced, friendly HR professional
-- You know everything about the {job_title} position and {company_name}
-- You conduct thorough but welcoming interviews
-- You ask relevant questions about skills, experience, and cultural fit
+CONVERSATION STYLE:
+- Listen carefully to their answers
+- Build on what they tell you
+- Ask simple, direct questions
+- Be supportive when they struggle
+- Keep questions short and clear
 
-INTERVIEW STYLE:
-- Be warm but professional
-- Listen actively to candidate responses
-- Ask follow-up questions based on what they share
-- Focus on job-relevant topics: technical skills, experience, problem-solving, teamwork
-- Acknowledge their answers before moving to next questions
-- Keep responses concise (1-3 sentences)
+EXAMPLES:
+- Good: "That's great! What programming languages do you know?"
+- Bad: "Response as Sarah: That's wonderful to hear about your background..."
+- Good: "Nice! Tell me about a project you built."
+- Bad: "I appreciate you sharing that detailed information about your experience..."
 
-IMPORTANT:
-- Always respond as if you are Sarah speaking directly
-- Never break character or reference being an AI
-- Make the conversation feel natural and engaging
-- End responses with relevant questions when appropriate
-
-Example of correct response: "That's great experience with Python! Can you tell me about a challenging project you worked on?"
-Example of WRONG response: "Response as Sarah: That's great experience..."
+Remember: Short responses, acknowledge their answer, ask one clear question.
 """
                 
     try:
@@ -81,10 +75,10 @@ Example of WRONG response: "Response as Sarah: That's great experience..."
                     "content": prompt
                 }
             ],
-            temperature=0.7,
-            max_tokens=200,
+            temperature=0.5,
+            max_tokens=100,
             stream=False,
-            stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds"]
+            stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
         )
         
         raw_response = completion.choices[0].message.content
@@ -98,31 +92,28 @@ Example of WRONG response: "Response as Sarah: That's great experience..."
         return get_fallback_response(prompt, candidate_name, job_title, company_name)
 
 def clean_text(text):
-    """Clean AI response text and remove any meta-language"""
+    """Clean AI response and keep it short and direct"""
     import re
     
-    # Remove any meta-responses or AI references
-    text = re.sub(r'^(Response as Sarah|Here\'s my response as Sarah|As Sarah|Sarah responds)[:.]?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'^(Here\'s what Sarah would say|Sarah\'s response)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    # Remove ALL meta-language and stage directions
+    text = re.sub(r'^(Response as Sarah|Sarah\'s response|As Sarah|Here\'s my response|Sarah responds|Warm Smile|\*.*?\*)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\*.*?\*', '', text)  # Remove any *actions*
+    text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
     
-    # Remove markdown and formatting
+    # Remove speaker labels and formatting
+    text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'[*#`_>\\-]+', '', text)
     text = re.sub(r'["""''′`]', '', text)
     
-    # Remove speaker labels
-    text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
-    
-    # Clean whitespace
+    # Clean whitespace and bullets
     text = re.sub(r'\s+', ' ', text).strip()
-    
-    # Remove bullet points
     text = re.sub(r'^\d+\.\s*', '', text)
     text = re.sub(r'^[-•]\s*', '', text)
     
-    # Limit response length
+    # Keep responses SHORT - max 2 sentences
     sentences = text.split('. ')
-    if len(sentences) > 3:
-        text = '. '.join(sentences[:3]) + '.'
+    if len(sentences) > 2:
+        text = '. '.join(sentences[:2]) + '.'
     
     # Ensure proper punctuation
     if text and not text.endswith(('.', '!', '?')):
@@ -131,27 +122,27 @@ def clean_text(text):
     return text
 
 def get_fallback_response(prompt, candidate_name, job_title, company_name):
-    """Generate friendly, job-focused fallback responses when AI fails"""
+    """Generate short, direct fallback responses"""
     candidate_name = candidate_name or "the candidate"
     job_title = job_title or "Software Developer"
     company_name = company_name or "Our Company"
     
     prompt_lower = prompt.lower()
     
-    # More engaging fallback responses based on prompt content
+    # Short, direct fallback responses
     if any(phrase in prompt_lower for phrase in ['tell me about yourself', 'introduce', 'start']):
-        return f"Hi {candidate_name}! I'm so excited to meet you today. Could you start by telling me about your background and what specifically drew you to apply for this {job_title} position with us?"
+        return f"Hi {candidate_name}! Tell me about your background."
     elif any(phrase in prompt_lower for phrase in ['technical', 'experience', 'skills', 'technology']):
-        return f"That sounds really interesting! I'd love to dive deeper into your technical background. What programming languages or technologies have you been working with that would be relevant to this {job_title} role?"
+        return "That's great! What programming languages do you know?"
     elif any(phrase in prompt_lower for phrase in ['project', 'challenging', 'problem', 'built', 'developed']):
-        return "Wow, that's impressive! Can you walk me through a specific project you're proud of? I'm particularly interested in any challenges you faced and how you solved them."
+        return "Nice! Tell me about a project you built."
     elif any(phrase in prompt_lower for phrase in ['team', 'collaboration', 'work with others', 'colleagues']):
-        return "Great teamwork experience! How do you typically approach collaboration, especially when working on complex technical problems with different team members?"
+        return "Good! How do you work with teams?"
     elif any(phrase in prompt_lower for phrase in ['goals', 'future', 'career', 'growth']):
-        return f"I love hearing about career aspirations! Where do you see yourself growing in the next few years, and how does this {job_title} position fit into those goals?"
+        return "Interesting! What are your career goals?"
     elif any(phrase in prompt_lower for phrase in ['questions', 'ask', 'company', 'role']):
-        return f"Absolutely! I'd be happy to answer any questions you have about the {job_title} role, our team, or {company_name}. What would you like to know?"
+        return "Sure! What questions do you have?"
     elif any(phrase in prompt_lower for phrase in ['thank', 'final', 'wrap', 'end']):
-        return f"Thank you so much for this wonderful conversation, {candidate_name}! I really enjoyed learning about your experience and passion. We'll be in touch with next steps very soon. Have a fantastic day!"
+        return f"Thank you {candidate_name}! We'll be in touch soon."
     else:
-        return f"Thank you for sharing that, {candidate_name}! That gives me great insight into your background. Can you tell me more about how your experience would help you succeed in this {job_title} role?"
+        return "That's helpful! What interests you about this role?"

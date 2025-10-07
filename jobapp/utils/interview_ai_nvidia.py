@@ -25,32 +25,38 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         logger.error("Empty prompt provided to AI function")
         return f"Hi {candidate_name}! I'm Sarah, and I'm so excited to meet you today. Thanks for taking the time to interview for the {job_title} position at {company_name}. Could you start by telling me a bit about yourself and what interests you about this role?"
             
-    # Enhanced system prompt focused on friendly, job-focused conversation
+    # Professional interviewer system prompt
     system_prompt = f"""
-You are Sarah, a warm, enthusiastic, and experienced HR interviewer conducting a job interview for the {job_title} position at {company_name}.
+You are Sarah, a professional HR interviewer at {company_name} conducting an interview for the {job_title} position.
 
-YOUR PERSONALITY:
-- Genuinely excited about meeting candidates and learning about them
-- Friendly, approachable, and encouraging
-- Professional but conversational - like talking to a colleague
-- Show real interest in their responses with phrases like "That's fascinating!", "I love that!", "Great example!"
-- Make candidates feel comfortable and valued
+CRITICAL INSTRUCTIONS:
+- Respond ONLY as Sarah speaking directly to the candidate
+- NEVER use phrases like "Response as Sarah" or "Here's my response"
+- NEVER mention that you are an AI or reference your role as an assistant
+- Speak naturally and conversationally as if you are a real person
 
-INTERVIEW APPROACH:
-- ALWAYS acknowledge what they just shared before asking the next question
-- Build naturally on their previous answers - show you're listening
-- Ask follow-up questions that dig deeper into their experiences
-- Focus on job-relevant skills: technical abilities, problem-solving, teamwork, growth mindset
-- Be encouraging when they share challenges or learning experiences
-- Ask about specific technologies, projects, and experiences related to {job_title}
+YOUR ROLE:
+- You are an experienced, friendly HR professional
+- You know everything about the {job_title} position and {company_name}
+- You conduct thorough but welcoming interviews
+- You ask relevant questions about skills, experience, and cultural fit
 
-RESPONSE FORMAT:
-- Speak naturally as Sarah would speak - no quotes, labels, or formatting
-- Keep responses conversational and under 3 sentences
-- Always end with a relevant question that builds on what they said
-- Use their name occasionally to make it personal
+INTERVIEW STYLE:
+- Be warm but professional
+- Listen actively to candidate responses
+- Ask follow-up questions based on what they share
+- Focus on job-relevant topics: technical skills, experience, problem-solving, teamwork
+- Acknowledge their answers before moving to next questions
+- Keep responses concise (1-3 sentences)
 
-REMEMBER: You're not just asking random questions - you're having a genuine conversation about their fit for this {job_title} role at {company_name}. Listen to their answers and respond accordingly!
+IMPORTANT:
+- Always respond as if you are Sarah speaking directly
+- Never break character or reference being an AI
+- Make the conversation feel natural and engaging
+- End responses with relevant questions when appropriate
+
+Example of correct response: "That's great experience with Python! Can you tell me about a challenging project you worked on?"
+Example of WRONG response: "Response as Sarah: That's great experience..."
 """
                 
     try:
@@ -75,10 +81,10 @@ REMEMBER: You're not just asking random questions - you're having a genuine conv
                     "content": prompt
                 }
             ],
-            temperature=0.8,  # Slightly higher for more natural conversation
-            max_tokens=250,   # Increased for more detailed responses
+            temperature=0.7,
+            max_tokens=200,
             stream=False,
-            stop=["\n\n", "Candidate:", "You:", "Interviewer:"]
+            stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds"]
         )
         
         raw_response = completion.choices[0].message.content
@@ -92,26 +98,33 @@ REMEMBER: You're not just asking random questions - you're having a genuine conv
         return get_fallback_response(prompt, candidate_name, job_title, company_name)
 
 def clean_text(text):
-    """Clean AI response text while preserving natural conversation flow"""
+    """Clean AI response text and remove any meta-language"""
     import re
-    # Remove markdown and excessive formatting
+    
+    # Remove any meta-responses or AI references
+    text = re.sub(r'^(Response as Sarah|Here\'s my response as Sarah|As Sarah|Sarah responds)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(Here\'s what Sarah would say|Sarah\'s response)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    
+    # Remove markdown and formatting
     text = re.sub(r'[*#`_>\\-]+', '', text)
-    # Remove ALL quotation marks and quotes
     text = re.sub(r'["""''′`]', '', text)
-    # Remove extra whitespace and newlines
+    
+    # Remove speaker labels
+    text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
+    
+    # Clean whitespace
     text = re.sub(r'\s+', ' ', text).strip()
-    # Remove bullet points or numbered lists
+    
+    # Remove bullet points
     text = re.sub(r'^\d+\.\s*', '', text)
     text = re.sub(r'^[-•]\s*', '', text)
-    # Remove any speaker labels that might have slipped through
-    text = re.sub(r'^(Sarah|Interviewer|Alex):\s*', '', text, flags=re.IGNORECASE)
     
-    # Keep responses conversational but not too long
+    # Limit response length
     sentences = text.split('. ')
-    if len(sentences) > 4:  # Allow slightly longer responses for better conversation
-        text = '. '.join(sentences[:4]) + '.'
+    if len(sentences) > 3:
+        text = '. '.join(sentences[:3]) + '.'
     
-    # Ensure proper ending punctuation
+    # Ensure proper punctuation
     if text and not text.endswith(('.', '!', '?')):
         text += '.'
         

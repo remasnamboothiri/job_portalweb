@@ -1,0 +1,204 @@
+<!-- Email Management Buttons for Interview List -->
+<!-- Add this to your recruiter dashboard where interviews are displayed -->
+
+<div class="interview-email-actions mt-2">
+    <div class="btn-group btn-group-sm" role="group">
+        <!-- Send Email Button -->
+        <button type="button" 
+                class="btn btn-primary btn-sm send-email-btn" 
+                data-interview-uuid="{{ interview.uuid }}"
+                data-candidate-email="{{ interview.candidate_email }}"
+                data-candidate-name="{{ interview.candidate_name }}"
+                title="Send interview email to candidate">
+            <i class="fas fa-envelope"></i> Send Email
+        </button>
+        
+        <!-- Get Link Button -->
+        <button type="button" 
+                class="btn btn-info btn-sm get-link-btn" 
+                data-interview-uuid="{{ interview.uuid }}"
+                title="Get interview link for manual sharing">
+            <i class="fas fa-link"></i> Get Link
+        </button>
+        
+        <!-- Copy Link Button (hidden initially) -->
+        <button type="button" 
+                class="btn btn-success btn-sm copy-link-btn d-none" 
+                data-clipboard-text=""
+                title="Copy interview link to clipboard">
+            <i class="fas fa-copy"></i> Copy
+        </button>
+    </div>
+    
+    <!-- Interview Link Display (hidden initially) -->
+    <div class="interview-link-display mt-2 d-none">
+        <div class="alert alert-info alert-sm mb-0">
+            <strong>Interview Link:</strong>
+            <br>
+            <small class="interview-link-text text-break"></small>
+            <button type="button" class="btn btn-xs btn-outline-primary ml-2 copy-link-direct">
+                Copy Link
+            </button>
+        </div>
+    </div>
+    
+    <!-- Email Status Display -->
+    <div class="email-status-display mt-1"></div>
+</div>
+
+<script>
+// Email Management JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Send Email Button Handler
+    document.querySelectorAll('.send-email-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const interviewUuid = this.dataset.interviewUuid;
+            const candidateEmail = this.dataset.candidateEmail;
+            const candidateName = this.dataset.candidateName;
+            
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            this.disabled = true;
+            
+            // Send email request
+            fetch(`/interview/${interviewUuid}/send-email/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showEmailStatus(this, 'success', `✅ Email sent to ${candidateEmail}`);
+                    
+                    // Show interview link as backup
+                    if (data.interview_url) {
+                        showInterviewLink(this, data.interview_url);
+                    }
+                } else {
+                    showEmailStatus(this, 'warning', `⚠️ Email failed: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                showEmailStatus(this, 'danger', `❌ Error: ${error.message}`);
+            })
+            .finally(() => {
+                // Reset button
+                this.innerHTML = '<i class="fas fa-envelope"></i> Send Email';
+                this.disabled = false;
+            });
+        });
+    });
+    
+    // Get Link Button Handler
+    document.querySelectorAll('.get-link-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const interviewUuid = this.dataset.interviewUuid;
+            
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting...';
+            this.disabled = true;
+            
+            // Get interview link
+            fetch(`/interview/${interviewUuid}/get-link/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showInterviewLink(this, data.interview_url);
+                    showEmailStatus(this, 'info', `🔗 Interview link ready for ${data.candidate_name}`);
+                } else {
+                    showEmailStatus(this, 'danger', `❌ Failed to get link: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                showEmailStatus(this, 'danger', `❌ Error: ${error.message}`);
+            })
+            .finally(() => {
+                // Reset button
+                this.innerHTML = '<i class="fas fa-link"></i> Get Link';
+                this.disabled = false;
+            });
+        });
+    });
+    
+    // Helper Functions
+    function showEmailStatus(button, type, message) {
+        const statusDiv = button.closest('.interview-email-actions').querySelector('.email-status-display');
+        statusDiv.innerHTML = `<div class="alert alert-${type} alert-sm mt-1 mb-0">${message}</div>`;
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            statusDiv.innerHTML = '';
+        }, 5000);
+    }
+    
+    function showInterviewLink(button, interviewUrl) {
+        const linkDisplay = button.closest('.interview-email-actions').querySelector('.interview-link-display');
+        const linkText = linkDisplay.querySelector('.interview-link-text');
+        const copyButton = linkDisplay.querySelector('.copy-link-direct');
+        
+        linkText.textContent = interviewUrl;
+        linkDisplay.classList.remove('d-none');
+        
+        // Copy link functionality
+        copyButton.onclick = function() {
+            navigator.clipboard.writeText(interviewUrl).then(() => {
+                this.innerHTML = '✅ Copied!';
+                setTimeout(() => {
+                    this.innerHTML = 'Copy Link';
+                }, 2000);
+            });
+        };
+    }
+    
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+               document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+});
+</script>
+
+<style>
+/* Email Management Styles */
+.interview-email-actions {
+    border-left: 3px solid #007bff;
+    padding-left: 10px;
+    margin-top: 10px;
+}
+
+.interview-email-actions .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.interview-link-display {
+    max-width: 100%;
+}
+
+.interview-link-text {
+    font-family: monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+.email-status-display .alert-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn-xs {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.7rem;
+}
+</style>

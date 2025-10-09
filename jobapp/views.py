@@ -50,6 +50,7 @@ from django.core.exceptions import FieldError
 from django.views.static import serve
 
 from django.core.mail import send_mail
+from .email_utils import send_interview_link_email, test_email_configuration, get_email_settings_info
 
 
 from django.db import connection, transaction
@@ -3303,9 +3304,107 @@ def generate_interview_results(interview, conversation_history):
         return True
     except Exception as e:
         logger.error(f"Error generating interview results: {e}")
-        return False        
+        return False
+
+
+# EMAIL MANAGEMENT VIEWS
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def send_interview_email_manual(request, interview_uuid):
+    """Manually send interview email to candidate"""
+    try:
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
         
+        # Check if recruiter owns this interview
+        if interview.job.posted_by != request.user:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have permission to send this interview email.'
+            }, status=403)
         
+        # Send the email
+        result = send_interview_link_email(interview)
         
+        if result['success']:
+            messages.success(request, f'Interview email sent successfully to {interview.candidate_email}!')
+        else:
+            messages.warning(request, f'Email could not be sent, but interview link is available: {result["interview_url"]}')
         
-      
+        return JsonResponse({
+            'success': True,
+            'message': f'Email process completed for {interview.candidate_email}',
+            'interview_url': result['interview_url'],
+            'email_sent': result['success']
+        })
+        
+    except Exception as e:
+        logger.error(f"Manual email sending failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Failed to send email: {str(e)}'
+        }, status=500)
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def get_interview_link(request, interview_uuid):
+    """Get interview link for manual sharing"""
+    try:
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+        # Check if recruiter owns this interview
+        if interview.job.posted_by != request.user:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have permission to access this interview.'
+            }, status=403)
+        
+        # Generate interview URL
+        domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portal-23qb.onrender.com')
+        if settings.DEBUG:
+            domain = 'localhost:8000'
+        protocol = 'https' if not settings.DEBUG else 'http'
+        interview_url = f"{protocol}://{domain}/interview/ready/{interview.uuid}/"
+        
+        return JsonResponse({
+            'success': True,
+            'interview_url': interview_url,
+            'candidate_name': interview.candidate_name,
+            'candidate_email': interview.candidate_email,
+            'job_title': interview.job.title,
+            'company_name': interview.job.company,
+            'interview_id': interview.interview_id,
+            'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if interview.scheduled_at else 'TBD'
+        })
+        
+    except Exception as e:
+        logger.error(f"Get interview link failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Failed to get interview link: {str(e)}'
+        }, status=500)
+
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def test_email_system(request):
+    """Test email system configuration"""
+    try:
+        # Test email configuration
+        config_result = test_email_configuration()
+        
+        # Get email settings info
+        settings_info = get_email_settings_info()
+        
+        return JsonResponse({
+            'success': True,
+            'configuration_test': config_result,
+            'email_settings': settings_info,
+            'message': 'Email system test completed'
+        })
+        
+    except Exception as e:
+        logger.error(f"Email system test failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Email system test failed: {str(e)}'
+        }, status=500)

@@ -132,4 +132,10 @@ urlpatterns = [
     path('jobs/<int:job_id>/delete/', views.delete_job, name='delete_job'),
     path('jobs/<int:job_id>/duplicate/', views.duplicate_job, name='duplicate_job'),
     
+    # Email Management URLs
+    path('interview/<uuid:interview_uuid>/send-email/', views.send_interview_email_manual, name='send_interview_email_manual'),
+    path('interview/<uuid:interview_uuid>/get-link/', views.get_interview_link, name='get_interview_link'),
+    path('test-email-system/', views.test_email_system, name='test_email_system'),
+    path('email-test/', lambda request: render(request, 'jobapp/email_test.html'), name='email_test'),
+    
 ]

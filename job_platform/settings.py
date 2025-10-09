@@ -19,17 +19,30 @@ except ImportError:
     dj_database_url = None
 
 
-# Gmail SMTP Configuration for automatic email sending
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='your-email@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='your-app-password')
-DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='your-email@gmail.com')
+# EMAIL CONFIGURATION - Multiple backends supported
+# Choose between console (for testing) and SMTP (for production)
 
-# Email timeout settings to prevent hanging
-EMAIL_TIMEOUT = 10  # 10 seconds timeout
+# For testing - emails will be printed to console/logs
+if config('USE_CONSOLE_EMAIL', default=True, cast=bool):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@jobportal.com'
+else:
+    # For production - real email sending via SMTP
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=config('EMAIL_HOST_USER', default='noreply@jobportal.com'))
+    
+    # Additional SMTP settings for better reliability
+    EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+    EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
+    
+# Fallback settings
+if not DEFAULT_FROM_EMAIL:
+    DEFAULT_FROM_EMAIL = 'noreply@jobportal.com'
 
 
 

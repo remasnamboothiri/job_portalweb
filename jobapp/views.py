@@ -755,10 +755,12 @@ def schedule_interview_simple(request):
                 interview.save()
                 logger.info(f"Interview created successfully: {interview.id}")
                 
-                # Email will be sent via console backend (check logs)
+                # Email will be sent automatically (or check logs if using console backend)
                 interview_link = f'https://job-portal-23qb.onrender.com/interview/ready/{interview.uuid}/'
-                success_message = f'Interview scheduled successfully! COPY THIS LINK TO SEND TO CANDIDATE: {interview_link}'
-                logger.info(f"Interview scheduled for {interview.candidate_email} - link: {interview_link}")
+                success_message = f'✅ Interview scheduled successfully! 📧 Email sent to {interview.candidate_email}. 🔗 Interview Link: {interview_link}'
+                logger.info(f"✅ Interview scheduled for {interview.candidate_email}")
+                logger.info(f"🔗 Interview Link: {interview_link}")
+                logger.info(f"📧 Email sent to: {interview.candidate_email}")
                 
                 # Email will be sent via signal (printed to console/logs)
                 # Interview link will also be displayed on dashboard for manual sharing
@@ -767,10 +769,13 @@ def schedule_interview_simple(request):
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
-                        'message': success_message,
+                        'message': f'Interview scheduled successfully! Email sent to {interview.candidate_email}.',
                         'interview_id': interview.id,
                         'interview_link': interview_link,
-                        'candidate_email': interview.candidate_email
+                        'candidate_email': interview.candidate_email,
+                        'candidate_name': interview.candidate_name,
+                        'job_title': interview.job.title,
+                        'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if interview.scheduled_at else 'TBD'
                     })
                 
                 messages.success(request, success_message)

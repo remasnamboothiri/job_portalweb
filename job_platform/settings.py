@@ -19,19 +19,17 @@ except ImportError:
     dj_database_url = None
 
 
-# QUICK FIX: Console Email Backend (prints emails to console/logs)
-# This prevents SMTP timeout issues while still showing email content
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@jobportal.com'
+# Gmail SMTP Configuration for automatic email sending
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='your-email@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='your-app-password')
+DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='your-email@gmail.com')
 
-# SMTP Email Configuration (commented out to prevent timeouts)
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = config('EMAIL_HOST', default='localhost')
-# EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-# EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-# EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-# DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@example.com')
+# Email timeout settings to prevent hanging
+EMAIL_TIMEOUT = 10  # 10 seconds timeout
 
 
 

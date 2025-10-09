@@ -5,9 +5,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from .models import Application , Interview , Profile
 
-# TEMPORARY FIX: All email signals are disabled to prevent SMTP timeout crashes
-# The SMTP server configuration is causing worker timeouts when scheduling interviews
-# Email functionality can be re-enabled once SMTP is properly configured
+# AUTOMATIC EMAIL SENDING WITH GMAIL SMTP
+# Using threading and timeouts to prevent worker crashes
 
 User = get_user_model()
 
@@ -84,56 +83,63 @@ def create_profile(sender, instance, created, **kwargs):
         
 
 
-# 4 . Interview Scheduled Email - CONSOLE BACKEND (PRINTS TO LOGS)
+# 4 . Interview Scheduled Email - AUTOMATIC GMAIL SENDING
 
 @receiver(post_save, sender = Interview)
 def send_interview_email(sender, instance, created, **kwargs):
     if created:
-        try:
-            from django.conf import settings
-            import logging
-            logger = logging.getLogger(__name__)
-            
-            # Generate full interview URL
-            domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
-            protocol = 'https' if not settings.DEBUG else 'http'
-            interview_url = f"{protocol}://{domain}/interview/ready/{instance.uuid}/"
-            
-            email_subject = f'Interview Scheduled - {instance.job.title}'
-            email_body = f"""Hello {instance.candidate_name},
+        import threading
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        def send_email_with_timeout():
+            try:
+                from django.conf import settings
+                import socket
+                
+                # Set socket timeout to prevent hanging
+                socket.setdefaulttimeout(10)
+                
+                # Generate full interview URL
+                domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                protocol = 'https' if not settings.DEBUG else 'http'
+                interview_url = f"{protocol}://{domain}/interview/ready/{instance.uuid}/"
+                
+                email_subject = f'🎯 Interview Scheduled - {instance.job.title}'
+                email_body = f"""Hello {instance.candidate_name},
 
-Your interview for the position of {instance.job.title} has been scheduled.
+🎉 Great news! Your interview has been scheduled.
 
-Interview Details:
-- Date & Time: {instance.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if instance.scheduled_at else 'TBD'}
-- Position: {instance.job.title}
-- Company: {instance.job.company}
-- Interview Link: {interview_url}
+📋 Interview Details:
+• Date & Time: {instance.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if instance.scheduled_at else 'TBD'}
+• Position: {instance.job.title}
+• Company: {instance.job.company}
 
-Please click the link above to join your interview at the scheduled time.
+🔗 Interview Link: {interview_url}
 
-Best regards,
-Job Portal Team
+👆 Click the link above to join your interview at the scheduled time.
 
---- COPY THIS LINK TO SEND TO CANDIDATE ---
-{interview_url}
---- END LINK ---"""
-            
-            # Send email (will print to console/logs with console backend)
-            send_mail(
-                subject=email_subject,
-                message=email_body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[instance.candidate_email],
-                fail_silently=False  # Show any errors
-            )
-            
-            logger.info(f"✅ INTERVIEW EMAIL GENERATED for {instance.candidate_email}")
-            logger.info(f"📧 EMAIL CONTENT ABOVE - COPY LINK TO SEND TO CANDIDATE")
-            logger.info(f"🔗 DIRECT LINK: {interview_url}")
-            
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"❌ Failed to generate interview email: {str(e)}")
-            logger.info(f"🔗 BACKUP LINK for {instance.candidate_email}: {protocol}://{domain}/interview/ready/{instance.uuid}/")
+Best of luck!
+Job Portal Team"""
+                
+                # Send email with timeout
+                send_mail(
+                    subject=email_subject,
+                    message=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[instance.candidate_email],
+                    fail_silently=False,
+                    timeout=10
+                )
+                
+                logger.info(f"✅ EMAIL SENT SUCCESSFULLY to {instance.candidate_email}")
+                logger.info(f"🔗 Interview link: {interview_url}")
+                
+            except Exception as e:
+                logger.error(f"❌ Email failed: {str(e)}")
+                logger.info(f"🔗 Manual link for {instance.candidate_email}: {interview_url}")
+        
+        # Send email in background thread with timeout
+        email_thread = threading.Thread(target=send_email_with_timeout)
+        email_thread.daemon = True
+        email_thread.start()

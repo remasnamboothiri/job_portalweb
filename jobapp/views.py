@@ -755,57 +755,22 @@ def schedule_interview_simple(request):
                 interview.save()
                 logger.info(f"Interview created successfully: {interview.id}")
                 
-                # Try to send email but don't fail if it doesn't work
-                try:
-                    from django.core.mail import send_mail
-                    from django.conf import settings
-                    from django.urls import reverse
-                    
-                    # Generate full interview URL
-                    domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
-                    protocol = 'https' if not settings.DEBUG else 'http'
-                    interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
-                    
-                    email_subject = f'Interview Scheduled - {interview.job.title}'
-                    email_body = f"""Hello {interview.candidate_name},
-
-Your interview for the position of {interview.job.title} has been scheduled.
-
-Interview Details:
-- Date & Time: {interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p')}
-- Position: {interview.job.title}
-- Company: {interview.job.company}
-- Interview Link: {interview_url}
-
-Please click the link above to join your interview at the scheduled time.
-
-Best regards,
-{request.user.get_full_name() or request.user.username}
-{interview.job.company}"""
-                    
-                    send_mail(
-                        email_subject,
-                        email_body,
-                        settings.DEFAULT_FROM_EMAIL,
-                        [interview.candidate_email],
-                        fail_silently=True  # Don't crash if email fails
-                    )
-                    
-                    success_message = f'Interview scheduled successfully! Email sent to {interview.candidate_email}.'
-                    logger.info(f"Email sent successfully to {interview.candidate_email}")
-                    
-                except Exception as email_error:
-                    logger.warning(f'Email sending failed but interview was created: {str(email_error)}')
-                    success_message = 'Interview scheduled successfully! Email could not be sent, but candidate can see the interview link on dashboard.'
+                # Email will be sent via console backend (check logs)
+                interview_link = f'https://job-portal-23qb.onrender.com/interview/ready/{interview.uuid}/'
+                success_message = f'Interview scheduled successfully! COPY THIS LINK TO SEND TO CANDIDATE: {interview_link}'
+                logger.info(f"Interview scheduled for {interview.candidate_email} - link: {interview_link}")
                 
-                # Email sending is now handled above in the interview creation block
+                # Email will be sent via signal (printed to console/logs)
+                # Interview link will also be displayed on dashboard for manual sharing
                 
                 # Return JSON response for AJAX (modal submission)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
                         'message': success_message,
-                        'interview_id': interview.id
+                        'interview_id': interview.id,
+                        'interview_link': interview_link,
+                        'candidate_email': interview.candidate_email
                     })
                 
                 messages.success(request, success_message)

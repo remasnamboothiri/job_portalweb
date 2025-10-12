@@ -226,7 +226,7 @@
         <!-- Simple 3-button controls -->
         <div class="controls">
             <button class="btn mic" id="micBtn" onclick="toggleMic()" title="Toggle Microphone">🎤</button>
-            <button class="btn camera" id="cameraBtn" onclick="toggleCamera()" title="Toggle Camera">📹</button>
+            {% comment %} <button class="btn camera" id="cameraBtn" onclick="toggleCamera()" title="Toggle Camera">📹</button> {% endcomment %}
             <button class="btn end-call" onclick="endInterview()" title="End Interview">📞</button>
         </div>
     </div>
@@ -700,7 +700,7 @@ function toggleMic() {
 }
 
 // Toggle camera
-function toggleCamera() {
+{% comment %} function toggleCamera() {
     if (!userStream) return;
     
     const videoTracks = userStream.getVideoTracks();
@@ -719,7 +719,7 @@ function toggleCamera() {
     }
     
     log(`Camera ${isCameraOn ? 'enabled' : 'disabled'}`);
-}
+} {% endcomment %}
 
 // End interview
 function endInterview() {

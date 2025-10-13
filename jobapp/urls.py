@@ -96,7 +96,7 @@ urlpatterns = [
     path('api/candidate/<int:candidate_id>/email/', views.get_candidate_email, name='get_candidate_email'),
     
     # Test interview results
-    #path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
+    path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
     
     # Interview results view
     path('interview-results/<uuid:interview_uuid>/', views.interview_results, name='interview_results'),

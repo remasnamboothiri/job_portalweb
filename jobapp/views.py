@@ -1157,7 +1157,18 @@ def start_interview_by_uuid(request, interview_uuid):
                     ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
                     
                     context['interview_completed'] = True
+                    # Mark interview as completed in database
+                    interview.status = 'completed'
+                    interview.completed_at = timezone.now()
+                    interview.save()
                     logger.info(f"Interview time completed for {interview_uuid}")
+                    
+                    # Generate interview results immediately
+                    try:
+                        generate_interview_results(interview, conversation_history)
+                        logger.info(f"Interview results generated for {interview_uuid}")
+                    except Exception as e:
+                        logger.error(f"Failed to generate interview results: {e}")
                     
                 elif is_last_question:
                     # 2 minutes or less - notify this is the last question
@@ -1351,8 +1362,8 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                 
             context['conversation_history'] = conversation_history
             
-            # Generate interview results if completed
-            if context.get('interview_completed', False):
+            # Generate interview results if completed (but not already generated)
+            if context.get('interview_completed', False) and not interview.has_results:
                 try:
                     generate_interview_results(interview, conversation_history)
                     logger.info(f"Interview results generation completed for {interview_uuid}")
@@ -2849,49 +2860,55 @@ def get_candidate_email(request, candidate_id):
 
 
 
-# @login_required
-# @user_passes_test(lambda u: u.is_recruiter)
-# def test_interview_results(request):
-#     """Test view to create sample interview results"""
-#     try:
-#         # Get the first interview for this recruiter
-#         interview = Interview.objects.filter(
-#             job__posted_by=request.user
-#         ).first()
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def test_interview_results(request):
+    """Test view to create sample interview results"""
+    try:
+        # Get the most recent interview for this recruiter
+        interview = Interview.objects.filter(
+            job__posted_by=request.user
+        ).order_by('-created_at').first()
         
-#         if not interview:
-#             return JsonResponse({
-#                 'success': False,
-#                 'message': 'No interviews found for testing'
-#             })
+        if not interview:
+            return JsonResponse({
+                'success': False,
+                'message': 'No interviews found for testing'
+            })
         
-#         # Create sample conversation history with more realistic data
-#         sample_conversation = [
-#             {'speaker': 'interviewer', 'message': 'Hello! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this position?', 'question_number': 1},
-#             {'speaker': 'candidate', 'message': 'Hi! I am a software developer with 3 years of experience in full-stack development. I have worked extensively with Python, Django, JavaScript, and React. I am particularly interested in this position because it offers opportunities to work on challenging projects and grow my skills in cloud technologies.', 'question_number': 1},
-#             {'speaker': 'interviewer', 'message': 'That sounds great! Can you tell me about a challenging project you have worked on recently and how you approached solving the problems you encountered?', 'question_number': 2},
-#             {'speaker': 'candidate', 'message': 'Recently, I worked on a e-commerce platform where we had performance issues with the database queries. I identified the bottlenecks using profiling tools, optimized the queries by adding proper indexes, and implemented caching strategies using Redis. This reduced the page load time by 60%.', 'question_number': 2},
-#             {'speaker': 'interviewer', 'message': 'Excellent problem-solving approach! How do you handle working in a team environment, especially when there are conflicting opinions on technical decisions?', 'question_number': 3},
-#             {'speaker': 'candidate', 'message': 'I believe in open communication and data-driven decisions. When there are conflicting opinions, I try to understand different perspectives, present the pros and cons of each approach, and if needed, create small prototypes to test the solutions. I also value team consensus and am willing to compromise when it benefits the overall project.', 'question_number': 3},
-#         ]
+        # Create sample conversation history with more realistic data
+        sample_conversation = [
+            {'speaker': 'interviewer', 'message': 'Hello! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this position?', 'question_number': 1},
+            {'speaker': 'candidate', 'message': 'Hi! I am a software developer with 3 years of experience in full-stack development. I have worked extensively with Python, Django, JavaScript, and React. I am particularly interested in this position because it offers opportunities to work on challenging projects and grow my skills in cloud technologies.', 'question_number': 1},
+            {'speaker': 'interviewer', 'message': 'That sounds great! Can you tell me about a challenging project you have worked on recently and how you approached solving the problems you encountered?', 'question_number': 2},
+            {'speaker': 'candidate', 'message': 'Recently, I worked on a e-commerce platform where we had performance issues with the database queries. I identified the bottlenecks using profiling tools, optimized the queries by adding proper indexes, and implemented caching strategies using Redis. This reduced the page load time by 60%.', 'question_number': 2},
+            {'speaker': 'interviewer', 'message': 'Excellent problem-solving approach! How do you handle working in a team environment, especially when there are conflicting opinions on technical decisions?', 'question_number': 3},
+            {'speaker': 'candidate', 'message': 'I believe in open communication and data-driven decisions. When there are conflicting opinions, I try to understand different perspectives, present the pros and cons of each approach, and if needed, create small prototypes to test the solutions. I also value team consensus and am willing to compromise when it benefits the overall project.', 'question_number': 3},
+        ]
         
-#         # Generate results
-#         generate_interview_results(interview, sample_conversation)
+        # Generate results
+        result = generate_interview_results(interview, sample_conversation)
         
-#         return JsonResponse({
-#             'success': True,
-#             'message': f'Test results generated for interview {interview.uuid}',
-#             'interview_id': str(interview.uuid),
-#             'candidate_name': interview.candidate_name,
-#             'job_title': interview.job.title if interview.job else 'N/A'
-#         })
+        if result:
+            return JsonResponse({
+                'success': True,
+                'message': f'Test results generated for interview {interview.uuid}',
+                'interview_id': str(interview.uuid),
+                'candidate_name': interview.candidate_name,
+                'job_title': interview.job.title if interview.job else 'N/A'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Failed to generate test results'
+            })
         
-#     except Exception as e:
-#         logger.error(f"Test interview results failed: {e}")
-#         return JsonResponse({
-#             'success': False,
-#             'error': str(e)
-#         })
+    except Exception as e:
+        logger.error(f"Test interview results failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
         
         
         

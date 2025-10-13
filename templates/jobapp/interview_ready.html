@@ -14,23 +14,31 @@
     <style>
         body {
             background: linear-gradient(135deg, #eaecf6ff 0%, #ede9f2ff 100%);
-            min-height: 100vh;
+            height: 100vh;  /* CHANGED - fixed height */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 1rem 0;  /* ADD THIS - reduces top/bottom space */
+            padding: 0;
+            margin: 0;
+            overflow: hidden;  /* CHANGED - prevent scrolling */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .interview-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 1rem;  /* CHANGE from 2rem to 1rem */
+            max-width: 750px;
+            width: 100%;
+            padding: 0.5rem;
+            max-height: 95vh;  /* ADDED - limit height */
+            overflow-y: auto;  /* ADDED - internal scroll if needed */
+            
         }
         
         .interview-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
-            animation: slideUp 0.6s ease-out;
+            {% comment %} animation: slideUp 0.6s ease-out; {% endcomment %}
         }
         
         @keyframes slideUp {
@@ -46,70 +54,75 @@
         
         .header-section {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            padding: 2rem 1.5rem;  /* CHANGE from 3rem 2rem */
+            padding: 1rem 1rem;  /* CHANGE from 3rem 2rem */
             text-align: center;
             color: white;
         }
         
         .target-icon {
-            width: 60px;      /* CHANGE from 80px */
-            height: 60px;     /* CHANGE from 80px */
+            width: 50px;      /* CHANGE from 80px */
+            height: 50px;     /* CHANGE from 80px */
             background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 0.75rem;  /* CHANGE from 1rem */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 0 auto 0.4rem;  /* CHANGE from 1rem */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
         .target-icon::before {
             content: '🎯';
-            font-size: 1.5rem;  /* CHANGE from 2rem */
+            font-size: 1.3rem;  /* CHANGE from 2rem */
         }
         
         .interview-title {
-            font-size: 2rem;  /* CHANGE from 2.5rem */
+            font-size: 1.6rem;  /* CHANGE from 2.5rem */
             font-weight: 700;
-            margin-bottom: 0.3rem;  /* CHANGE from 0.5rem */
+            margin-bottom: 0.2rem;  /* CHANGE from 0.5rem */
+            line-height: 1.2;
         }
         
         .interview-subtitle {
-            font-size: 1rem;  /* CHANGE from 1.1rem */
+            font-size: 0.85rem;  /* CHANGE from 1.1rem */
             opacity: 0.9;
+            margin: 0;
         }
         
         .details-section {
-            padding: 1.5rem;  /* CHANGE from 2rem */
+            padding: 0.75rem 1rem;  /* CHANGE from 2rem */
         }
         
         .details-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;      
-            margin-bottom: 1.5rem;  /* CHANGE from 2rem */
+            gap: 0.75rem;      
+            margin-bottom: 0.75rem;  /* CHANGE from 2rem */
         }
         
         .detail-item {
             text-align: center;
+            background: #f8f9fa;  /* ADDED - visual separation */
+            padding: 0.5rem;
+            border-radius: 8px;
         }
         
         .detail-label {
             font-weight: 600;
             color: #666;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
         
         .detail-value {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             color: #333;
             font-weight: 500;
         }
         
-        .system-check {
+        {% comment %} .system-check {
             background: #f8f9fa;
             border-radius: 15px;
             padding: 1.5rem;  /* CHANGE from 2rem */
@@ -155,25 +168,27 @@
         .check-text {
             color: #555;
             font-weight: 500;
-        }
+        } {% endcomment %}
         
         .tips-section {
             background: #e3f2fd;
-            border-radius: 15px;
-            padding: 1.2rem;  /* CHANGE from 1.5rem */
-            margin: 1.5rem 0; /* CHANGE from 2rem 0 */
+            border-radius: 10px;
+            padding: 0.75rem;  /* CHANGE from 1.5rem */
+            margin: 0.75rem 0; /* CHANGE from 2rem 0 */
         }
         
         .tips-title {
             color: #1976d2;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 0.4rem;
             display: flex;
             align-items: center;
+            font-size: 0.85rem;  /* REDUCED */
         }
         
         .tips-title i {
-            margin-right: 0.5rem;
+            margin-right: 0.4rem;
+            font-size: 0.8rem;
         }
         
         .tips-list {
@@ -183,10 +198,12 @@
         }
         
         .tips-list li {
-            padding: 0.5rem 0;
+            padding: 0.25rem 0;
             color: #555;
             position: relative;
-            padding-left: 1.5rem;
+            padding-left: 1.2rem;
+            font-size: 0.8rem;  /* REDUCED */
+            line-height: 1.3;
         }
         
         .tips-list li::before {
@@ -195,10 +212,11 @@
             font-weight: bold;
             position: absolute;
             left: 0;
+            font-size: 0.9rem;
         }
         
         .action-buttons {
-            padding: 1.5rem;  /* CHANGE from 2rem */
+            padding: 0.75rem 1rem;  /* CHANGE from 2rem */
             text-align: center;
             background: #f8f9fa;
         }
@@ -206,63 +224,86 @@
         .start-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 0.9rem 2.5rem;  /* CHANGE from 1rem 3rem */
+            padding: 0.7rem 2rem;  /* CHANGE from 1rem 3rem */
             border-radius: 50px;
             color: white;
             font-weight: 600;
-            font-size: 1rem;  /* CHANGE from 1.1rem */
+            font-size: 0.95rem;  /* CHANGE from 1.1rem */
             text-decoration: none;
             display: inline-block;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
         }
         
         .start-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
             color: white;
         }
+
+        .start-btn i {
+            font-size: 0.9rem;
+            margin-right: 0.3rem;
+        }
+        
         
         .secondary-buttons {
-            margin-top: 0.75rem;  /* CHANGE from 1rem */
+            margin-top: 0.5rem;  /* CHANGE from 1rem */
         }
         
         .secondary-btn {
             background: transparent;
             border: 2px solid #6c757d;
-            padding: 0.5rem 1.5rem;
-            border-radius: 25px;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
             color: #6c757d;
             text-decoration: none;
-            margin: 0 0.5rem;
+            margin: 0 0.3rem;
             transition: all 0.3s ease;
+            font-size: 0.8rem;  /* REDUCED */
+            display: inline-block;
         }
         
         .secondary-btn:hover {
             background: #6c757d;
             color: white;
         }
+
+        .secondary-btn i {
+            font-size: 0.75rem;
+            margin-right: 0.2rem;
+        }
+
+         /* Remove any extra spacing */
+        h3, h1, p {
+            margin-top: 0;
+        }
         
-        .disclaimer {
+        {% comment %} .disclaimer {
             text-align: center;
             color: #666;
             font-size: 0.9rem;
             margin-top: 1rem;
-        }
+        } {% endcomment %}
         
         @media (max-width: 768px) {
             .details-grid {
                 grid-template-columns: 1fr;
-                gap: 1rem;
+                gap: 0.5rem;
             }
             
             .interview-title {
-                font-size: 2rem;
+                font-size: 1.4rem;
             }
             
             .interview-container {
-                padding: 1rem;
+                padding: 0.5rem;
             }
+        }
+
+        /* Ensure no overflow */
+        * {
+            box-sizing: border-box;
         }
     </style>
 </head>

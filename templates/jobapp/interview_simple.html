@@ -83,13 +83,13 @@
         .btn {
             color: white;
             border: none;
-            padding: 12px 16px;   /* ← Reduced padding */
-            border-radius: 50px;
-            font-size: 20px;       /* ← CHANGE: 24px → 20px (smaller emoji) */
+            padding: 16px 20px;       /* ← More padding for rectangular shape */
+            border-radius: 28px;      /* ← CHANGED: Less rounded (was 50px) */
+            font-size: 22px;          /* ← Slightly larger icon */
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 55px;      /* ← CHANGE: 70px → 55px (narrower button) */
-            height: 55px;         /* ← CHANGE: 70px → 55px (shorter button) */
+            min-width: 56px;          /* ← Google Meet size */
+            height: 56px;             /* ← Google Meet size */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -110,12 +110,12 @@
             cursor: not-allowed;
             opacity: 0.5;
         }
-        .btn.camera {
+        {% comment %} .btn.camera {
             background: #2196f3;
-        }
-        .btn.camera.off {
+        } {% endcomment %}
+        {% comment %} .btn.camera.off {
             background: #666;
-        }
+        } {% endcomment %}
         .btn.end-call {
             background: #f44336;
         }
@@ -202,7 +202,7 @@
         <div class="audio-status" id="audioStatus"></div>
         
         <div class="stats">
-            <div class="stat">Question: <span id="questionCount">1/8</span></div>
+            {% comment %} <div class="stat"> <span id="questionCount"></span></div> {% endcomment %}
             <div class="stat">Time: <span id="timer">15:00</span></div>
         </div>
         

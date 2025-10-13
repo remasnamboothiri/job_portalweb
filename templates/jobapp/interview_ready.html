@@ -16,12 +16,13 @@
             background: linear-gradient(135deg, #eaecf6ff 0%, #ede9f2ff 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 1rem 0;  /* ADD THIS - reduces top/bottom space */
         }
         
         .interview-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1rem;  /* CHANGE from 2rem to 1rem */
         }
         
         .interview-card {
@@ -45,48 +46,48 @@
         
         .header-section {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            padding: 3rem 2rem;
+            padding: 2rem 1.5rem;  /* CHANGE from 3rem 2rem */
             text-align: center;
             color: white;
         }
         
         .target-icon {
-            width: 80px;
-            height: 80px;
+            width: 60px;      /* CHANGE from 80px */
+            height: 60px;     /* CHANGE from 80px */
             background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
+            margin: 0 auto 0.75rem;  /* CHANGE from 1rem */
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         .target-icon::before {
             content: '🎯';
-            font-size: 2rem;
+            font-size: 1.5rem;  /* CHANGE from 2rem */
         }
         
         .interview-title {
-            font-size: 2.5rem;
+            font-size: 2rem;  /* CHANGE from 2.5rem */
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;  /* CHANGE from 0.5rem */
         }
         
         .interview-subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;  /* CHANGE from 1.1rem */
             opacity: 0.9;
         }
         
         .details-section {
-            padding: 2rem;
+            padding: 1.5rem;  /* CHANGE from 2rem */
         }
         
         .details-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;      
+            margin-bottom: 1.5rem;  /* CHANGE from 2rem */
         }
         
         .detail-item {
@@ -111,14 +112,14 @@
         .system-check {
             background: #f8f9fa;
             border-radius: 15px;
-            padding: 2rem;
-            margin: 2rem 0;
+            padding: 1.5rem;  /* CHANGE from 2rem */
+            margin: 1.5rem 0; /* CHANGE from 2rem 0 */
         }
         
         .check-title {
-            font-size: 1.3rem;
+            font-size: 1.1rem;  /* CHANGE from 1.3rem */
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin-bottom:  1rem;  /* CHANGE from 1.5rem */
             text-align: center;
             color: #333;
         }
@@ -159,8 +160,8 @@
         .tips-section {
             background: #e3f2fd;
             border-radius: 15px;
-            padding: 1.5rem;
-            margin: 2rem 0;
+            padding: 1.2rem;  /* CHANGE from 1.5rem */
+            margin: 1.5rem 0; /* CHANGE from 2rem 0 */
         }
         
         .tips-title {
@@ -197,7 +198,7 @@
         }
         
         .action-buttons {
-            padding: 2rem;
+            padding: 1.5rem;  /* CHANGE from 2rem */
             text-align: center;
             background: #f8f9fa;
         }
@@ -205,11 +206,11 @@
         .start-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 1rem 3rem;
+            padding: 0.9rem 2.5rem;  /* CHANGE from 1rem 3rem */
             border-radius: 50px;
             color: white;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1rem;  /* CHANGE from 1.1rem */
             text-decoration: none;
             display: inline-block;
             transition: all 0.3s ease;
@@ -223,7 +224,7 @@
         }
         
         .secondary-buttons {
-            margin-top: 1rem;
+            margin-top: 0.75rem;  /* CHANGE from 1rem */
         }
         
         .secondary-btn {
@@ -298,39 +299,7 @@
                     </div>
                 </div>
                 
-                {% comment %} <!-- System Check -->
-                <div class="system-check">
-                    <h4 class="check-title">System Check</h4>
-                    
-                    <div class="check-item">
-                        <div class="check-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div class="check-text">Camera access granted</div>
-                    </div>
-                    
-                    <div class="check-item">
-                        <div class="check-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div class="check-text">Microphone access granted</div>
-                    </div>
-                    
-                    <div class="check-item">
-                        <div class="check-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div class="check-text">Internet connection stable</div>
-                    </div>
-                    
-                    <div class="check-item">
-                        <div class="check-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div class="check-text">AI interviewer ready</div>
-                    </div>
-                </div>
-                 {% endcomment %}
+                
                 <!-- Tips Section -->
                 <div class="tips-section">
                     <div class="tips-title">

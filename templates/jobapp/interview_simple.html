@@ -319,7 +319,7 @@ function initSpeech() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         log('Speech recognition not supported');
         conversationArea.innerHTML = 
-            `<div style="color: #f44336; padding: 20px;">Speech recognition not supported. Please use Chrome, Edge, or Safari.</div>`;
+            `<div style="color: #4caf50; padding: 20px;">Speech recognition not supported. Please use Chrome, Edge, or Safari.</div>`;
         return false;
     }
     
@@ -364,7 +364,7 @@ function initSpeech() {
             
             if (event.error === 'not-allowed') {
                 conversationArea.innerHTML = 
-                    `<div style="color: #f44336; padding: 20px;">Microphone access denied. Please allow microphone access and refresh.</div>`;
+                    `<div style="color: #4caf50; padding: 20px;">Microphone access denied. Please allow microphone access and refresh.</div>`;
             }
         };
         

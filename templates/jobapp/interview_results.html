@@ -175,9 +175,18 @@
                 </div>
                 <div class="col-md-3">
                     <strong>Position:</strong><br>
+                    <a href="{% url 'job_detail' interview.job.id %}" 
+                        style="color: #667eea; text-decoration: none; font-weight: 500;"
+                        onmouseover="this.style.textDecoration='underline'"
+                        onmouseout="this.style.textDecoration='none'">
+                        {{ interview.job.title }}
+                    </a>
+                </div>
+                {% comment %} <div class="col-md-3">
+                    <strong>Position:</strong><br>
                    
                     {{ interview.job.title }}
-                </div>
+                </div> {% endcomment %}
                 <div class="col-md-3">
                     <strong>Company:</strong><br>
                     {{ interview.job.company }}

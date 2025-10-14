@@ -86,6 +86,37 @@
             border: 2px solid #4caf50;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
+
+        /* NEW: Recording indicator in top-left corner */
+        .recording-indicator {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(244, 67, 54, 0.9);  /* Red background */
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+        }
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: blink-recording 1.5s ease-in-out infinite;  /* Blinking effect */
+        
+        }
+
+        @keyframes blink-recording {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
         .controls {
             position: fixed;
             bottom: 20px;
@@ -236,7 +267,17 @@
             </div>
             <div class="video-box" id="candidateVideoBox">
                 <video id="userVideo" autoplay muted playsinline></video>
+
+                <!-- NEW: Recording indicator in top-left -->
+                <div class="recording-indicator">
+                    <div class="recording-dot"></div>
+                    <span>REC</span>
+                </div>
+
+                <!-- Candidate name at bottom-left -->
                 <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
+
+                
                 <!-- NEW: Timer moved here, positioned on top-right of video -->
                 <div class="timer-overlay">
                     <span id="timer">15:00</span>

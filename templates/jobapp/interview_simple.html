@@ -28,6 +28,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin-bottom: 20px;
+            margin-top: 10px;
         }
         .video-box {
             background: #303134;
@@ -200,11 +201,18 @@
     <div class="container">
         <!-- Audio status indicator -->
         <div class="audio-status" id="audioStatus"></div>
-        
+
+
+        <!-- MODIFIED: Hidden stats section, question count hidden -->
         <div class="stats">
-            <div class="stat"> <span id="questionCount"></span></div> 
-            <div class="stat">Time: <span id="timer">15:00</span></div>
+            <div class="stat" style="display: none;"> <span id="questionCount"></span></div> 
         </div>
+        
+        
+         {% comment %} <div class="stats">
+            <div class="stat"> <span id="questionCount"></span></div> 
+            <div class="stat">Time: <span id="timer">15:00</span></div> 
+        </div>  {% endcomment %}
         
         <div class="video-grid">
             <div class="video-box" id="aiVideoBox">
@@ -214,6 +222,10 @@
             <div class="video-box" id="candidateVideoBox">
                 <video id="userVideo" autoplay muted playsinline></video>
                 <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
+                <!-- NEW: Timer moved here, positioned on top-right of video -->
+                <div class="participant-name timer-overlay">
+                    <span id="timer">15:00</span>
+                </div>
             </div>
         </div>
 

@@ -71,6 +71,21 @@
             font-weight: bold;
             backdrop-filter: blur(10px);
         }
+
+         /* FIXED: Timer in top-right corner, separate from candidate name */
+        .timer-overlay {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0,0,0,0.85);
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            border: 2px solid #4caf50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
         .controls {
             position: fixed;
             bottom: 20px;
@@ -223,7 +238,7 @@
                 <video id="userVideo" autoplay muted playsinline></video>
                 <div class="participant-name">{{ candidate_name|default:"Candidate" }}</div>
                 <!-- NEW: Timer moved here, positioned on top-right of video -->
-                <div class="participant-name timer-overlay">
+                <div class="timer-overlay">
                     <span id="timer">15:00</span>
                 </div>
             </div>

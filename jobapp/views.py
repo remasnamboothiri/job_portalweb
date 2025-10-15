@@ -3144,8 +3144,7 @@ Decision: {'Recommended for Hire' if avg_response_length > 100 and total_respons
 
 Feedback for the Candidate:
 {'Your communication style and technical responses were well-received. Continue to build on these strengths in future opportunities.' if avg_response_length > 100 else 'To improve future interview performance, focus on providing more detailed technical explanations, specific examples from your experience, and comprehensive answers that demonstrate your problem-solving approach.'}"""
-            recommendation = 'recommended' if avg_response_length > 100 and total_responses >= 5 else 'maybe'etail and elaboration."
-                recommendation = 'maybe'
+            recommendation = 'recommended' if avg_response_length > 100 and total_responses >= 5 else 'maybe'
         else:
             ai_feedback = f"""Overall Assessment:
 The interview was brief with only {total_responses} responses recorded. Limited interaction makes it challenging to provide a comprehensive evaluation of the candidate's technical capabilities and communication skills. More extensive dialogue would be needed to assess their problem-solving approach and cultural fit.

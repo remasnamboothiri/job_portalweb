@@ -3071,19 +3071,89 @@ def generate_interview_results(interview, conversation_history):
         problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
         overall_score = (technical_score + communication_score + problem_solving_score) / 3
         
-        # Generate AI feedback based on responses
-        if total_responses >= 5:
-            if avg_response_length > 100:
-                ai_feedback = f"The candidate provided detailed and thoughtful responses throughout the interview. They demonstrated good communication skills with an average response length of {int(avg_response_length)} characters across {total_responses} questions. The candidate showed engagement and provided comprehensive answers."
-                recommendation = 'recommended'
-            elif avg_response_length > 50:
-                ai_feedback = f"The candidate provided adequate responses during the interview. They answered {total_responses} questions with moderate detail. There's potential for growth in providing more comprehensive explanations."
-                recommendation = 'maybe'
+        # Generate detailed AI feedback using actual conversation analysis
+        try:
+            # Build full conversation for AI analysis
+            full_conversation = "\n\n".join([
+                f"{entry['speaker'].title()}: {entry['message']}"
+                for entry in conversation_history
+            ])
+            
+            # Create comprehensive analysis prompt
+            analysis_prompt = f"""
+Analyze this job interview conversation and provide a detailed professional assessment:
+
+CANDIDATE: {interview.candidate_name}
+POSITION: {interview.job.title if interview.job else 'Software Developer'}
+COMPANY: {interview.job.company if interview.job else 'Our Company'}
+
+FULL INTERVIEW CONVERSATION:
+{full_conversation}
+
+Provide a comprehensive analysis in this exact format:
+
+Overall Assessment:
+[Detailed paragraph analyzing the candidate's technical capabilities, communication skills, professional demeanor, problem-solving approach, and team collaboration potential. Be specific about strengths and concerns based on their actual responses.]
+
+Decision: [Recommended for Hire / Not Recommended for Hire / Requires Further Evaluation]
+
+Feedback for the Candidate:
+[Specific advice for improvement, areas to focus on, and strengths to build upon based on the interview performance.]
+
+Focus your analysis on: technical competency demonstrated, communication clarity, professional presentation, problem-solving methodology, and cultural fit indicators.
+"""
+            
+            # Get AI analysis using existing function
+            detailed_analysis = ask_ai_question(
+                analysis_prompt,
+                candidate_name=interview.candidate_name,
+                job_title=interview.job.title if interview.job else 'Software Developer',
+                company_name=interview.job.company if interview.job else 'Our Company',
+                timeout=30
+            )
+            
+            if detailed_analysis and len(detailed_analysis) > 100:
+                ai_feedback = detailed_analysis
+                # Extract recommendation from AI response
+                if 'not recommended' in detailed_analysis.lower():
+                    recommendation = 'not_recommended'
+                elif 'highly recommended' in detailed_analysis.lower():
+                    recommendation = 'highly_recommended'
+                elif 'recommended' in detailed_analysis.lower():
+                    recommendation = 'recommended'
+                else:
+                    recommendation = 'maybe'
             else:
-                ai_feedback = f"The candidate provided brief responses during the interview. While they answered {total_responses} questions, the responses could benefit from more detail and elaboration."
+                # Fallback to enhanced basic analysis
+                ai_feedback = f"""Overall Assessment:
+The candidate participated in a {total_responses}-question interview with an average response length of {int(avg_response_length)} characters. Based on their engagement level and response quality, they demonstrated {'strong' if avg_response_length > 100 else 'moderate' if avg_response_length > 50 else 'basic'} communication skills. {'The detailed responses suggest good technical understanding and articulation abilities.' if avg_response_length > 100 else 'The responses indicate room for improvement in providing more comprehensive explanations and technical depth.'}
+
+Decision: {'Recommended for Hire' if avg_response_length > 100 else 'Requires Further Evaluation'}
+
+Feedback for the Candidate:
+{'Continue leveraging your strong communication skills and technical knowledge. Focus on maintaining this level of detail in future interviews.' if avg_response_length > 100 else 'To strengthen future opportunities, focus on providing more detailed responses that showcase your technical expertise and problem-solving approach. Practice articulating your experience with specific examples and technical implementations.'}"""
+                recommendation = 'recommended' if avg_response_length > 100 else 'maybe'
+                
+        except Exception as ai_error:
+            logger.error(f"AI analysis failed: {ai_error}")
+            # Enhanced fallback analysis
+            ai_feedback = f"""Overall Assessment:
+The candidate completed the interview with {total_responses} responses averaging {int(avg_response_length)} characters each. {'Their detailed responses demonstrate strong communication skills and technical engagement.' if avg_response_length > 100 else 'Their responses show basic engagement but could benefit from more comprehensive technical explanations.'} The interview duration and response quality suggest {'good' if total_responses >= 5 else 'limited'} interaction with the interviewer.
+
+Decision: {'Recommended for Hire' if avg_response_length > 100 and total_responses >= 5 else 'Requires Further Evaluation'}
+
+Feedback for the Candidate:
+{'Your communication style and technical responses were well-received. Continue to build on these strengths in future opportunities.' if avg_response_length > 100 else 'To improve future interview performance, focus on providing more detailed technical explanations, specific examples from your experience, and comprehensive answers that demonstrate your problem-solving approach.'}"""
+            recommendation = 'recommended' if avg_response_length > 100 and total_responses >= 5 else 'maybe'etail and elaboration."
                 recommendation = 'maybe'
         else:
-            ai_feedback = f"The interview was brief with only {total_responses} responses recorded. More interaction would be needed for a comprehensive evaluation."
+            ai_feedback = f"""Overall Assessment:
+The interview was brief with only {total_responses} responses recorded. Limited interaction makes it challenging to provide a comprehensive evaluation of the candidate's technical capabilities and communication skills. More extensive dialogue would be needed to assess their problem-solving approach and cultural fit.
+
+Decision: Requires Further Evaluation
+
+Feedback for the Candidate:
+Due to the brief nature of this interview, we recommend scheduling a follow-up session to better showcase your technical expertise and experience. Prepare to discuss specific projects, challenges you've overcome, and your approach to problem-solving in more detail."""
             recommendation = 'maybe'
         
         logger.info(f"🎯 Scores calculated - Overall: {overall_score:.1f}, Technical: {technical_score:.1f}, Communication: {communication_score:.1f}")

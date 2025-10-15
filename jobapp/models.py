@@ -262,10 +262,23 @@ class Interview(models.Model):
         """Check if candidate is a registered user"""
         return self.candidate is not None
     
+    # @property
+    # def has_results(self):
+    #     """Check if interview has results generated"""
+    #     return bool(self.overall_score or self.ai_feedback or self.recommendation)
+    
+    
     @property
     def has_results(self):
         """Check if interview has results generated"""
-        return bool(self.overall_score or self.ai_feedback or self.recommendation)
+        # Check if ANY result field is present (not just truthy)
+        return (
+            self.overall_score is not None or 
+            self.ai_feedback is not None and self.ai_feedback.strip() != '' or
+            self.recommendation is not None and self.recommendation.strip() != '' or
+            self.questions_asked is not None and self.questions_asked.strip() != '' or
+            self.answers_given is not None and self.answers_given.strip() != ''
+        )
     
     @property
     def is_completed(self):

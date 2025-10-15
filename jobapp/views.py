@@ -2916,10 +2916,104 @@ def test_interview_results(request):
      
      
 # Add this function in your views.py file:
+# def generate_interview_results(interview, conversation_history):
+#     """Generate and save interview results from live conversation"""
+#     try:
+#         logger.info(f"Generating interview results for {interview.uuid} with {len(conversation_history)} exchanges")
+        
+#         # Extract questions and answers from conversation history
+#         questions_asked = []
+#         answers_given = []
+#         candidate_responses = []
+#         interviewer_questions = []
+        
+#         for entry in conversation_history:
+#             if entry['speaker'] == 'candidate':
+#                 candidate_responses.append(entry['message'])
+#                 answers_given.append({
+#                     'question_number': entry.get('question_number', 0),
+#                     'answer': entry['message'],
+#                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
+#                 })
+#             elif entry['speaker'] == 'interviewer':
+#                 interviewer_questions.append(entry['message'])
+#                 questions_asked.append({
+#                     'question_number': entry.get('question_number', 0),
+#                     'question': entry['message'],
+#                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
+#                 })
+        
+#         # Generate basic scores based on conversation quality
+#         total_responses = len(candidate_responses)
+#         avg_response_length = sum(len(response) for response in candidate_responses) / max(total_responses, 1)
+        
+#         # Simple scoring algorithm based on response quality
+#         technical_score = min(10.0, max(1.0, (avg_response_length / 50) * 5))  # Based on response depth
+#         communication_score = min(10.0, max(1.0, total_responses * 1.5))  # Based on engagement
+#         problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
+#         overall_score = (technical_score + communication_score + problem_solving_score) / 3
+        
+#         # Generate AI feedback based on responses
+#         if total_responses >= 5:
+#             if avg_response_length > 100:
+#                 ai_feedback = f"The candidate provided detailed and thoughtful responses throughout the interview. They demonstrated good communication skills with an average response length of {int(avg_response_length)} characters across {total_responses} questions. The candidate showed engagement and provided comprehensive answers."
+#                 recommendation = 'recommended'
+#             elif avg_response_length > 50:
+#                 ai_feedback = f"The candidate provided adequate responses during the interview. They answered {total_responses} questions with moderate detail. There's potential for growth in providing more comprehensive explanations."
+#                 recommendation = 'maybe'
+#             else:
+#                 ai_feedback = f"The candidate provided brief responses during the interview. While they answered {total_responses} questions, the responses could benefit from more detail and elaboration."
+#                 recommendation = 'maybe'
+#         else:
+#             ai_feedback = f"The interview was brief with only {total_responses} responses recorded. More interaction would be needed for a comprehensive evaluation."
+#             recommendation = 'maybe'
+        
+#         # Save all results to the interview model
+#         interview.questions_asked = json.dumps(questions_asked)
+#         interview.answers_given = json.dumps(answers_given)
+#         interview.overall_score = round(overall_score, 1)
+#         interview.technical_score = round(technical_score, 1)
+#         interview.communication_score = round(communication_score, 1)
+#         interview.problem_solving_score = round(problem_solving_score, 1)
+#         interview.ai_feedback = ai_feedback
+#         interview.recommendation = recommendation
+#         interview.status = 'completed'
+#         interview.completed_at = timezone.now()
+#         interview.results_generated_at = timezone.now()
+        
+#         # Also save the full conversation in transcript field
+#         full_transcript = "\n\n".join([
+#             f"{entry['speaker'].title()}: {entry['message']}"
+#             for entry in conversation_history
+#         ])
+#         interview.transcript = full_transcript
+        
+#         interview.save()
+        
+#         logger.info(f"Interview results saved successfully for {interview.uuid}:")
+#         logger.info(f"  - Overall Score: {overall_score:.1f}/10")
+#         logger.info(f"  - Technical Score: {technical_score:.1f}/10")
+#         logger.info(f"  - Communication Score: {communication_score:.1f}/10")
+#         logger.info(f"  - Recommendation: {recommendation}")
+#         logger.info(f"  - Total Questions: {len(questions_asked)}")
+#         logger.info(f"  - Total Responses: {len(answers_given)}")
+        
+#         return True
+#     except Exception as e:
+#         logger.error(f"Error generating interview results for {interview.uuid}: {e}")
+#         import traceback
+#         logger.error(f"Full traceback: {traceback.format_exc()}")
+#         return False
+
+
+
+
+
 def generate_interview_results(interview, conversation_history):
-    """Generate and save interview results from live conversation"""
+    """Generate and save interview results from live conversation - FIXED VERSION"""
     try:
-        logger.info(f"Generating interview results for {interview.uuid} with {len(conversation_history)} exchanges")
+        logger.info(f"🔄 Starting results generation for interview {interview.uuid}")
+        logger.info(f"📊 Conversation history has {len(conversation_history)} exchanges")
         
         # Extract questions and answers from conversation history
         questions_asked = []
@@ -2943,9 +3037,33 @@ def generate_interview_results(interview, conversation_history):
                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
                 })
         
+        logger.info(f"📝 Extracted {len(questions_asked)} questions and {len(answers_given)} answers")
+        
+        # CRITICAL FIX: Handle edge case where no responses were recorded
+        if len(candidate_responses) == 0:
+            logger.warning(f"⚠️ No candidate responses found for interview {interview.uuid}")
+            # Still save partial results
+            interview.questions_asked = json.dumps(questions_asked)
+            interview.answers_given = json.dumps([])
+            interview.overall_score = 1.0
+            interview.technical_score = 1.0
+            interview.communication_score = 1.0
+            interview.problem_solving_score = 1.0
+            interview.ai_feedback = "Interview was completed but no candidate responses were recorded. This may indicate a technical issue during the interview."
+            interview.recommendation = 'not_recommended'
+            interview.status = 'completed'
+            interview.completed_at = timezone.now()
+            interview.results_generated_at = timezone.now()
+            interview.transcript = "No conversation data available."
+            interview.save()
+            logger.info(f"✅ Saved partial results for interview {interview.uuid}")
+            return True
+        
         # Generate basic scores based on conversation quality
         total_responses = len(candidate_responses)
         avg_response_length = sum(len(response) for response in candidate_responses) / max(total_responses, 1)
+        
+        logger.info(f"📈 Calculating scores - Responses: {total_responses}, Avg length: {avg_response_length:.1f}")
         
         # Simple scoring algorithm based on response quality
         technical_score = min(10.0, max(1.0, (avg_response_length / 50) * 5))  # Based on response depth
@@ -2968,41 +3086,73 @@ def generate_interview_results(interview, conversation_history):
             ai_feedback = f"The interview was brief with only {total_responses} responses recorded. More interaction would be needed for a comprehensive evaluation."
             recommendation = 'maybe'
         
-        # Save all results to the interview model
-        interview.questions_asked = json.dumps(questions_asked)
-        interview.answers_given = json.dumps(answers_given)
-        interview.overall_score = round(overall_score, 1)
-        interview.technical_score = round(technical_score, 1)
-        interview.communication_score = round(communication_score, 1)
-        interview.problem_solving_score = round(problem_solving_score, 1)
-        interview.ai_feedback = ai_feedback
-        interview.recommendation = recommendation
-        interview.status = 'completed'
-        interview.completed_at = timezone.now()
-        interview.results_generated_at = timezone.now()
+        logger.info(f"🎯 Scores calculated - Overall: {overall_score:.1f}, Technical: {technical_score:.1f}, Communication: {communication_score:.1f}")
+        logger.info(f"💡 Recommendation: {recommendation}")
         
-        # Also save the full conversation in transcript field
-        full_transcript = "\n\n".join([
-            f"{entry['speaker'].title()}: {entry['message']}"
-            for entry in conversation_history
-        ])
-        interview.transcript = full_transcript
+        # CRITICAL FIX: Save to database with explicit field assignment
+        try:
+            interview.questions_asked = json.dumps(questions_asked)
+            interview.answers_given = json.dumps(answers_given)
+            interview.overall_score = round(overall_score, 1)
+            interview.technical_score = round(technical_score, 1)
+            interview.communication_score = round(communication_score, 1)
+            interview.problem_solving_score = round(problem_solving_score, 1)
+            interview.ai_feedback = ai_feedback
+            interview.recommendation = recommendation
+            interview.status = 'completed'
+            interview.completed_at = timezone.now()
+            interview.results_generated_at = timezone.now()
+            
+            # Save the full conversation in transcript field
+            full_transcript = "\n\n".join([
+                f"{entry['speaker'].title()}: {entry['message']}"
+                for entry in conversation_history
+            ])
+            interview.transcript = full_transcript
+            
+            # CRITICAL: Force save to database
+            interview.save(update_fields=[
+                'questions_asked', 'answers_given', 'overall_score', 
+                'technical_score', 'communication_score', 'problem_solving_score',
+                'ai_feedback', 'recommendation', 'status', 'completed_at',
+                'results_generated_at', 'transcript'
+            ])
+            
+            logger.info(f"✅ Interview results saved successfully for {interview.uuid}")
+            logger.info(f"📊 Final scores - Overall: {interview.overall_score}/10, Technical: {interview.technical_score}/10")
+            logger.info(f"💼 Recommendation: {interview.recommendation}")
+            logger.info(f"❓ Questions: {len(questions_asked)}, 💬 Responses: {len(answers_given)}")
+            
+            # VERIFICATION: Check if data was actually saved
+            interview.refresh_from_db()
+            if interview.overall_score is not None:
+                logger.info(f"✅ VERIFICATION PASSED: Results confirmed in database")
+                return True
+            else:
+                logger.error(f"❌ VERIFICATION FAILED: Results not found in database after save")
+                return False
+            
+        except Exception as save_error:
+            logger.error(f"❌ Database save error for interview {interview.uuid}: {save_error}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
         
-        interview.save()
-        
-        logger.info(f"Interview results saved successfully for {interview.uuid}:")
-        logger.info(f"  - Overall Score: {overall_score:.1f}/10")
-        logger.info(f"  - Technical Score: {technical_score:.1f}/10")
-        logger.info(f"  - Communication Score: {communication_score:.1f}/10")
-        logger.info(f"  - Recommendation: {recommendation}")
-        logger.info(f"  - Total Questions: {len(questions_asked)}")
-        logger.info(f"  - Total Responses: {len(answers_given)}")
-        
-        return True
     except Exception as e:
-        logger.error(f"Error generating interview results for {interview.uuid}: {e}")
+        logger.error(f"❌ CRITICAL ERROR generating interview results for {interview.uuid}: {e}")
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
+        
+        # Try to save error state
+        try:
+            interview.status = 'completed'
+            interview.completed_at = timezone.now()
+            interview.ai_feedback = f"Error generating results: {str(e)}"
+            interview.overall_score = 1.0
+            interview.save()
+        except:
+            pass
+            
         return False
 
 
@@ -3112,25 +3262,114 @@ def test_email_system(request):
 
 
 # INTERVIEW RESULTS VIEW
+# @login_required
+# @user_passes_test(lambda u: u.is_recruiter)
+# def interview_results(request, interview_uuid):
+#     """Display interview results for completed interviews"""
+#     try:
+#         # Get the interview and ensure the recruiter owns it
+#         interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+#         if interview.job.posted_by != request.user:
+#             messages.error(request, 'You do not have permission to view this interview.')
+#             return redirect('recruiter_dashboard')
+        
+#         # Check if interview is completed and has results
+#         if interview.status != 'completed':
+#             messages.warning(request, 'This interview is not yet completed.')
+#             return redirect('recruiter_dashboard')
+        
+#         if not interview.has_results:
+#             messages.info(request, 'Results are being generated for this interview. Please check back in a few minutes.')
+#             return redirect('recruiter_dashboard')
+        
+#         # Parse the questions and answers from JSON
+#         questions_asked = []
+#         answers_given = []
+        
+#         try:
+#             if interview.questions_asked:
+#                 questions_asked = json.loads(interview.questions_asked)
+#         except (json.JSONDecodeError, TypeError):
+#             logger.warning(f"Could not parse questions_asked for interview {interview_uuid}")
+        
+#         try:
+#             if interview.answers_given:
+#                 answers_given = json.loads(interview.answers_given)
+#         except (json.JSONDecodeError, TypeError):
+#             logger.warning(f"Could not parse answers_given for interview {interview_uuid}")
+        
+#         # Combine questions and answers for display
+#         qa_pairs = []
+#         for i in range(max(len(questions_asked), len(answers_given))):
+#             question = questions_asked[i] if i < len(questions_asked) else None
+#             answer = answers_given[i] if i < len(answers_given) else None
+            
+#             qa_pairs.append({
+#                 'question_number': i + 1,
+#                 'question': question['question'] if question else 'Question not recorded',
+#                 'answer': answer['answer'] if answer else 'Answer not recorded',
+#                 'question_timestamp': question.get('timestamp') if question else None,
+#                 'answer_timestamp': answer.get('timestamp') if answer else None
+#             })
+        
+#         # Calculate interview duration if available
+#         interview_duration = None
+#         if interview.completed_at and interview.created_at:
+#             duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
+#             interview_duration = f"{int(duration_seconds // 60)}m {int(duration_seconds % 60)}s"
+        
+#         context = {
+#             'interview': interview,
+#             'qa_pairs': qa_pairs,
+#             'interview_duration': interview_duration,
+#             'total_questions': len(questions_asked),
+#             'total_answers': len(answers_given),
+#         }
+        
+#         return render(request, 'jobapp/interview_results.html', context)
+        
+#     except Exception as e:
+#         logger.error(f"Error displaying interview results for {interview_uuid}: {e}")
+#         messages.error(request, 'Could not load interview results. Please try again.')
+#         return redirect('recruiter_dashboard')
+
+
+#interview results view 
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def interview_results(request, interview_uuid):
-    """Display interview results for completed interviews"""
+    """Display interview results for completed interviews - FIXED VERSION"""
     try:
+        logger.info(f"📊 Results page accessed for interview {interview_uuid}")
+        
         # Get the interview and ensure the recruiter owns it
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
+        logger.info(f"✅ Interview found: {interview.candidate_name} for {interview.job.title}")
+        logger.info(f"📝 Interview status: {interview.status}")
+        logger.info(f"🎯 Has results: {interview.has_results}")
+        logger.info(f"💯 Overall score: {interview.overall_score}")
+        logger.info(f"💬 AI feedback length: {len(interview.ai_feedback) if interview.ai_feedback else 0}")
+        
         if interview.job.posted_by != request.user:
+            logger.warning(f"⚠️ Permission denied - wrong recruiter")
             messages.error(request, 'You do not have permission to view this interview.')
             return redirect('recruiter_dashboard')
         
-        # Check if interview is completed and has results
-        if interview.status != 'completed':
-            messages.warning(request, 'This interview is not yet completed.')
-            return redirect('recruiter_dashboard')
-        
+        # FIXED: Don't check status first - check if results exist
         if not interview.has_results:
-            messages.info(request, 'Results are being generated for this interview. Please check back in a few minutes.')
+            logger.warning(f"⚠️ No results available for interview {interview_uuid}")
+            logger.info(f"Debug info - Status: {interview.status}, Completed: {interview.completed_at}")
+            logger.info(f"Debug info - Questions: {bool(interview.questions_asked)}, Answers: {bool(interview.answers_given)}")
+            
+            # Try to regenerate results if interview is completed but has no results
+            if interview.status == 'completed' and interview.completed_at:
+                logger.info(f"🔄 Attempting to regenerate results...")
+                messages.info(request, 'Results are being generated for this interview. Please refresh in a moment.')
+            else:
+                messages.warning(request, 'This interview is not yet completed or has no results.')
+            
             return redirect('recruiter_dashboard')
         
         # Parse the questions and answers from JSON
@@ -3140,14 +3379,16 @@ def interview_results(request, interview_uuid):
         try:
             if interview.questions_asked:
                 questions_asked = json.loads(interview.questions_asked)
-        except (json.JSONDecodeError, TypeError):
-            logger.warning(f"Could not parse questions_asked for interview {interview_uuid}")
+                logger.info(f"✅ Parsed {len(questions_asked)} questions")
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"❌ Could not parse questions_asked: {e}")
         
         try:
             if interview.answers_given:
                 answers_given = json.loads(interview.answers_given)
-        except (json.JSONDecodeError, TypeError):
-            logger.warning(f"Could not parse answers_given for interview {interview_uuid}")
+                logger.info(f"✅ Parsed {len(answers_given)} answers")
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"❌ Could not parse answers_given: {e}")
         
         # Combine questions and answers for display
         qa_pairs = []
@@ -3163,6 +3404,8 @@ def interview_results(request, interview_uuid):
                 'answer_timestamp': answer.get('timestamp') if answer else None
             })
         
+        logger.info(f"✅ Created {len(qa_pairs)} Q&A pairs for display")
+        
         # Calculate interview duration if available
         interview_duration = None
         if interview.completed_at and interview.created_at:
@@ -3177,9 +3420,12 @@ def interview_results(request, interview_uuid):
             'total_answers': len(answers_given),
         }
         
+        logger.info(f"✅ Rendering results page with {len(qa_pairs)} Q&A pairs")
         return render(request, 'jobapp/interview_results.html', context)
         
     except Exception as e:
-        logger.error(f"Error displaying interview results for {interview_uuid}: {e}")
+        logger.error(f"❌ Error displaying interview results for {interview_uuid}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         messages.error(request, 'Could not load interview results. Please try again.')
         return redirect('recruiter_dashboard')

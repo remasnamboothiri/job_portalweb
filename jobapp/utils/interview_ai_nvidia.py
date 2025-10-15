@@ -55,7 +55,7 @@ Remember: Short responses, acknowledge their answer, ask one clear question.
                 
     try:
         # Initialize client with timeout
-        client = OpenAI(
+        client = OpenAI(               
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=api_key,
             timeout= timeout or 20.0 # 20 second timeout
@@ -70,7 +70,7 @@ Remember: Short responses, acknowledge their answer, ask one clear question.
                     "role": "system",
                     "content": system_prompt
                 },
-                {
+                {   
                     "role": "user",
                     "content": prompt
                 }

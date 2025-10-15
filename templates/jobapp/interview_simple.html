@@ -840,7 +840,7 @@ function endInterview() {
                     ">You can close this window now.</p>
                 </div>
                 
-                <button onclick="window.close()" style="
+                {% comment %} <button onclick="window.close()" style="
                     background: #f44336;
                     color: white;
                     border: none;
@@ -853,7 +853,7 @@ function endInterview() {
                 " onmouseover="this.style.transform='scale(1.05)'" 
                    onmouseout="this.style.transform='scale(1)'">
                     📞 Close Interview
-                </button>
+                </button> {% endcomment %}
             </div>
         `;
     }
@@ -927,7 +927,7 @@ function updateTimer() {
                     ">Your responses have been recorded.</p>
                 </div>
                 
-                <button onclick="window.close()" style="
+                {% comment %} <button onclick="window.close()" style="
                     background: #f44336;
                     color: white;
                     border: none;
@@ -940,7 +940,7 @@ function updateTimer() {
                 " onmouseover="this.style.transform='scale(1.05)'" 
                    onmouseout="this.style.transform='scale(1)'">
                     📞 Close Interview
-                </button>
+                </button> {% endcomment %}
             </div>
         `;
       

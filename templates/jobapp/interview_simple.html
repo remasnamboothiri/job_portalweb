@@ -19,9 +19,11 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            height: calc(100vh - 40px);
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            padding: 0 20px;
+            padding-bottom: 100px;  /* CRITICAL: Reserve space at bottom for buttons */
         }
         .video-grid {
             display: grid;
@@ -194,7 +196,7 @@
         .btn.end-call {
             background: #f44336;
         }
-        .transcript-section {
+        {% comment %} .transcript-section {
             background: #303134;
             padding: 20px 25px;
             border-radius: 12px;
@@ -206,6 +208,19 @@
             border: 2px solid #444;
             min-height: 120px;  /* ← CHANGE TO: 150px (50% smaller) */
             max-height: 180px;  /* Added max-height to control size */
+            overflow: hidden;
+        } {% endcomment %}
+         
+        .transcript-section {
+            background: #303134;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 0 0 20px 0;
+            flex: 0 1 auto;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #444;
+            height: 150px;
             overflow: hidden;
         }
         .conversation-text {

@@ -1288,15 +1288,14 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                                 ai_response = f"Thank you for sharing that, {candidate_name}. That's really insightful! "
                             
                             # Add contextual follow-up based on question progression and content
-                            if question_count <= 2:
-                                if any(word in response_lower for word in ['experience', 'work', 'project', 'develop', 'code', 'program', 'software']):
-                                    ai_response += f"I'd love to dive deeper into your technical experience. What specific technologies or programming languages have you been working with that would be relevant to this {job_title} role?"
-                                elif any(word in response_lower for word in ['student', 'graduate', 'fresh', 'new', 'learning', 'bootcamp', 'course']):
-                                    ai_response += "It's wonderful to see someone eager to start their career! What technologies or programming languages have you been learning, and what excites you most about development?"
-                                elif any(word in response_lower for word in ['career', 'transition', 'change', 'switch']):
-                                    ai_response += f"Career transitions can be exciting! What drew you specifically to {job_title}, and what skills from your previous experience do you think will transfer well?"
-                                else:
-                                    ai_response += f"Can you tell me more about your technical background? What programming languages or technologies are you most comfortable with for {job_title} work?"
+                            if question_count <= 3:
+                                # ICE-BREAKING QUESTIONS (First 3 questions to make candidate comfortable)
+                                if question_count == 1:
+                                    ai_response += f"Nice to meet you! How are you feeling today?"
+                                elif question_count == 2:
+                                    ai_response += f"Great! Now that we're getting to know each other, are you ready to start our interview for the {job_title} position at {company_name}?"
+                                else:  # question_count == 3
+                                    ai_response += f"Perfect! Let's begin. Could you tell me a bit about yourself and what drew you to apply for this {job_title} role?"
                             
                             elif question_count <= 4:
                                 if any(word in response_lower for word in ['python', 'javascript', 'java', 'react', 'django', 'node', 'html', 'css', 'sql']):
@@ -1470,7 +1469,7 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
             return JsonResponse(response_data)
         
         # HANDLE GET REQUEST - Show interview UI with first question
-        ai_question = f"Hi {candidate_name}! It's wonderful to meet you, and thank you so much for taking the time to speak with me today. I'm Sarah, and I'll be conducting your interview for the {job_title} position at {company_name}. I'm really excited to learn more about you and your background! To get us started, could you tell me a bit about yourself - your experience, what you're passionate about, and what drew you to apply for this role?"
+        ai_question = f"Hi there! I'm Sarah. Before we begin, could you please tell me your name?"
         
         logger.info(f"Generated AI initial question for interview {interview_uuid}")
         

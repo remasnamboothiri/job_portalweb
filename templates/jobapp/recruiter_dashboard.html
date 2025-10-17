@@ -121,138 +121,7 @@
 
 
 
-    /* ============================================
-       ENHANCED SIDEBAR FILTER SECTION STYLES
-       ============================================ */
     
-    /* Sidebar Container - Makes it stick to viewport */
-    .sidebar-filter-container {
-        position: sticky;
-        top: 20px;
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
-        margin-right: 20px;
-    }
-
-    /* Custom Scrollbar for Sidebar */
-    .sidebar-filter-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .sidebar-filter-container::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-    }
-
-    .sidebar-filter-container::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 10px;
-    }
-
-    .sidebar-filter-container::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.5);
-    }
-
-    /* Sidebar Card Styling */
-    .sidebar-filter {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        padding: 25px 20px;
-        min-height: 500px;
-    }
-
-    /* Sidebar Header */
-    .sidebar-filter h6 {
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 2px;
-        margin-bottom: 25px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-    }
-
-    /* Filter Navigation Links */
-    .sidebar-filter .nav-link {
-        color: rgba(255, 255, 255, 0.85);
-        padding: 12px 15px;
-        margin-bottom: 8px;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        border: 2px solid transparent;
-    }
-
-    .sidebar-filter .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.15);
-        color: #ffffff;
-        transform: translateX(5px);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .sidebar-filter .nav-link.active {
-        background-color: #ffffff;
-        color: #667eea;
-        font-weight: 600;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        border-color: #ffffff;
-    }
-
-    /* Icon Styling in Sidebar */
-    .sidebar-filter .nav-link i,
-    .sidebar-filter .nav-link .fas {
-        margin-right: 12px;
-        font-size: 16px;
-        width: 20px;
-        text-align: center;
-    }
-
-    /* Add subtle animation to active state */
-    .sidebar-filter .nav-link.active {
-        animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-        from {
-            transform: translateX(-10px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .sidebar-filter-container {
-            position: relative;
-            top: 0;
-            margin-right: 0;
-            margin-bottom: 30px;
-            max-height: none;
-        }
-
-        .sidebar-filter {
-            min-height: auto;
-        }
-
-        .sidebar-filter .nav-link {
-            padding: 10px 12px;
-            font-size: 13px;
-        }
-    }
-
-    /* Dashboard Content Area */
-    .dashboard-content-area {
-        background-color: rgba(255, 255, 255, 0.5);
-        border-radius: 15px;
-        padding: 30px;
-        min-height: 600px;
-    }
 
   </style>
 </head>
@@ -386,7 +255,7 @@
     
 
             
-{% comment %} <!-- ...existing code above... -->
+<!-- ...existing code above... -->
 
 <div class="container py-5">
   <div class="row">
@@ -418,9 +287,9 @@
           </a>
         </nav>
       </div>
-    </div> {% endcomment %}
+    </div> 
 
-    <!-- MODIFIED SIDEBAR AND CONTENT LAYOUT -->
+    {% comment %} <!-- MODIFIED SIDEBAR AND CONTENT LAYOUT -->
 <div class="container py-5">
   <div class="row">
     <!-- ============================================
@@ -455,7 +324,7 @@
           </nav>
         </div>
       </div>
-    </div>
+    </div> {% endcomment %}
 
 
     <!-- Main Content Sections -->

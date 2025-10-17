@@ -44,6 +44,15 @@
                                 {% endif %}
                             </div>
                             
+                            <div class="mb-3">
+                                <label for="{{ form.interview_duration_minutes.id_for_label }}" class="form-label">{{ form.interview_duration_minutes.label }}</label>
+                                {{ form.interview_duration_minutes }}
+                                {% if form.interview_duration_minutes.errors %}
+                                    <div class="text-danger">{{ form.interview_duration_minutes.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Choose how long this interview should be</div>
+                            </div>
+                            
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-success">Schedule Interview</button>
                                 <a href="{% url 'recruiter_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>

@@ -102,12 +102,12 @@ class Job(models.Model):
     interview_duration = models.CharField(
         max_length=20,
         choices=[
+            ('10', '10 minutes'),
             ('15', '15 minutes'),
+            ('20', '20 minutes'),
             ('30', '30 minutes'),
-            ('45', '45 minutes'),
-            ('60', '60 minutes'),
         ],
-        default='30',
+        default='15',
         blank=True,
         null=True
     )
@@ -222,6 +222,16 @@ class Interview(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True, help_text="When the interview was completed")
     results_generated_at = models.DateTimeField(blank=True, null=True, help_text="When AI results were generated")
     started_at = models.DateTimeField(blank=True, null=True, help_text="When the interview session actually started")
+    interview_duration_minutes = models.IntegerField(
+        choices=[
+            (10, '10 minutes'),
+            (15, '15 minutes'),
+            (20, '20 minutes'),
+            (30, '30 minutes'),
+        ],
+        default=15,
+        help_text="Duration set by recruiter for this specific interview"
+    )
 
     def save(self, *args, **kwargs):
         if not self.uuid:

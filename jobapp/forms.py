@@ -267,14 +267,16 @@ class ScheduleInterviewForm(forms.ModelForm):
     
     class Meta:
         model = Interview
-        fields = ['job', 'scheduled_at']  # Exclude candidate field
+        fields = ['job', 'scheduled_at', 'interview_duration_minutes']
         widgets = {
             'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'job': forms.Select(attrs={'class': 'form-control'}),
+            'interview_duration_minutes': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
             'job': 'Which job is it?',
             'scheduled_at': 'Interview Date & Time',
+            'interview_duration_minutes': 'Interview Duration',
         }
     
     def __init__(self, *args, **kwargs):
@@ -353,6 +355,19 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
         required=True,
         help_text='Select the date and time for the interview'
     )
+    interview_duration_minutes = forms.ChoiceField(
+        choices=[
+            (10, '10 minutes'),
+            (15, '15 minutes'),
+            (20, '20 minutes'),
+            (30, '30 minutes'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Interview Duration',
+        initial=15,
+        required=True,
+        help_text='Select how long this interview should be'
+    )
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -408,7 +423,8 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
             candidate_name=self.candidate.name,
             candidate_email=self.candidate.email,
             candidate_phone=self.candidate.phone,
-            scheduled_at=scheduled_at
+            scheduled_at=scheduled_at,
+            interview_duration_minutes=self.cleaned_data['interview_duration_minutes']
         )
         interview.save()
         return interview

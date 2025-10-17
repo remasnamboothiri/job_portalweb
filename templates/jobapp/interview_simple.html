@@ -842,7 +842,14 @@ function endInterview() {
         interviewCompleted = true;
         
         stopMicrophone();
-
+        
+        // Stop camera and microphone
+        if (userStream) {
+            userStream.getTracks().forEach(track => {
+                track.stop();
+                log(`${track.kind} track stopped`);
+            });
+        }
 
         // Hide all interview elements
         document.querySelector('.video-grid').style.display = 'none';
@@ -928,7 +935,14 @@ function updateTimer() {
         log('Time expired');
         interviewCompleted = true;
         stopMicrophone();
-
+        
+        // Stop camera and microphone
+        if (userStream) {
+            userStream.getTracks().forEach(track => {
+                track.stop();
+                log(`${track.kind} track stopped`);
+            });
+        }
 
         // Hide video boxes, transcript, and mic button
         document.querySelector('.video-grid').style.display = 'none';

@@ -221,6 +221,7 @@ class Interview(models.Model):
     )
     completed_at = models.DateTimeField(blank=True, null=True, help_text="When the interview was completed")
     results_generated_at = models.DateTimeField(blank=True, null=True, help_text="When AI results were generated")
+    started_at = models.DateTimeField(blank=True, null=True, help_text="When the interview session actually started")
 
     def save(self, *args, **kwargs):
         if not self.uuid:

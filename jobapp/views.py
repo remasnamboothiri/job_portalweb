@@ -1002,6 +1002,12 @@ def start_interview_by_uuid(request, interview_uuid):
         # CRITICAL FIX: Only initialize session if it doesn't exist (don't reset on every request)
         if session_key not in request.session:
             logger.info(f"Creating new session context for interview {interview_uuid}")
+            # Set the actual start time in the database when interview begins
+            if not interview.started_at:
+                interview.started_at = timezone.now()
+                interview.save(update_fields=['started_at'])
+                logger.info(f"Interview {interview_uuid} started at {interview.started_at}")
+            
             request.session[session_key] = {
                 'candidate_name': candidate_name,
                 'job_title': job_title,
@@ -1160,6 +1166,9 @@ def start_interview_by_uuid(request, interview_uuid):
                     # Mark interview as completed in database
                     interview.status = 'completed'
                     interview.completed_at = timezone.now()
+                    # Ensure started_at is set if not already
+                    if not interview.started_at:
+                        interview.started_at = timezone.now() - timezone.timedelta(minutes=15)  # Estimate 15 minutes ago
                     interview.save()
                     logger.info(f"Interview time completed for {interview_uuid}")
                     
@@ -1458,6 +1467,12 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
             # Save updated context to session
             request.session[session_key] = context
             request.session.modified = True
+            
+            # Update interview start time if not already set
+            if not interview.started_at:
+                interview.started_at = timezone.now()
+                interview.save(update_fields=['started_at'])
+                logger.info(f"Interview {interview_uuid} start time updated to {interview.started_at}")
             
             # Clear duplicate prevention after a delay
             if 'last_processed_input' in context:
@@ -3183,7 +3198,7 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
                 'questions_asked', 'answers_given', 'overall_score', 
                 'technical_score', 'communication_score', 'problem_solving_score',
                 'ai_feedback', 'recommendation', 'status', 'completed_at',
-                'results_generated_at', 'transcript'
+                'results_generated_at', 'transcript', 'started_at'
             ])
             
             logger.info(f"✅ Interview results saved successfully for {interview.uuid}")
@@ -3473,12 +3488,32 @@ def interview_results(request, interview_uuid):
             })
         
         logger.info(f"✅ Created {len(qa_pairs)} Q&A pairs for display")
+        logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
+        if interview.started_at and interview.completed_at:
+            logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
+        else:
+            logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
         
-        # Calculate interview duration if available
+        # Calculate interview duration if available - FIXED to use actual start time
         interview_duration = None
-        if interview.completed_at and interview.created_at:
+        if interview.completed_at and interview.started_at:
+            duration_seconds = (interview.completed_at - interview.started_at).total_seconds()
+            # Ensure duration is positive and reasonable
+            if duration_seconds > 0:
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                interview_duration = f"{minutes}m {seconds}s"
+            else:
+                interview_duration = "Less than 1 minute"
+        elif interview.completed_at and interview.created_at:
+            # Fallback to created_at if started_at is not available (for old interviews)
             duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
-            interview_duration = f"{int(duration_seconds // 60)}m {int(duration_seconds % 60)}s"
+            if duration_seconds > 0:
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                interview_duration = f"{minutes}m {seconds}s (estimated)"
+            else:
+                interview_duration = "Duration unavailable"
         
         context = {
             'interview': interview,

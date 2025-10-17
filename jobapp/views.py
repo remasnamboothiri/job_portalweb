@@ -3493,26 +3493,37 @@ def interview_results(request, interview_uuid):
         interview_duration = None
         if interview.completed_at and interview.started_at:
             duration_seconds = (interview.completed_at - interview.started_at).total_seconds()
-            # Ensure duration is positive and reasonable
-            if duration_seconds > 0:
+            # Ensure duration is positive and reasonable (max 60 minutes for interviews)
+            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
                 minutes = int(duration_seconds // 60)
                 seconds = int(duration_seconds % 60)
                 interview_duration = f"{minutes}m {seconds}s"
+            elif duration_seconds > 3600:
+                # If duration seems too long, use the scheduled duration instead
+                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
+                interview_duration = f"{scheduled_duration}m (scheduled duration)"
             else:
                 interview_duration = "Less than 1 minute"
         elif interview.completed_at and interview.created_at:
             # Fallback to created_at if started_at is not available (for old interviews)
             duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
-            if duration_seconds > 0:
+            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
                 minutes = int(duration_seconds // 60)
                 seconds = int(duration_seconds % 60)
                 interview_duration = f"{minutes}m {seconds}s (estimated)"
+            elif duration_seconds > 3600:
+                # If duration seems too long, use the scheduled duration instead
+                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
+                interview_duration = f"{scheduled_duration}m (scheduled duration)"
             else:
                 interview_duration = "Duration unavailable"
         
         logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
         if interview.started_at and interview.completed_at:
+            actual_duration = (interview.completed_at - interview.started_at).total_seconds()
             logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
+            logger.info(f"⏱️ Actual duration: {actual_duration:.0f} seconds ({actual_duration/60:.1f} minutes)")
+            logger.info(f"🎯 Scheduled duration: {getattr(interview, 'interview_duration_minutes', 15)} minutes")
         else:
             logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
         

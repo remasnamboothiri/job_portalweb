@@ -852,6 +852,17 @@
             <input type="datetime-local" class="form-control" name="scheduled_at" required>
           </div>
           
+          <div class="mb-3">
+            <label class="form-label">Interview Duration <span class="text-danger">*</span></label>
+            <select class="form-control" name="interview_duration_minutes" required>
+              <option value="10">10 minutes</option>
+              <option value="15" selected>15 minutes</option>
+              <option value="20">20 minutes</option>
+              <option value="30">30 minutes</option>
+            </select>
+            <small class="form-text text-muted">Choose how long this interview should be</small>
+          </div>
+          
           <div class="alert alert-info">
             <small>
               <strong>Note:</strong> An email with the interview link will be sent to the candidate automatically.

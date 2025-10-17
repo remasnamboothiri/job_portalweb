@@ -3488,11 +3488,6 @@ def interview_results(request, interview_uuid):
             })
         
         logger.info(f"✅ Created {len(qa_pairs)} Q&A pairs for display")
-        logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
-        if interview.started_at and interview.completed_at:
-            logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
-        else:
-            logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
         
         # Calculate interview duration if available - FIXED to use actual start time
         interview_duration = None
@@ -3514,6 +3509,12 @@ def interview_results(request, interview_uuid):
                 interview_duration = f"{minutes}m {seconds}s (estimated)"
             else:
                 interview_duration = "Duration unavailable"
+        
+        logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
+        if interview.started_at and interview.completed_at:
+            logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
+        else:
+            logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
         
         context = {
             'interview': interview,

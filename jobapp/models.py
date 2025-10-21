@@ -102,6 +102,7 @@ class Job(models.Model):
     interview_duration = models.CharField(
         max_length=20,
         choices=[
+            ('5',  '5 minites'),
             ('10', '10 minutes'),
             ('15', '15 minutes'),
             ('20', '20 minutes'),

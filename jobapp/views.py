@@ -111,16 +111,51 @@ HR Team
             return False
         
         # Send the email
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [interview.candidate_email],
-            fail_silently=True  # Don't break the system if email fails
-        )
-        
-        logger.info(f"Status email sent to {interview.candidate_email} for interview {interview.uuid} - Type: {status_type}")
-        return True
+        try:
+            # Check if we're using console backend
+            from django.conf import settings
+            is_console_backend = 'console' in settings.EMAIL_BACKEND.lower()
+            
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [interview.candidate_email],
+                fail_silently=False  # Show email errors for debugging
+            )
+            
+            if is_console_backend:
+                logger.info(f"📧 Status email logged to console for {interview.candidate_email} (interview {interview.uuid}) - Type: {status_type}")
+                logger.info(f"""
+                ==========================================
+                📧 EMAIL CONTENT (CONSOLE OUTPUT):
+                ==========================================
+                To: {interview.candidate_email}
+                Subject: {subject}
+                
+                {message}
+                ==========================================
+                💡 NOTE: Email was sent to console. To send real emails, configure SMTP settings.
+                """)
+            else:
+                logger.info(f"✅ Status email sent successfully to {interview.candidate_email} for interview {interview.uuid} - Type: {status_type}")
+            
+            return True
+            
+        except Exception as email_error:
+            logger.error(f"❌ Email sending failed for {interview.candidate_email}: {email_error}")
+            # Log the email content for manual sending if needed
+            logger.info(f"""
+            ==========================================
+            📧 EMAIL CONTENT (FAILED TO SEND):
+            ==========================================
+            To: {interview.candidate_email}
+            Subject: {subject}
+            
+            {message}
+            ==========================================
+            """)
+            return False
         
     except Exception as e:
         logger.error(f"Failed to send status email for interview {interview.uuid}: {e}")
@@ -3039,96 +3074,6 @@ def test_interview_results(request):
      
      
      
-# Add this function in your views.py file:
-# def generate_interview_results(interview, conversation_history):
-#     """Generate and save interview results from live conversation"""
-#     try:
-#         logger.info(f"Generating interview results for {interview.uuid} with {len(conversation_history)} exchanges")
-        
-#         # Extract questions and answers from conversation history
-#         questions_asked = []
-#         answers_given = []
-#         candidate_responses = []
-#         interviewer_questions = []
-        
-#         for entry in conversation_history:
-#             if entry['speaker'] == 'candidate':
-#                 candidate_responses.append(entry['message'])
-#                 answers_given.append({
-#                     'question_number': entry.get('question_number', 0),
-#                     'answer': entry['message'],
-#                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
-#                 })
-#             elif entry['speaker'] == 'interviewer':
-#                 interviewer_questions.append(entry['message'])
-#                 questions_asked.append({
-#                     'question_number': entry.get('question_number', 0),
-#                     'question': entry['message'],
-#                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
-#                 })
-        
-#         # Generate basic scores based on conversation quality
-#         total_responses = len(candidate_responses)
-#         avg_response_length = sum(len(response) for response in candidate_responses) / max(total_responses, 1)
-        
-#         # Simple scoring algorithm based on response quality
-#         technical_score = min(10.0, max(1.0, (avg_response_length / 50) * 5))  # Based on response depth
-#         communication_score = min(10.0, max(1.0, total_responses * 1.5))  # Based on engagement
-#         problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
-#         overall_score = (technical_score + communication_score + problem_solving_score) / 3
-        
-#         # Generate AI feedback based on responses
-#         if total_responses >= 5:
-#             if avg_response_length > 100:
-#                 ai_feedback = f"The candidate provided detailed and thoughtful responses throughout the interview. They demonstrated good communication skills with an average response length of {int(avg_response_length)} characters across {total_responses} questions. The candidate showed engagement and provided comprehensive answers."
-#                 recommendation = 'recommended'
-#             elif avg_response_length > 50:
-#                 ai_feedback = f"The candidate provided adequate responses during the interview. They answered {total_responses} questions with moderate detail. There's potential for growth in providing more comprehensive explanations."
-#                 recommendation = 'maybe'
-#             else:
-#                 ai_feedback = f"The candidate provided brief responses during the interview. While they answered {total_responses} questions, the responses could benefit from more detail and elaboration."
-#                 recommendation = 'maybe'
-#         else:
-#             ai_feedback = f"The interview was brief with only {total_responses} responses recorded. More interaction would be needed for a comprehensive evaluation."
-#             recommendation = 'maybe'
-        
-#         # Save all results to the interview model
-#         interview.questions_asked = json.dumps(questions_asked)
-#         interview.answers_given = json.dumps(answers_given)
-#         interview.overall_score = round(overall_score, 1)
-#         interview.technical_score = round(technical_score, 1)
-#         interview.communication_score = round(communication_score, 1)
-#         interview.problem_solving_score = round(problem_solving_score, 1)
-#         interview.ai_feedback = ai_feedback
-#         interview.recommendation = recommendation
-#         interview.status = 'completed'
-#         interview.completed_at = timezone.now()
-#         interview.results_generated_at = timezone.now()
-        
-#         # Also save the full conversation in transcript field
-#         full_transcript = "\n\n".join([
-#             f"{entry['speaker'].title()}: {entry['message']}"
-#             for entry in conversation_history
-#         ])
-#         interview.transcript = full_transcript
-        
-#         interview.save()
-        
-#         logger.info(f"Interview results saved successfully for {interview.uuid}:")
-#         logger.info(f"  - Overall Score: {overall_score:.1f}/10")
-#         logger.info(f"  - Technical Score: {technical_score:.1f}/10")
-#         logger.info(f"  - Communication Score: {communication_score:.1f}/10")
-#         logger.info(f"  - Recommendation: {recommendation}")
-#         logger.info(f"  - Total Questions: {len(questions_asked)}")
-#         logger.info(f"  - Total Responses: {len(answers_given)}")
-        
-#         return True
-#     except Exception as e:
-#         logger.error(f"Error generating interview results for {interview.uuid}: {e}")
-#         import traceback
-#         logger.error(f"Full traceback: {traceback.format_exc()}")
-#         return False
-
 
 
 
@@ -3462,78 +3407,7 @@ def test_email_system(request):
         }, status=500)
 
 
-# INTERVIEW RESULTS VIEW
-# @login_required
-# @user_passes_test(lambda u: u.is_recruiter)
-# def interview_results(request, interview_uuid):
-#     """Display interview results for completed interviews"""
-#     try:
-#         # Get the interview and ensure the recruiter owns it
-#         interview = get_object_or_404(Interview, uuid=interview_uuid)
-        
-#         if interview.job.posted_by != request.user:
-#             messages.error(request, 'You do not have permission to view this interview.')
-#             return redirect('recruiter_dashboard')
-        
-#         # Check if interview is completed and has results
-#         if interview.status != 'completed':
-#             messages.warning(request, 'This interview is not yet completed.')
-#             return redirect('recruiter_dashboard')
-        
-#         if not interview.has_results:
-#             messages.info(request, 'Results are being generated for this interview. Please check back in a few minutes.')
-#             return redirect('recruiter_dashboard')
-        
-#         # Parse the questions and answers from JSON
-#         questions_asked = []
-#         answers_given = []
-        
-#         try:
-#             if interview.questions_asked:
-#                 questions_asked = json.loads(interview.questions_asked)
-#         except (json.JSONDecodeError, TypeError):
-#             logger.warning(f"Could not parse questions_asked for interview {interview_uuid}")
-        
-#         try:
-#             if interview.answers_given:
-#                 answers_given = json.loads(interview.answers_given)
-#         except (json.JSONDecodeError, TypeError):
-#             logger.warning(f"Could not parse answers_given for interview {interview_uuid}")
-        
-#         # Combine questions and answers for display
-#         qa_pairs = []
-#         for i in range(max(len(questions_asked), len(answers_given))):
-#             question = questions_asked[i] if i < len(questions_asked) else None
-#             answer = answers_given[i] if i < len(answers_given) else None
-            
-#             qa_pairs.append({
-#                 'question_number': i + 1,
-#                 'question': question['question'] if question else 'Question not recorded',
-#                 'answer': answer['answer'] if answer else 'Answer not recorded',
-#                 'question_timestamp': question.get('timestamp') if question else None,
-#                 'answer_timestamp': answer.get('timestamp') if answer else None
-#             })
-        
-#         # Calculate interview duration if available
-#         interview_duration = None
-#         if interview.completed_at and interview.created_at:
-#             duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
-#             interview_duration = f"{int(duration_seconds // 60)}m {int(duration_seconds % 60)}s"
-        
-#         context = {
-#             'interview': interview,
-#             'qa_pairs': qa_pairs,
-#             'interview_duration': interview_duration,
-#             'total_questions': len(questions_asked),
-#             'total_answers': len(answers_given),
-#         }
-        
-#         return render(request, 'jobapp/interview_results.html', context)
-        
-#     except Exception as e:
-#         logger.error(f"Error displaying interview results for {interview_uuid}: {e}")
-#         messages.error(request, 'Could not load interview results. Please try again.')
-#         return redirect('recruiter_dashboard')
+
 
 
 #interview results view 

@@ -11,24 +11,7 @@ from .models import Application, Interview, Profile
 User = get_user_model()
 
 
-# 1 . Registration  Email - TEMPORARILY DISABLED
 
-# @receiver(post_save, sender = User)
-# def send_registration_email(sender , instance , created, **kwargs):
-#     if created:
-#         try:
-#             send_mail(
-#                 subject="Welcome to Job Portal!",
-#                 message="Hi {}, thanks for registering.".format(instance.username),
-#                 from_email=settings.DEFAULT_FROM_EMAIL,
-#                 recipient_list=[instance.email],
-#                 fail_silently=True
-#             )
-#         except Exception as e:
-#             import logging
-#             logger = logging.getLogger(__name__)
-#             logger.warning(f"Failed to send registration email to {instance.email}: {str(e)}")
-        
         
         
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)

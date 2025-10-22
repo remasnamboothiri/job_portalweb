@@ -23,22 +23,29 @@ except ImportError:
 # Choose between console (for testing) and SMTP (for production)
 
 # For testing - emails will be printed to console/logs
-if config('USE_CONSOLE_EMAIL', default=True, cast=bool):
+if config('USE_CONSOLE_EMAIL', default=False, cast=bool):
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'noreply@jobportal.com'
 else:
     # For production - real email sending via SMTP
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
     EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=config('EMAIL_HOST_USER', default='noreply@jobportal.com'))
     
-    # Additional SMTP settings for better reliability
-    EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-    EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
+    # If no SMTP credentials are provided, use console backend as fallback
+    if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        DEFAULT_FROM_EMAIL = 'noreply@jobportal.com'
+    else:
+        # Use SMTP only if credentials are provided
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+        EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+        EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+        DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+        
+        # Additional SMTP settings for better reliability
+        EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+        EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
     
 # Fallback settings
 if not DEFAULT_FROM_EMAIL:

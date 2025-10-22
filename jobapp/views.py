@@ -1020,7 +1020,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 'conversation_history': [],
                 'started_at': timezone.now().isoformat(),
                 'interview_completed': False,
-                'interview_duration_minutes': 15  # 15-minute interview
+                'interview_duration_minutes': interview.interview_duration_minutes or 15  # Use actual duration or default to 15
             }
             request.session.modified = True
         else:

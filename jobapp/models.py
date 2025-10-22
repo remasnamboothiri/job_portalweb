@@ -314,6 +314,39 @@ class Interview(models.Model):
         self.completed_at = timezone.now()
         self.save()
     
+    @property
+    def is_expired(self):
+        """Check if interview deadline has passed"""
+        if not self.scheduled_at:
+            return False
+        return timezone.now() > self.scheduled_at
+    
+    @property
+    def is_accessible(self):
+        """Check if interview can still be accessed by candidate"""
+        # Interview is not accessible if:
+        # 1. It's already completed, OR
+        # 2. The deadline has passed
+        return not (self.is_completed or self.is_expired)
+    
+    def get_status_for_recruiter(self):
+        """Get status display for recruiter dashboard"""
+        if self.is_completed:
+            return 'Completed'
+        elif self.is_expired:
+            return 'Expired'
+        else:
+            return 'Active'
+    
+    def get_status_color_class(self):
+        """Get Bootstrap color class for status badge"""
+        if self.is_completed:
+            return 'bg-success'  # Green for completed
+        elif self.is_expired:
+            return 'bg-danger'   # Red for expired
+        else:
+            return 'bg-primary'  # Blue for active
+    
     def __str__(self):
         return f"Interview for {self.job.title} - {self.candidate_name}"
 

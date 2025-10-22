@@ -51,6 +51,7 @@ from django.views.static import serve
 
 from django.core.mail import send_mail
 from .email_utils import send_interview_link_email, test_email_configuration, get_email_settings_info
+from django.core.mail import send_mail
 
 
 from django.db import connection, transaction
@@ -65,6 +66,65 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+
+
+def send_interview_status_email(interview, status_type):
+    """Send email notification for interview status changes"""
+    try:
+        if status_type == 'expired':
+            subject = f'Interview Deadline Passed - {interview.job.title}'
+            message = f"""Dear {interview.candidate_name},
+
+The deadline for your interview for the position of {interview.job.title} at {interview.job.company} has passed.
+
+If you still wish to be considered for this position, please contact our HR team directly:
+
+Email: hr@{interview.job.company.lower().replace(' ', '')}.com
+Phone: +1-555-0123
+
+Thank you for your interest in our company.
+
+Best regards,
+HR Team
+{interview.job.company}"""
+        
+        elif status_type == 'completed':
+            subject = f'Interview Completed - {interview.job.title}'
+            message = f"""Dear {interview.candidate_name},
+
+Thank you for completing your interview for the position of {interview.job.title} at {interview.job.company}.
+
+Your interview has been successfully recorded and our team will review your responses. We will contact you with the next steps within 3-5 business days.
+
+For any questions, please contact our HR team:
+
+Email: hr@{interview.job.company.lower().replace(' ', '')}.com
+Phone: +1-555-0123
+
+Thank you for your time and interest in our company.
+
+Best regards,
+HR Team
+{interview.job.company}"""
+        
+        else:
+            return False
+        
+        # Send the email
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [interview.candidate_email],
+            fail_silently=True  # Don't break the system if email fails
+        )
+        
+        logger.info(f"Status email sent to {interview.candidate_email} for interview {interview.uuid} - Type: {status_type}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send status email for interview {interview.uuid}: {e}")
+        return False
 
 
 #for Ai interview
@@ -925,6 +985,37 @@ def interview_ready(request, interview_uuid):
         # Get the interview record
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
+        # Check if interview is completed
+        if interview.is_completed:
+            # Send completion email if not sent already
+            send_interview_status_email(interview, 'completed')
+            return HttpResponse(
+                f'<div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">'
+                f'<h2>Interview Already Completed</h2>'
+                f'<p>Dear {interview.candidate_name},</p>'
+                f'<p>You have already completed your interview for <strong>{interview.job.title}</strong> at <strong>{interview.job.company}</strong>.</p>'
+                f'<p>Our team will review your responses and contact you with the next steps within 3-5 business days.</p>'
+                f'<p>An email confirmation has been sent to <strong>{interview.candidate_email}</strong>.</p>'
+                f'<p>Thank you for your time and interest in our company.</p>'
+                f'</div>'
+            )
+        
+        # Check if interview deadline has passed
+        if interview.is_expired:
+            # Send expiration email
+            send_interview_status_email(interview, 'expired')
+            return HttpResponse(
+                f'<div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">'
+                f'<h2>Interview Deadline Passed</h2>'
+                f'<p>Dear {interview.candidate_name},</p>'
+                f'<p>The deadline for your interview for <strong>{interview.job.title}</strong> at <strong>{interview.job.company}</strong> has passed.</p>'
+                f'<p>The interview was scheduled to be completed by: <strong>{interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}</strong></p>'
+                f'<p>If you still wish to be considered for this position, please contact our HR team directly.</p>'
+                f'<p>An email with contact information has been sent to <strong>{interview.candidate_email}</strong>.</p>'
+                f'</div>'
+            )
+        
+        # Interview is accessible - show normal ready page
         return render(request, 'jobapp/interview_ready.html', {
             'interview': interview,
         })
@@ -949,6 +1040,25 @@ def start_interview_by_uuid(request, interview_uuid):
         # Get the interview record
         interview = get_object_or_404(Interview, uuid=interview_uuid)
         
+        # Check if interview is accessible (not expired or completed)
+        if not interview.is_accessible:
+            if interview.is_completed:
+                send_interview_status_email(interview, 'completed')
+                return JsonResponse({
+                    'error': 'Interview already completed',
+                    'message': 'This interview has already been completed. An email confirmation has been sent.',
+                    'redirect': True
+                })
+            elif interview.is_expired:
+                send_interview_status_email(interview, 'expired')
+                return JsonResponse({
+                    'error': 'Interview deadline passed',
+                    'message': 'The deadline for this interview has passed. Please contact HR for further assistance.',
+                    'redirect': True
+                })
+        
+        
+        # Interview is accessible - proceed with normal flow
         # Handle both registered and unregistered candidates
         if interview.is_registered_candidate:
             candidate_name = interview.candidate.get_full_name() or interview.candidate.username
@@ -3210,6 +3320,14 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
             interview.refresh_from_db()
             if interview.overall_score is not None:
                 logger.info(f"✅ VERIFICATION PASSED: Results confirmed in database")
+                
+                # Send completion email automatically
+                try:
+                    send_interview_status_email(interview, 'completed')
+                    logger.info(f"✅ Completion email sent for interview {interview.uuid}")
+                except Exception as email_error:
+                    logger.error(f"❌ Failed to send completion email: {email_error}")
+                
                 return True
             else:
                 logger.error(f"❌ VERIFICATION FAILED: Results not found in database after save")

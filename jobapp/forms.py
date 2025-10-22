@@ -202,56 +202,7 @@ class ApplicationForm(forms.ModelForm):
         
         
         
-#interview form
-# class ScheduleInterviewForm(forms.ModelForm):
-#     interview_link = forms.URLField(
-#         required=False,
-#         help_text='Enter Google Meet, Zoom, or any video call link',
-#         widget=forms.URLInput(attrs={
-#             'class': 'form-control',
-#             'placeholder': 'https://meet.google.com/abc-defg-hij or https://zoom.us/j/123456789'
-#         })
-#     )
-    
-#     class Meta:
-#         model = Interview
-#         fields = [ 'job', 'candidate_name', 'candidate_email', 'scheduled_at', 'link']
-#         widgets = {
-#             'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-#             'job': forms.Select(attrs={'class': 'form-control'}),
-#             'candidate_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter candidate full name'}),
-#             'candidate_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'candidate@example.com'}),
-#         }
-#         labels = {
-#             'job': 'Job Position',
-#             'candidate_name': 'Candidate Name',
-#             'candidate_email': 'Candidate Email',
-#             'scheduled_at': 'Interview Date & Time',
-#             'link': 'Interview Link',
-#         }
-    
-#     def __init__(self, *args, **kwargs):
-#         user = kwargs.pop('user', None)
-#         super().__init__(*args, **kwargs)
-        
-#         # If user is provided, filter job_position to only show jobs posted by this user
-#         if user and hasattr(user, 'is_recruiter') and user.is_recruiter:
-#             self.fields['job'].queryset = Job.objects.filter(posted_by=user)
-        
-#         # Make job_position field read-only if it's already set in initial data
-#         if self.initial.get('job'):
-#             self.fields['job'].widget.attrs['readonly'] = True
-    
-#     def save(self, commit=True):
-#         interview = super().save(commit=False)
-        
-#         # If no custom link provided, generate a default one
-#         if not interview.link:
-#             interview.link = f"https://meet.google.com/{interview.interview_id or 'generated-link'}"
-        
-#         if commit:
-#             interview.save()
-#         return interview
+
         
         
         
@@ -351,7 +302,7 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
             'class': 'form-control',
             'required': True
         }),
-        label='Interview Date & Time',
+        label='Interview deadline',
         required=True,
         help_text='Select the date and time for the interview'
     )

@@ -326,7 +326,7 @@
                 
                 <!-- NEW: Timer moved here, positioned on top-right of video -->
                 <div class="timer-overlay">
-                    <span id="timer">15:00</span>
+                    <span id="timer">{{ interview.interview_duration_minutes|default:"15" }}:00</span>
                 </div>
             </div>
         </div>

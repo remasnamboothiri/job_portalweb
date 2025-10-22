@@ -357,6 +357,7 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
     )
     interview_duration_minutes = forms.ChoiceField(
         choices=[
+            (5, '5 minutes'),
             (10, '10 minutes'),
             (15, '15 minutes'),
             (20, '20 minutes'),

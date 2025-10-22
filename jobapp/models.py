@@ -102,7 +102,7 @@ class Job(models.Model):
     interview_duration = models.CharField(
         max_length=20,
         choices=[
-            ('5',  '5 minites'),
+            ('5', '5 minutes'),
             ('10', '10 minutes'),
             ('15', '15 minutes'),
             ('20', '20 minutes'),
@@ -225,6 +225,7 @@ class Interview(models.Model):
     started_at = models.DateTimeField(blank=True, null=True, help_text="When the interview session actually started")
     interview_duration_minutes = models.IntegerField(
         choices=[
+            (5, '5 minutes'),
             (10, '10 minutes'),
             (15, '15 minutes'),
             (20, '20 minutes'),

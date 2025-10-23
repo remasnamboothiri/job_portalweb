@@ -336,8 +336,11 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-        # ElevenLabs TTS Configuration
-ELEVENLABS_API_KEY = config('ELEVENLABS_API_KEY', default='')
+        # New TTS API Configuration
+NEW_TTS_API_URL = config('NEW_TTS_API_URL', default='')
+NEW_TTS_API_KEY = config('NEW_TTS_API_KEY', default='')
+NEW_TTS_VOICE_ID = config('NEW_TTS_VOICE_ID', default='')
+NEW_TTS_MODEL_ID = config('NEW_TTS_MODEL_ID', default='')
 
         # COMMENTED OUT - RunPod TTS Configuration (replaced with ElevenLabs)
         # RUNPOD_API_KEY = config('RUNPOD_API_KEY', default='')

@@ -1,5 +1,5 @@
 """
-TTS.PY - Configured specifically for Monika Sogam voice (EaBs7G1VibMrNAuz2Na7)
+TTS.PY - Configured for Daisy Studious voice using new TTS API
 """
 import requests
 import os
@@ -12,160 +12,129 @@ from django.utils import timezone
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# ElevenLabs TTS Configuration
-ELEVENLABS_API_KEY = getattr(settings, 'ELEVENLABS_API_KEY', '') or os.environ.get('ELEVENLABS_API_KEY', '')
-if ELEVENLABS_API_KEY:
-    ELEVENLABS_API_KEY = ELEVENLABS_API_KEY.strip()
+# New TTS API Configuration
+NEW_TTS_API_KEY = getattr(settings, 'NEW_TTS_API_KEY', '') or os.environ.get('NEW_TTS_API_KEY', '')
+NEW_TTS_API_URL = getattr(settings, 'NEW_TTS_API_URL', '') or os.environ.get('NEW_TTS_API_URL', '')
+NEW_TTS_VOICE_ID = getattr(settings, 'NEW_TTS_VOICE_ID', '') or os.environ.get('NEW_TTS_VOICE_ID', '')
+NEW_TTS_MODEL_ID = getattr(settings, 'NEW_TTS_MODEL_ID', '') or os.environ.get('NEW_TTS_MODEL_ID', '')
 
-ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
+if NEW_TTS_API_KEY:
+    NEW_TTS_API_KEY = NEW_TTS_API_KEY.strip()
 
-# YOUR SPECIFIC VOICE CONFIGURATION - Monika Sogam Only
-MONIKA_VOICE_ID = "EaBs7G1VibMrNAuz2Na7"
-MONIKA_VOICE_NAME = "Monika Sogam - Natural Conversations"
+# YOUR SPECIFIC VOICE CONFIGURATION - Daisy Studious Only
+DAISY_VOICE_ID = NEW_TTS_VOICE_ID or "Daisy Studious"
+DAISY_VOICE_NAME = "Daisy Studious - Natural Conversations"
 
-# All voice requests will use Monika Sogam
+# All voice requests will use Daisy Studious
 VOICE_OPTIONS = {
     "female_interview": {
-        "voice_id": MONIKA_VOICE_ID,
-        "name": MONIKA_VOICE_NAME,
-        "model": "eleven_multilingual_v2"
+        "voice_id": DAISY_VOICE_ID,
+        "name": DAISY_VOICE_NAME,
+        "model": NEW_TTS_MODEL_ID or "coqui"
     },
     "female_natural": {
-        "voice_id": MONIKA_VOICE_ID,
-        "name": MONIKA_VOICE_NAME,
-        "model": "eleven_multilingual_v2"
+        "voice_id": DAISY_VOICE_ID,
+        "name": DAISY_VOICE_NAME,
+        "model": NEW_TTS_MODEL_ID or "coqui"
     },
     "female_professional": {
-        "voice_id": MONIKA_VOICE_ID,
-        "name": MONIKA_VOICE_NAME,
-        "model": "eleven_multilingual_v2"
+        "voice_id": DAISY_VOICE_ID,
+        "name": DAISY_VOICE_NAME,
+        "model": NEW_TTS_MODEL_ID or "coqui"
     },
     "default": {
-        "voice_id": MONIKA_VOICE_ID,
-        "name": MONIKA_VOICE_NAME,
-        "model": "eleven_multilingual_v2"
+        "voice_id": DAISY_VOICE_ID,
+        "name": DAISY_VOICE_NAME,
+        "model": NEW_TTS_MODEL_ID or "coqui"
     }
 }
 
 def check_elevenlabs_status():
-    """Check if ElevenLabs API is working with Monika voice access"""
-    if not ELEVENLABS_API_KEY:
-        return False, "ElevenLabs API key not configured"
+    """Check if new TTS API is working with Daisy voice access"""
+    if not NEW_TTS_API_KEY:
+        return False, "New TTS API key not configured"
     
-    if len(ELEVENLABS_API_KEY) < 20:
-        return False, "ElevenLabs API key appears invalid (too short)"
+    if len(NEW_TTS_API_KEY) < 20:
+        return False, "New TTS API key appears invalid (too short)"
+    
+    if not NEW_TTS_API_URL:
+        return False, "New TTS API URL not configured"
     
     try:
         headers = {
-            'xi-api-key': ELEVENLABS_API_KEY,
+            'Authorization': f'Bearer {NEW_TTS_API_KEY}',
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
         
-        logger.info("Testing ElevenLabs API connection...")
+        logger.info("Testing new TTS API connection...")
         
-        # Test user endpoint first
-        response = requests.get(
-            "https://api.elevenlabs.io/v1/user", 
-            headers=headers, 
-            timeout=10
-        )
+        # Test API endpoint
+        test_url = f"{NEW_TTS_API_URL.rstrip('/')}/health"
+        try:
+            response = requests.get(test_url, headers=headers, timeout=10)
+            logger.info(f"New TTS API health check response: {response.status_code}")
+        except:
+            # If health endpoint doesn't exist, that's okay
+            logger.info("Health endpoint not available, proceeding with main API test")
         
-        logger.info(f"ElevenLabs API response: {response.status_code}")
+        # Test with a simple TTS request
+        test_payload = {
+            "text": "Hello, this is a test.",
+            "voice_id": DAISY_VOICE_ID,
+            "model_id": NEW_TTS_MODEL_ID or "coqui"
+        }
+        
+        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
+        response = requests.post(tts_url, json=test_payload, headers=headers, timeout=15)
+        
+        logger.info(f"New TTS API test response: {response.status_code}")
         
         if response.status_code == 200:
-            try:
-                user_data = response.json()
-                subscription = user_data.get('subscription', {})
-                tier = subscription.get('tier', 'free')
-                character_count = user_data.get('character_count', 0)
-                character_limit = user_data.get('character_limit', 0)
-                
-                logger.info(f"ElevenLabs account - Tier: {tier}, Characters used: {character_count}/{character_limit}")
-                
-                if tier == 'free' and character_count >= character_limit:
-                    return False, f"Free tier limit exceeded ({character_count}/{character_limit}) - upgrade required"
-                
-                # Test if Monika voice is accessible
-                voice_response = requests.get(
-                    f"https://api.elevenlabs.io/v1/voices/{MONIKA_VOICE_ID}",
-                    headers=headers,
-                    timeout=5
-                )
-                
-                if voice_response.status_code == 200:
-                    voice_data = voice_response.json()
-                    voice_name = voice_data.get('name', 'Unknown')
-                    logger.info(f"Monika voice accessible: {voice_name}")
-                    return True, f"API working - {tier} tier, Monika voice accessible ({character_count}/{character_limit} chars used)"
-                elif voice_response.status_code == 404:
-                    return False, f"Monika voice (ID: {MONIKA_VOICE_ID}) not found in your account"
-                else:
-                    logger.warning(f"Voice check failed: {voice_response.status_code}")
-                    return True, f"API working - {tier} tier, but couldn't verify Monika voice access"
-                
-            except Exception as e:
-                logger.error(f"Failed to parse API response: {e}")
-                return True, "API responding but couldn't get account details"
-        
+            logger.info(f"Daisy voice accessible via new TTS API")
+            return True, f"API working - Daisy voice accessible"
         elif response.status_code == 401:
-            try:
-                error_data = response.json()
-                error_detail = error_data.get('detail', {})
-                error_msg = error_detail.get('message', 'Authentication failed')
-                
-                logger.error(f"ElevenLabs authentication error: {error_msg}")
-                
-                if 'unusual activity' in error_msg.lower():
-                    return False, "Account flagged for unusual activity - upgrade to paid plan required"
-                elif 'invalid' in error_msg.lower():
-                    return False, "Invalid API key - get new key from ElevenLabs dashboard"
-                else:
-                    return False, f"Authentication failed: {error_msg}"
-                    
-            except:
-                return False, "Authentication failed - API key invalid"
-        
-        elif response.status_code == 429:
-            return False, "Rate limit exceeded - wait before retrying"
-        
+            return False, "Authentication failed - check API key"
+        elif response.status_code == 404:
+            return False, f"Daisy voice (ID: {DAISY_VOICE_ID}) not found"
         else:
+            logger.warning(f"API test failed: {response.status_code}")
             return False, f"API error: HTTP {response.status_code}"
             
     except requests.exceptions.Timeout:
-        logger.error("ElevenLabs API timeout")
+        logger.error("New TTS API timeout")
         return False, "API request timed out"
     except requests.exceptions.ConnectionError:
-        logger.error("ElevenLabs connection error") 
-        return False, "Cannot connect to ElevenLabs servers"
+        logger.error("New TTS API connection error") 
+        return False, "Cannot connect to TTS API servers"
     except Exception as e:
-        logger.error(f"ElevenLabs status check failed: {e}")
+        logger.error(f"New TTS API status check failed: {e}")
         return False, f"Connection error: {str(e)[:100]}"
 
 def generate_elevenlabs_tts(text, voice="female_interview"):
-    """Generate TTS using ElevenLabs with Monika Sogam voice only"""
+    """Generate TTS using new API with Daisy Studious voice only"""
     try:
-        if not ELEVENLABS_API_KEY:
-            logger.warning("ElevenLabs API key not configured")
-            return None
+        if not NEW_TTS_API_KEY or not NEW_TTS_API_URL:
+            logger.warning("New TTS API not configured, falling back to Google TTS")
+            return generate_google_tts(text)
         
-        # Always use Monika voice regardless of voice parameter
+        # Always use Daisy voice regardless of voice parameter
         voice_config = VOICE_OPTIONS.get(voice, VOICE_OPTIONS["default"])
-        voice_id = MONIKA_VOICE_ID  # Force Monika voice
+        voice_id = DAISY_VOICE_ID  # Force Daisy voice
         model_id = voice_config["model"]
         
-        logger.info(f"Generating TTS with Monika Sogam voice (ID: {voice_id})")
+        logger.info(f"Generating TTS with Daisy Studious voice (ID: {voice_id})")
         logger.info(f"Text length: {len(text)} characters")
         
         # Clean and validate text
         clean_text = text.strip()
-        if len(clean_text) > 2000:  # ElevenLabs character limit for some tiers
+        if len(clean_text) > 2000:  # Reasonable character limit
             clean_text = clean_text[:1997] + "..."
             logger.info(f"Text truncated to {len(clean_text)} characters")
         
         # Create filename for caching
-        text_hash = hashlib.md5(f"{clean_text}_monika_sogam".encode()).hexdigest()[:10]
-        filename = f"monika_{text_hash}.mp3"
+        text_hash = hashlib.md5(f"{clean_text}_daisy_studious".encode()).hexdigest()[:10]
+        filename = f"daisy_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         os.makedirs(tts_dir, exist_ok=True)
         filepath = os.path.join(tts_dir, filename)
@@ -173,31 +142,31 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         # Check cache first
         if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
             media_url = f"/media/tts/{filename}"
-            logger.info(f"Using cached Monika voice TTS: {media_url}")
+            logger.info(f"Using cached Daisy voice TTS: {media_url}")
             return media_url
         
         # Prepare API request
-        url = f"{ELEVENLABS_API_URL}/{voice_id}"
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
-            "xi-api-key": ELEVENLABS_API_KEY
+            "Authorization": f"Bearer {NEW_TTS_API_KEY}"
         }
         
-        # Optimized settings for Monika's natural conversation voice
+        # Payload for new TTS API
         payload = {
             "text": clean_text,
+            "voice_id": voice_id,
             "model_id": model_id,
-            "voice_settings": {
-                "stability": 0.71,           # Good stability for natural speech
-                "similarity_boost": 0.5,     # Maintain Monika's voice characteristics  
-                "style": 0.0,               # Neutral style
-                "use_speaker_boost": True    # Enhanced clarity for interviews
+            "settings": {
+                "speed": 1.0,
+                "pitch": 1.0,
+                "volume": 1.0
             }
         }
         
-        logger.info(f"Making request to ElevenLabs API: {url}")
-        logger.info(f"Using model: {model_id} for Monika voice")
+        logger.info(f"Making request to new TTS API: {url}")
+        logger.info(f"Using model: {model_id} for Daisy voice")
         
         # Make the API request with retry
         max_retries = 2
@@ -205,7 +174,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             try:
                 response = requests.post(url, json=payload, headers=headers, timeout=25)
                 
-                logger.info(f"ElevenLabs response: {response.status_code} (attempt {attempt + 1})")
+                logger.info(f"New TTS API response: {response.status_code} (attempt {attempt + 1})")
                 
                 if response.status_code == 200:
                     # Save the audio file
@@ -216,348 +185,161 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
                     if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
                         media_url = f"/media/tts/{filename}"
                         file_size = os.path.getsize(filepath)
-                        logger.info(f"SUCCESS: Monika voice TTS generated: {media_url} ({file_size} bytes)")
+                        logger.info(f"Daisy TTS generated successfully: {media_url} ({file_size} bytes)")
                         return media_url
                     else:
                         logger.error("Generated audio file is too small or empty")
                         if os.path.exists(filepath):
                             os.remove(filepath)
-                
+                        
                 elif response.status_code == 401:
-                    try:
-                        error_data = response.json()
-                        error_msg = error_data.get('detail', {}).get('message', 'Authentication failed')
-                        logger.error(f"Authentication error: {error_msg}")
-                        
-                        if 'unusual activity' in error_msg.lower():
-                            logger.error("CRITICAL: Account flagged - upgrade to paid plan required")
-                        
-                    except:
-                        logger.error("Authentication failed - API key invalid")
-                    break  # Don't retry auth errors
-                
-                elif response.status_code == 404:
-                    logger.error(f"Monika voice not found - check if voice ID {MONIKA_VOICE_ID} is correct")
+                    logger.error("Authentication failed - check API key")
                     break
-                    
-                elif response.status_code == 422:
-                    try:
-                        error_data = response.json()
-                        logger.error(f"Invalid request for Monika voice: {error_data}")
-                    except:
-                        logger.error(f"Invalid request: {response.text}")
-                    break
-                
                 elif response.status_code == 429:
+                    logger.warning(f"Rate limit hit, retrying in {2 ** attempt} seconds...")
                     if attempt < max_retries - 1:
-                        logger.warning("Rate limited, retrying in 2 seconds...")
                         import time
-                        time.sleep(2)
+                        time.sleep(2 ** attempt)
                         continue
-                    else:
-                        logger.error("Rate limit exceeded after retries")
-                        break
-                
                 else:
-                    logger.error(f"ElevenLabs API error {response.status_code}: {response.text[:200]}")
-                    if attempt == max_retries - 1:
-                        break
-                
+                    logger.error(f"API error {response.status_code}: {response.text[:200]}")
+                    
             except requests.exceptions.Timeout:
                 logger.warning(f"Request timeout (attempt {attempt + 1})")
-                if attempt == max_retries - 1:
-                    logger.error("Final timeout - using fallback")
+                if attempt < max_retries - 1:
+                    continue
             except requests.exceptions.RequestException as e:
-                logger.error(f"Request error: {e}")
-                break
+                logger.error(f"Request failed (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    continue
         
-        return None
+        # If all attempts failed, fall back to Google TTS
+        logger.warning("New TTS API failed, falling back to Google TTS")
+        return generate_google_tts(text)
         
     except Exception as e:
-        logger.error(f"Monika voice TTS generation failed: {e}")
-        import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        return None
+        logger.error(f"Unexpected error in Daisy TTS generation: {e}")
+        return generate_google_tts(text)
 
-def generate_gtts_fallback(text):
-    """Generate audio using Google TTS as fallback when Monika voice fails"""
+def generate_google_tts(text, voice="female_interview"):
+    """Fallback Google TTS generation"""
     try:
-        logger.info(f"Using gTTS fallback (Monika voice unavailable): '{text[:50]}...'")
+        logger.info("Using Google TTS as fallback")
         
+        # Clean text
         clean_text = text.strip()
-        if not clean_text:
-            logger.error("Empty text provided to gTTS")
-            return None
-        
         if len(clean_text) > 1000:
             clean_text = clean_text[:997] + "..."
         
         # Create filename
-        text_hash = hashlib.md5(clean_text.encode()).hexdigest()[:8]
-        filename = f"gtts_fallback_{text_hash}.mp3"
+        text_hash = hashlib.md5(f"{clean_text}_google".encode()).hexdigest()[:10]
+        filename = f"gtts_{text_hash}.mp3"
         tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
         os.makedirs(tts_dir, exist_ok=True)
         filepath = os.path.join(tts_dir, filename)
         
         # Check cache
-        if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
             media_url = f"/media/tts/{filename}"
-            logger.info(f"Using cached gTTS fallback: {media_url}")
+            logger.info(f"Using cached Google TTS: {media_url}")
             return media_url
         
-        # Generate gTTS with retry
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"Generating gTTS fallback (attempt {attempt + 1})...")
-                tts = gTTS(text=clean_text, lang='en', slow=False, tld='com')
-                tts.save(filepath)
-                
-                # Verify file
-                if os.path.exists(filepath) and os.path.getsize(filepath) > 100:
-                    media_url = f"/media/tts/{filename}"
-                    file_size = os.path.getsize(filepath)
-                    logger.info(f"gTTS fallback success: {media_url} ({file_size} bytes)")
-                    return media_url
-                else:
-                    logger.warning(f"gTTS generated small file (attempt {attempt + 1})")
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                
-            except Exception as e:
-                logger.warning(f"gTTS attempt {attempt + 1} failed: {e}")
-                if os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                    except:
-                        pass
-                
-                if attempt == max_retries - 1:
-                    logger.error("All gTTS attempts failed")
-                    return None
-                
-                import time
-                time.sleep(1)
+        # Generate with Google TTS
+        tts = gTTS(text=clean_text, lang='en', slow=False)
+        tts.save(filepath)
         
-        return None
-        
-    except Exception as e:
-        logger.error(f"gTTS fallback completely failed: {e}")
-        return None
-
-def generate_tts(text, model="female_interview"):
-    """Main TTS function - Always tries Monika voice first, fallback to gTTS"""
-    if not text or not text.strip():
-        logger.error("Empty text provided to generate_tts")
-        return None
-    
-    clean_text = text.strip()
-    if len(clean_text) > 3000:
-        clean_text = clean_text[:2997] + "..."
-    
-    logger.info(f"TTS requested for Monika voice: '{clean_text[:50]}...'")
-    
-    # Always try Monika voice first if API key is configured
-    if ELEVENLABS_API_KEY and len(ELEVENLABS_API_KEY) > 20:
-        logger.info("Attempting ElevenLabs with Monika Sogam voice...")
-        
-        # Quick API status check
-        api_status, api_message = check_elevenlabs_status()
-        if api_status:
-            logger.info(f"ElevenLabs API available: {api_message}")
-            monika_result = generate_elevenlabs_tts(clean_text, model)
-            if monika_result:
-                logger.info(f"SUCCESS: Monika voice generated: {monika_result}")
-                return monika_result
-            else:
-                logger.warning("Monika voice generation failed, using gTTS fallback")
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+            media_url = f"/media/tts/{filename}"
+            logger.info(f"Google TTS generated: {media_url}")
+            return media_url
         else:
-            logger.warning(f"ElevenLabs API not available: {api_message}")
-            if "upgrade" in api_message.lower() or "flagged" in api_message.lower():
-                logger.error("IMPORTANT: Your ElevenLabs account needs attention - check the message above")
-    else:
-        logger.warning("ElevenLabs API key not configured properly")
-    
-    # Fallback to gTTS
-    logger.info("Using gTTS fallback due to ElevenLabs issues")
-    fallback_result = generate_gtts_fallback(clean_text)
-    if fallback_result:
-        logger.info(f"Fallback successful: {fallback_result}")
-        return fallback_result
-    else:
-        logger.error("Both Monika voice and gTTS fallback failed")
-        return None
-
-def estimate_audio_duration(text, words_per_minute=150):
-    """Estimate audio duration for Monika's natural speaking pace"""
-    if not text or not text.strip():
-        return 3.0
-    
-    word_count = len(text.split())
-    # Monika speaks naturally, so use realistic pace
-    duration_seconds = (word_count / words_per_minute) * 60
-    # Add padding for natural pauses
-    duration_seconds *= 1.15
-    # Ensure reasonable bounds
-    return max(2.0, min(duration_seconds, 25.0))
-
-def get_audio_duration(audio_path):
-    """Get actual audio duration from file"""
-    try:
-        if not os.path.exists(audio_path):
-            logger.error(f"Audio file not found: {audio_path}")
+            logger.error("Google TTS generation failed")
             return None
-        
-        file_size = os.path.getsize(audio_path)
-        if file_size < 100:
-            logger.error(f"Audio file too small: {file_size} bytes")
-            return None
-        
-        # Try to get duration using mutagen if available
-        try:
-            from mutagen.mp3 import MP3
-            audio = MP3(audio_path)
-            duration = audio.info.length
-            logger.info(f"Actual Monika voice duration: {duration:.2f}s")
-            return duration
-        except ImportError:
-            logger.info("Mutagen not available, estimating duration")
-        except Exception as e:
-            logger.warning(f"Mutagen duration detection failed: {e}")
-        
-        # Fallback: estimate based on file size
-        estimated_duration = (file_size * 8) / (128 * 1024)
-        estimated_duration = max(2.0, min(estimated_duration, 25.0))
-        logger.info(f"Estimated Monika voice duration: {estimated_duration:.2f}s")
-        return estimated_duration
-        
+            
     except Exception as e:
-        logger.error(f"Error getting audio duration: {e}")
+        logger.error(f"Google TTS fallback failed: {e}")
         return None
 
-def check_tts_system():
-    """Comprehensive TTS system health check for Monika voice"""
+# Alias for backward compatibility
+def generate_tts(text, voice="female_interview"):
+    """Main TTS generation function - uses Daisy voice via new API"""
+    return generate_elevenlabs_tts(text, voice)
+
+# Test functions for the new API
+def test_daisy_voice_only():
+    """Test Daisy voice generation"""
+    test_text = "Hello! I'm Daisy Studious, your AI interviewer. Let's begin our conversation."
+    logger.info("Testing Daisy voice generation...")
+    
+    result = generate_elevenlabs_tts(test_text, "female_interview")
+    
+    if result:
+        logger.info(f"✅ Daisy voice test successful: {result}")
+        return True, result
+    else:
+        logger.error("❌ Daisy voice test failed")
+        return False, "Test failed"
+
+def test_daisy_direct_generation():
+    """Test direct Daisy voice generation without caching"""
+    test_text = "This is a direct test of the Daisy Studious voice using the new TTS API."
+    
+    if not NEW_TTS_API_KEY or not NEW_TTS_API_URL:
+        return False, "API not configured"
+    
     try:
-        import time
-        start_time = time.time()
-        
-        health_info = {
-            'timestamp': timezone.now().isoformat(),
-            'target_voice': MONIKA_VOICE_NAME,
-            'target_voice_id': MONIKA_VOICE_ID,
-            'media_root_exists': os.path.exists(settings.MEDIA_ROOT),
-            'tts_directory_exists': os.path.exists(os.path.join(settings.MEDIA_ROOT, 'tts')),
-            'tts_directory_writable': os.access(os.path.join(settings.MEDIA_ROOT, 'tts'), os.W_OK),
-            'elevenlabs_api_key_present': bool(ELEVENLABS_API_KEY),
-            'elevenlabs_api_key_length': len(ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else 0,
-            'elevenlabs_api_key_valid_format': len(ELEVENLABS_API_KEY) > 20 if ELEVENLABS_API_KEY else False,
-            'gtts_available': True,
-            'elevenlabs_status': None,
-            'elevenlabs_message': None,
-            'monika_voice_accessible': False,
-            'test_generation': False,
-            'test_service': None,
-            'test_duration': None
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json", 
+            "Authorization": f"Bearer {NEW_TTS_API_KEY}"
         }
         
-        # Create TTS directory if needed
-        tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
-        try:
+        payload = {
+            "text": test_text,
+            "voice_id": DAISY_VOICE_ID,
+            "model_id": NEW_TTS_MODEL_ID or "coqui"
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
+        
+        if response.status_code == 200:
+            # Save test file
+            test_filename = f"daisy_test_{timezone.now().strftime('%Y%m%d_%H%M%S')}.mp3"
+            tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
             os.makedirs(tts_dir, exist_ok=True)
-            health_info['tts_directory_created'] = True
-        except Exception as e:
-            health_info['tts_directory_created'] = False
-            health_info['tts_directory_error'] = str(e)
-        
-        # Check ElevenLabs status specifically for Monika voice
-        if ELEVENLABS_API_KEY:
-            api_status, api_message = check_elevenlabs_status()
-            health_info['elevenlabs_status'] = api_status
-            health_info['elevenlabs_message'] = api_message
+            test_filepath = os.path.join(tts_dir, test_filename)
             
-            if api_status and "Monika voice accessible" in api_message:
-                health_info['monika_voice_accessible'] = True
-        
-        # Test generation with Monika voice
-        test_text = f"Hello! This is {MONIKA_VOICE_NAME} speaking. I will be your AI interviewer today. Can you hear me clearly?"
-        logger.info(f"Testing TTS generation with Monika voice...")
-        
-        test_start = time.time()
-        test_result = generate_tts(test_text, "female_interview")
-        test_end = time.time()
-        
-        health_info['test_generation'] = bool(test_result)
-        health_info['test_duration'] = round(test_end - test_start, 2)
-        
-        if test_result:
-            if 'monika' in test_result:
-                health_info['test_service'] = 'elevenlabs_monika'
-                health_info['test_success_message'] = 'Monika voice working perfectly!'
-            elif 'gtts' in test_result:
-                health_info['test_service'] = 'gtts_fallback'
-                health_info['test_success_message'] = 'gTTS fallback working (Monika voice unavailable)'
-            else:
-                health_info['test_service'] = 'unknown_service'
+            with open(test_filepath, 'wb') as f:
+                f.write(response.content)
             
-            # Check file details
-            test_file_path = os.path.join(settings.BASE_DIR, test_result.lstrip('/'))
-            if os.path.exists(test_file_path):
-                health_info['test_file_size'] = os.path.getsize(test_file_path)
-                health_info['test_file_exists'] = True
+            if os.path.exists(test_filepath) and os.path.getsize(test_filepath) > 1000:
+                media_url = f"/media/tts/{test_filename}"
+                return True, media_url
             else:
-                health_info['test_file_exists'] = False
+                return False, "Generated file is empty"
         else:
-            health_info['test_service'] = 'failed'
-            health_info['test_error_message'] = 'Both Monika voice and fallback failed'
-        
-        health_info['total_check_duration'] = round(time.time() - start_time, 2)
-        
-        # Recommendations based on results
-        if health_info['monika_voice_accessible'] and health_info['test_service'] == 'elevenlabs_monika':
-            health_info['recommendation'] = 'PERFECT! Monika Sogam voice is working correctly!'
-        elif health_info['elevenlabs_status'] and not health_info['monika_voice_accessible']:
-            health_info['recommendation'] = 'ElevenLabs working but Monika voice may not be accessible. Check your voice library.'
-        elif not health_info['elevenlabs_status']:
-            if 'upgrade' in str(health_info['elevenlabs_message']).lower():
-                health_info['recommendation'] = 'UPGRADE REQUIRED: Your ElevenLabs account needs to be upgraded to access Monika voice.'
-            else:
-                health_info['recommendation'] = 'Get a new ElevenLabs API key to use Monika voice. Using gTTS fallback for now.'
-        elif health_info['test_service'] == 'gtts_fallback':
-            health_info['recommendation'] = 'Monika voice unavailable, using Google TTS fallback.'
-        else:
-            health_info['recommendation'] = 'Both TTS services failed. Check your configuration.'
-        
-        # Log results
-        logger.info("=== MONIKA VOICE TTS HEALTH CHECK ===")
-        logger.info(f"Target Voice: {MONIKA_VOICE_NAME} ({MONIKA_VOICE_ID})")
-        for key, value in health_info.items():
-            logger.info(f"   {key}: {value}")
-        logger.info("====================================")
-        
-        return health_info
-        
+            return False, f"API error: {response.status_code}"
+            
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        import traceback
-        logger.error(f"Health check traceback: {traceback.format_exc()}")
-        return {
-            'error': str(e), 
-            'test_generation': False,
-            'timestamp': timezone.now().isoformat(),
-            'target_voice': MONIKA_VOICE_NAME
-        }
+        return False, f"Test failed: {str(e)}"
 
-# Export all functions
-__all__ = [
-    'generate_tts',
-    'generate_elevenlabs_tts', 
-    'generate_gtts_fallback',
-    'check_tts_system',
-    'check_elevenlabs_status',
-    'estimate_audio_duration',
-    'get_audio_duration',
-    'MONIKA_VOICE_ID',
-    'MONIKA_VOICE_NAME'
-]
-
-
+def test_daisy_interview_simulation():
+    """Test Daisy voice with interview-style questions"""
+    questions = [
+        "Welcome to your AI interview. Please introduce yourself.",
+        "Can you tell me about your experience with Python programming?",
+        "What interests you most about this position?"
+    ]
+    
+    results = []
+    for i, question in enumerate(questions, 1):
+        logger.info(f"Testing question {i}: {question[:50]}...")
+        result = generate_elevenlabs_tts(question, "female_interview")
+        
+        if result:
+            results.append(f"Question {i}: ✅ {result}")
+        else:
+            results.append(f"Question {i}: ❌ Failed")
+    
+    return results

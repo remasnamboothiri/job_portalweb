@@ -62,7 +62,7 @@ def check_elevenlabs_status():
     
     try:
         headers = {
-            'Authorization': f'Bearer {NEW_TTS_API_KEY}',
+            'xi-api-key': NEW_TTS_API_KEY,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'User-Agent': 'Django-TTS-Client/1.0'
@@ -151,7 +151,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
-            "Authorization": f"Bearer {NEW_TTS_API_KEY}",
+            "xi-api-key": NEW_TTS_API_KEY,
             "User-Agent": "Django-TTS-Client/1.0"
         }
         
@@ -326,7 +326,7 @@ def test_daisy_direct_generation():
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
-            "Authorization": f"Bearer {NEW_TTS_API_KEY}",
+            "xi-api-key": NEW_TTS_API_KEY,
             "User-Agent": "Django-TTS-Client/1.0"
         }
         

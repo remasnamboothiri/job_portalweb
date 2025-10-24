@@ -85,7 +85,7 @@ def check_elevenlabs_status():
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
         
-        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/text_to_speech"
+        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
         response = requests.post(tts_url, json=test_payload, headers=headers, timeout=15)
         
         logger.info(f"New TTS API test response: {response.status_code}")
@@ -146,7 +146,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             return media_url
         
         # Prepare API request
-        url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
@@ -315,7 +315,7 @@ def test_daisy_direct_generation():
         return False, "API not configured"
     
     try:
-        url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # New TTS API Configuration
 NEW_TTS_API_KEY = getattr(settings, 'NEW_TTS_API_KEY', '') or os.environ.get('NEW_TTS_API_KEY', '')
-NEW_TTS_API_URL = "http://54.89.117.239"
+NEW_TTS_API_URL = "http://54.89.117.239/docs#"
 NEW_TTS_VOICE_ID = "Daisy Studious"
 NEW_TTS_MODEL_ID = "coqui"
 
@@ -70,7 +70,7 @@ def check_elevenlabs_status():
         logger.info("Testing new TTS API connection...")
         
         # Test API endpoint
-        test_url = f"{NEW_TTS_API_URL.rstrip('/')}/health"
+        test_url = f"{NEW_TTS_API_URL.rstrip('/')}/default/health_health_get"
         try:
             response = requests.get(test_url, headers=headers, timeout=10)
             logger.info(f"New TTS API health check response: {response.status_code}")
@@ -85,7 +85,7 @@ def check_elevenlabs_status():
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
         
-        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
+        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/default/text_to_speech_v1_text_to_speech_post"
         response = requests.post(tts_url, json=test_payload, headers=headers, timeout=15)
         
         logger.info(f"New TTS API test response: {response.status_code}")
@@ -146,7 +146,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             return media_url
         
         # Prepare API request
-        url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/default/text_to_speech_v1_text_to_speech_post"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
@@ -315,7 +315,7 @@ def test_daisy_direct_generation():
         return False, "API not configured"
     
     try:
-        url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
+        url = f"{NEW_TTS_API_URL.rstrip('/')}/default/text_to_speech_v1_text_to_speech_post"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 

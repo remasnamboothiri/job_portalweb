@@ -1,5 +1,5 @@
 """
-TTS.PY - Configured for Daisy Studious voice using new TTS API
+TTS.PY - Configured for Daisy Studious voice using new TTS API - FIXED VERSION
 """
 import requests
 import os
@@ -12,11 +12,11 @@ from django.utils import timezone
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# New TTS API Configuration
+# New TTS API Configuration - FIXED to read from settings properly
 NEW_TTS_API_KEY = getattr(settings, 'NEW_TTS_API_KEY', '') or os.environ.get('NEW_TTS_API_KEY', '')
-NEW_TTS_API_URL = "http://54.89.117.239"
-NEW_TTS_VOICE_ID = "Daisy Studious"
-NEW_TTS_MODEL_ID = "coqui"
+NEW_TTS_API_URL = getattr(settings, 'NEW_TTS_API_URL', '') or os.environ.get('NEW_TTS_API_URL', 'http://54.89.117.239')
+NEW_TTS_VOICE_ID = getattr(settings, 'NEW_TTS_VOICE_ID', '') or os.environ.get('NEW_TTS_VOICE_ID', 'Daisy Studious')
+NEW_TTS_MODEL_ID = getattr(settings, 'NEW_TTS_MODEL_ID', '') or os.environ.get('NEW_TTS_MODEL_ID', 'coqui')
 
 if NEW_TTS_API_KEY:
     NEW_TTS_API_KEY = NEW_TTS_API_KEY.strip()
@@ -64,7 +64,8 @@ def check_elevenlabs_status():
         headers = {
             'Authorization': f'Bearer {NEW_TTS_API_KEY}',
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': 'Django-TTS-Client/1.0'
         }
         
         logger.info("Testing new TTS API connection...")
@@ -112,7 +113,7 @@ def check_elevenlabs_status():
         return False, f"Connection error: {str(e)[:100]}"
 
 def generate_elevenlabs_tts(text, voice="female_interview"):
-    """Generate TTS using new API with Daisy Studious voice only"""
+    """Generate TTS using new API with Daisy Studious voice only - FIXED VERSION"""
     try:
         if not NEW_TTS_API_KEY or not NEW_TTS_API_URL:
             logger.warning("New TTS API not configured, falling back to Google TTS")
@@ -150,7 +151,8 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
-            "Authorization": f"Bearer {NEW_TTS_API_KEY}"
+            "Authorization": f"Bearer {NEW_TTS_API_KEY}",
+            "User-Agent": "Django-TTS-Client/1.0"
         }
         
         # Payload for new TTS API
@@ -167,6 +169,10 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         
         logger.info(f"Making request to new TTS API: {url}")
         logger.info(f"Using model: {model_id} for Daisy voice")
+        logger.info(f"API Key configured: {bool(NEW_TTS_API_KEY)}")
+        logger.info(f"API Key length: {len(NEW_TTS_API_KEY) if NEW_TTS_API_KEY else 0}")
+        if NEW_TTS_API_KEY:
+            logger.info(f"API Key preview: {NEW_TTS_API_KEY[:10]}...{NEW_TTS_API_KEY[-4:]}")
         
         # Make the API request with retry
         max_retries = 2
@@ -194,6 +200,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
                         
                 elif response.status_code == 401:
                     logger.error("Authentication failed - check API key")
+                    logger.error(f"Response text: {response.text}")
                     break
                 elif response.status_code == 429:
                     logger.warning(f"Rate limit hit, retrying in {2 ** attempt} seconds...")
@@ -319,7 +326,8 @@ def test_daisy_direct_generation():
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json", 
-            "Authorization": f"Bearer {NEW_TTS_API_KEY}"
+            "Authorization": f"Bearer {NEW_TTS_API_KEY}",
+            "User-Agent": "Django-TTS-Client/1.0"
         }
         
         payload = {

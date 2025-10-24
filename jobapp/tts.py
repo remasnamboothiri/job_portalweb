@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 # New TTS API Configuration
 NEW_TTS_API_KEY = getattr(settings, 'NEW_TTS_API_KEY', '') or os.environ.get('NEW_TTS_API_KEY', '')
-NEW_TTS_API_URL = getattr(settings, 'NEW_TTS_API_URL', '') or os.environ.get('NEW_TTS_API_URL', '')
-NEW_TTS_VOICE_ID = getattr(settings, 'NEW_TTS_VOICE_ID', '') or os.environ.get('NEW_TTS_VOICE_ID', '')
-NEW_TTS_MODEL_ID = getattr(settings, 'NEW_TTS_MODEL_ID', '') or os.environ.get('NEW_TTS_MODEL_ID', '')
+NEW_TTS_API_URL = "http://54.89.117.239"
+NEW_TTS_VOICE_ID = "Daisy Studious"
+NEW_TTS_MODEL_ID = "coqui"
 
 if NEW_TTS_API_KEY:
     NEW_TTS_API_KEY = NEW_TTS_API_KEY.strip()

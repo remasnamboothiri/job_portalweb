@@ -85,7 +85,7 @@ def check_elevenlabs_status():
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
         
-        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/generate-speech"
+        tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/text_to_speech"
         response = requests.post(tts_url, json=test_payload, headers=headers, timeout=15)
         
         logger.info(f"New TTS API test response: {response.status_code}")

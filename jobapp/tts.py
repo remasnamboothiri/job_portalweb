@@ -265,6 +265,33 @@ def generate_tts(text, voice="female_interview"):
     """Main TTS generation function - uses Daisy voice via new API"""
     return generate_elevenlabs_tts(text, voice)
 
+def estimate_audio_duration(text):
+    """Estimate audio duration based on text length"""
+    # Average speaking rate is about 150-160 words per minute
+    # Average word length is about 5 characters
+    # So roughly 750-800 characters per minute
+    words = len(text.split())
+    # Assume 150 words per minute speaking rate
+    duration_minutes = words / 150
+    duration_seconds = duration_minutes * 60
+    # Add some padding for natural pauses
+    duration_seconds = max(3.0, duration_seconds + 1.0)
+    return duration_seconds
+
+def get_audio_duration(file_path):
+    """Get actual audio duration from file (fallback to estimation)"""
+    try:
+        import os
+        if not os.path.exists(file_path):
+            return None
+        
+        # For now, return None to fall back to estimation
+        # In the future, you could add audio file analysis here
+        return None
+    except Exception as e:
+        logger.error(f"Error getting audio duration: {e}")
+        return None
+
 # Test functions for the new API
 def test_daisy_voice_only():
     """Test Daisy voice generation"""

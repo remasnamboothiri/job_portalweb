@@ -26,7 +26,7 @@ DAISY_VOICE_ID = NEW_TTS_VOICE_ID or "Daisy Studious"
 DAISY_VOICE_NAME = "Daisy Studious - Natural Conversations"
 
 # All voice requests will use Daisy Studious
-VOICE_OPTIONS = {
+VOICE_OPTIONS = {   
     "female_interview": {
         "voice_id": DAISY_VOICE_ID,
         "name": DAISY_VOICE_NAME,
@@ -48,7 +48,7 @@ VOICE_OPTIONS = {
         "model": NEW_TTS_MODEL_ID or "coqui"
     }
 }
-
+ 
 def check_elevenlabs_status():
     """Check if new TTS API is working with Daisy voice access"""
     if not NEW_TTS_API_KEY:

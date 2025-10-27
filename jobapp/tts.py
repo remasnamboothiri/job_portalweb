@@ -272,6 +272,10 @@ def generate_tts(text, voice="female_interview"):
     """Main TTS generation function - uses Daisy voice via new API"""
     return generate_elevenlabs_tts(text, voice)
 
+def generate_gtts_fallback(text):
+    """Direct Google TTS fallback function"""
+    return generate_google_tts(text)
+
 def estimate_audio_duration(text):
     """Estimate audio duration based on text length"""
     words = len(text.split())

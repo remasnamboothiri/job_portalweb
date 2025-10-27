@@ -1540,20 +1540,8 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                 
                 from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
                 
-                # Ensure consistent voice throughout interview
-                voice_preference = context.get('voice_service', None)
-                if voice_preference == 'gtts_only':
-                    # Force gTTS if already using it
-                    from jobapp.tts import generate_gtts_fallback
-                    audio_path = generate_gtts_fallback(ai_response)
-                else:
-                    audio_path = generate_tts(ai_response, "female_interview")
-                    
-                    # Track which service was used
-                    if audio_path and 'gtts' in audio_path:
-                        context['voice_service'] = 'gtts_only'
-                        request.session[session_key] = context
-                        request.session.modified = True
+                # Always try Daisy TTS first
+                audio_path = generate_tts(ai_response, "female_interview")
                 
                 if audio_path and audio_path != 'None':
                     try:
@@ -1660,10 +1648,6 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
             from jobapp.tts import generate_tts, estimate_audio_duration, get_audio_duration
             
             audio_path = generate_tts(ai_question, "female_interview")
-            
-            # Track which service was used for consistency
-            if audio_path and 'gtts' in audio_path:
-                context['voice_service'] = 'gtts_only'
             
             if audio_path and audio_path != 'None':
                 try:

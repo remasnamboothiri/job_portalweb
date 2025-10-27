@@ -226,6 +226,17 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         
     except Exception as e:
         logger.error(f"Unexpected error in Daisy TTS generation: {e}")
+        return generate_google_tts(text)pt requests.exceptions.RequestException as e:
+                logger.error(f"Request failed (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    continue
+        
+        # If all attempts failed, fall back to Google TTS
+        logger.warning("New TTS API failed, falling back to Google TTS")
+        return generate_google_tts(text)
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in Daisy TTS generation: {e}")
         return generate_google_tts(text)
 
 def generate_google_tts(text, voice="female_interview"):

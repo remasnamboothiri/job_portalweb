@@ -105,6 +105,32 @@ def generate_gtts_fallback(text):
     """Fallback function for Google TTS"""
     return generate_google_tts(text)
 
+def estimate_audio_duration(text):
+    """Estimate audio duration based on text length"""
+    # Average speaking rate is about 150-160 words per minute
+    # Average word length is about 5 characters
+    words = len(text.split())
+    if words == 0:
+        return 3.0  # Minimum duration
+    
+    # Estimate duration in seconds (150 words per minute)
+    duration = (words / 150) * 60
+    return max(3.0, min(duration, 30.0))  # Between 3-30 seconds
+
+def get_audio_duration(file_path):
+    """Get actual audio duration from file"""
+    try:
+        import os
+        if not os.path.exists(file_path):
+            return None
+        
+        # For now, return None to fall back to estimation
+        # You could add audio library here if needed
+        return None
+    except Exception as e:
+        logger.error(f"Error getting audio duration: {e}")
+        return None
+
 def check_elevenlabs_status():
     """Check if new TTS API is working"""
     if not NEW_TTS_API_KEY:

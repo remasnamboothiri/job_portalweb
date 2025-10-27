@@ -58,7 +58,7 @@ Remember: Short responses, acknowledge their answer, ask one clear question.
         client = OpenAI(               
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=api_key,
-            timeout= timeout or 20.0 # 20 second timeout
+            timeout= timeout or 5.0 # 20 second timeout
         )
         
         logger.info(f"Making AI API call with timeout=20s")

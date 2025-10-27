@@ -87,7 +87,7 @@ def check_elevenlabs_status():
         }
         
         tts_url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
-        response = requests.post(tts_url, json=test_payload, headers=headers, timeout=15)
+        response = requests.post(tts_url, json=test_payload, headers=headers, timeout=8)
         
         logger.info(f"New TTS API test response: {response.status_code}")
         
@@ -178,7 +178,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         max_retries = 2
         for attempt in range(max_retries):
             try:
-                response = requests.post(url, json=payload, headers=headers, timeout=25)
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
                 
                 logger.info(f"New TTS API response: {response.status_code} (attempt {attempt + 1})")
                 

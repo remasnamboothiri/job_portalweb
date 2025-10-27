@@ -274,111 +274,18 @@ def generate_tts(text, voice="female_interview"):
 
 def estimate_audio_duration(text):
     """Estimate audio duration based on text length"""
-    # Average speaking rate is about 150-160 words per minute
-    # Average word length is about 5 characters
-    # So roughly 750-800 characters per minute
     words = len(text.split())
-    # Assume 150 words per minute speaking rate
     duration_minutes = words / 150
     duration_seconds = duration_minutes * 60
-    # Add some padding for natural pauses
     duration_seconds = max(3.0, duration_seconds + 1.0)
     return duration_seconds
 
 def get_audio_duration(file_path):
     """Get actual audio duration from file (fallback to estimation)"""
     try:
-        import os
         if not os.path.exists(file_path):
             return None
-        
-        # For now, return None to fall back to estimation
-        # In the future, you could add audio file analysis here
         return None
     except Exception as e:
         logger.error(f"Error getting audio duration: {e}")
         return None
-
-# Test functions for the new API
-def test_daisy_voice_only():
-    """Test Daisy voice generation"""
-    test_text = "Hello! I'm Daisy Studious, your AI interviewer. Let's begin our conversation."
-    logger.info("Testing Daisy voice generation...")
-    
-    result = generate_elevenlabs_tts(test_text, "female_interview")
-    
-    if result:
-        logger.info(f"✅ Daisy voice test successful: {result}")
-        return True, result
-    else:
-        logger.error("❌ Daisy voice test failed")
-        return False, "Test failed"
-
-def test_daisy_direct_generation():
-    """Test direct Daisy voice generation without caching"""
-    test_text = "This is a direct test of the Daisy Studious voice using the new TTS API."
-    
-    if not NEW_TTS_API_KEY or not NEW_TTS_API_URL:
-        return False, "API not configured"
-    
-    try:
-        url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json", 
-            "xi-api-key": NEW_TTS_API_KEY,
-            "User-Agent": "Django-TTS-Client/1.0"
-        }
-        
-        payload = {
-            "text": test_text,
-            "voice_id": DAISY_VOICE_ID,
-            "model_id": NEW_TTS_MODEL_ID or "coqui"
-        }
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=20)
-        
-        if response.status_code == 200:
-            # Save test file
-            test_filename = f"daisy_test_{timezone.now().strftime('%Y%m%d_%H%M%S')}.mp3"
-            tts_dir = os.path.join(settings.MEDIA_ROOT, 'tts')
-            os.makedirs(tts_dir, exist_ok=True)
-            test_filepath = os.path.join(tts_dir, test_filename)
-            
-            with open(test_filepath, 'wb') as f:
-                f.write(response.content)
-            
-            if os.path.exists(test_filepath) and os.path.getsize(test_filepath) > 1000:
-                media_url = f"/media/tts/{test_filename}"
-                return True, media_url
-            else:
-                return False, "Generated file is empty"
-        else:
-            return False, f"API error: {response.status_code}"
-            
-    except Exception as e:
-        return False, f"Test failed: {str(e)}"
-
-def test_daisy_interview_simulation():
-    """Test Daisy voice with interview-style questions"""
-    questions = [
-        "Welcome to your AI interview. Please introduce yourself.",
-        "Can you tell me about your experience with Python programming?",
-        "What interests you most about this position?"
-    ]
-    
-    results = []
-    for i, question in enumerate(questions, 1):
-        logger.info(f"Testing question {i}: {question[:50]}...")
-        result = generate_elevenlabs_tts(question, "female_interview")
-        
-        if result:
-            results.append(f"Question {i}: ✅ {result}")
-        else:
-            results.append(f"Question {i}: ❌ Failed")
-    
-    return results
-
-def generate_gtts_fallback(text):
-    """Direct Google TTS fallback function"""
-    return generate_google_tts(text)

@@ -42,7 +42,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         url = f"{NEW_TTS_API_URL.rstrip('/')}/v1/text-to-speech"
         headers = {
             "Accept": "audio/mpeg",
-            "Content-Type": "application/json", 
+            "Content-Type": "application/json",
             "xi-api-key": NEW_TTS_API_KEY
         }
         
@@ -105,7 +105,7 @@ def generate_gtts_fallback(text):
     """Fallback function for Google TTS"""
     return generate_google_tts(text)
 
-def estimate_audio_duration(text):
+def estimate_audio_duration(text): 
     """Estimate audio duration based on text length"""
     # Average speaking rate is about 150-160 words per minute
     # Average word length is about 5 characters

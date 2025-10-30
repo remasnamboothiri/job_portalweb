@@ -924,7 +924,7 @@ def schedule_interview_simple(request):
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_recruiter)
+@user_passes_test(lambda u: u.is_recruiter) 
 def schedule_interview_with_candidate(request, candidate_id):
     """Schedule interview with a specific candidate"""
     from django.core.mail import send_mail

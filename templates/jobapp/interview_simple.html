@@ -431,11 +431,15 @@ function initSpeech() {
     log('Initializing speech recognition...');
     
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        log('Speech recognition not supported');
+        log('Web Speech API not supported - will use Whisper ASR fallback');
         conversationArea.innerHTML = 
-            `<div style="color: #4caf50; padding: 20px;">Speech recognition not supported. Please use Chrome, Edge, or Safari.</div>`;
-        return false;
+            `<div style="color: #4caf50; padding: 20px;">Using server-side speech recognition. Click microphone to record audio.</div>`;
+        // Enable Whisper mode
+        window.useWhisperASR = true;
+        return true; // Continue with Whisper mode
     }
+    
+    window.useWhisperASR = false; // Use Web Speech API
     
     try {
         const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
@@ -790,14 +794,144 @@ function enableCandidateResponse() {
     }, 500);
 }
 
-// Toggle microphone
+// Whisper ASR variables
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+// Initialize Whisper recording
+function initWhisperRecording() {
+    if (!userStream) {
+        log('No audio stream available for Whisper recording');
+        return false;
+    }
+    
+    try {
+        mediaRecorder = new MediaRecorder(userStream, { mimeType: 'audio/webm' });
+        
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = async () => {
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                await sendWhisperAudio(audioBlob);
+            }
+            audioChunks = [];
+        };
+        
+        log('Whisper recording initialized');
+        return true;
+    } catch (error) {
+        log(`Whisper recording init failed: ${error.message}`);
+        return false;
+    }
+}
+
+// Send audio to Whisper ASR
+async function sendWhisperAudio(audioBlob) {
+    try {
+        log('Sending audio to Whisper ASR...');
+        
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'response.webm');
+        formData.append('time_remaining', timeLeft);
+        
+        conversationArea.innerHTML = 
+            `<div style="opacity: 0.7; font-style: italic;">Processing your speech...</div>`;
+        
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': TEMPLATE_DATA.csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            log(`Whisper transcription: ${data.transcribed_text || 'N/A'}`);
+            displayAIResponse(data);
+        } else {
+            log(`Whisper ASR failed: ${data.error}`);
+            conversationArea.innerHTML = 
+                `<div style="color: #f44336; padding: 20px;">Speech recognition failed: ${data.error}</div>`;
+            enableCandidateResponse();
+        }
+        
+    } catch (error) {
+        log(`Whisper upload failed: ${error.message}`);
+        conversationArea.innerHTML = 
+            `<div style="color: #f44336; padding: 20px;">Network error. Please try again.</div>`;
+        enableCandidateResponse();
+    }
+}
+
+// Start Whisper recording
+function startWhisperRecording() {
+    if (!mediaRecorder || isRecording) return;
+    
+    try {
+        audioChunks = [];
+        mediaRecorder.start();
+        isRecording = true;
+        
+        micBtn.classList.add('recording');
+        document.getElementById('candidateVideoBox').classList.add('candidate-speaking');
+        
+        conversationArea.innerHTML = 
+            `<div style="color: #81c784; font-style: italic;">Recording... Click microphone again to stop</div>`;
+        
+        log('Whisper recording started');
+    } catch (error) {
+        log(`Failed to start Whisper recording: ${error.message}`);
+    }
+}
+
+// Stop Whisper recording
+function stopWhisperRecording() {
+    if (!mediaRecorder || !isRecording) return;
+    
+    try {
+        mediaRecorder.stop();
+        isRecording = false;
+        
+        micBtn.classList.remove('recording');
+        document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
+        
+        log('Whisper recording stopped');
+    } catch (error) {
+        log(`Failed to stop Whisper recording: ${error.message}`);
+    }
+}
+
+// Toggle microphone (updated for Whisper support)
 function toggleMic() {
-    if (!recognition || interviewCompleted) return;
+    if (interviewCompleted) return;
     
     if (isInterviewerSpeaking) {
         alert('Please wait for the interviewer to finish speaking.');
         return;
     }
+    
+    // Use Whisper ASR mode
+    if (window.useWhisperASR) {
+        if (isRecording) {
+            log('Stopping Whisper recording');
+            stopWhisperRecording();
+        } else {
+            log('Starting Whisper recording');
+            startWhisperRecording();
+        }
+        return;
+    }
+    
+    // Use Web Speech API mode (existing code)
+    if (!recognition) return;
     
     if (isListening) {
         log('Manually stopping microphone');
@@ -1029,6 +1163,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!speechSuccess) {
         log('Speech recognition initialization failed - cannot proceed');
         return;
+    }
+    
+    // Initialize Whisper recording if needed
+    if (window.useWhisperASR) {
+        const whisperSuccess = initWhisperRecording();
+        if (!whisperSuccess) {
+            log('Whisper recording initialization failed');
+        } else {
+            log('Whisper ASR mode enabled');
+        }
     }
     
     log('Speech recognition initialized');

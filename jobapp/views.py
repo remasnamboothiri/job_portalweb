@@ -166,12 +166,15 @@ HR Team
 try:
     from .utils.interview_ai_nvidia import ask_ai_question 
     from jobapp.utils.resume_reader import extract_resume_text
+    from .asr import transcribe_audio
 except ImportError as e:
     print(f"Import error: {e}")
     def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None , timeout=None):
         return "AI service is currently unavailable. Please try again later."
     def extract_resume_text(resume_file):
         return "Resume processing is currently unavailable."
+    def transcribe_audio(audio_file):
+        return {'success': False, 'text': '', 'error': 'ASR not available'}
 
 from gtts import gTTS
 
@@ -1174,7 +1177,39 @@ def start_interview_by_uuid(request, interview_uuid):
         # HANDLE POST REQUEST - Process candidate responses
         if request.method == "POST":
             try:
-                if request.content_type == 'application/json':
+                user_text = ""
+                time_remaining = 900
+                
+                # Check if audio file was uploaded (Whisper ASR mode)
+                if 'audio' in request.FILES:
+                    audio_file = request.FILES['audio']
+                    logger.info(f"🎤 Audio file received: {audio_file.name} ({audio_file.size} bytes)")
+                    
+                    # Transcribe audio to text using Whisper
+                    transcription_result = transcribe_audio(audio_file)
+                    
+                    if transcription_result['success']:
+                        user_text = transcription_result['text']
+                        logger.info(f"✅ Whisper transcription: {user_text}")
+                        
+                        # Get time_remaining from form data
+                        try:
+                            time_remaining = int(request.POST.get("time_remaining", 900))
+                        except (ValueError, TypeError):
+                            time_remaining = 900
+                    else:
+                        logger.error(f"❌ Whisper transcription failed: {transcription_result['error']}")
+                        return JsonResponse({
+                            'error': 'Could not understand your speech. Please try again.',
+                            'response': 'I had trouble understanding what you said. Could you please repeat that?',
+                            'audio': '',
+                            'audio_duration': 3.0,
+                            'success': False,
+                            'transcription_error': transcription_result['error']
+                        })
+                
+                # Handle text input (existing Web Speech API mode)
+                elif request.content_type == 'application/json':
                     data = json.loads(request.body)
                     user_text = data.get("text") or data.get("message")
                     time_remaining = int(data.get("time_remaining", 900))
@@ -1184,6 +1219,7 @@ def start_interview_by_uuid(request, interview_uuid):
                         time_remaining = int(request.POST.get("time_remaining", 900))
                     except (ValueError, TypeError):
                         time_remaining = 900
+                        
             except Exception as e:
                 logger.error(f"Error parsing request data: {e}")
                 user_text = request.POST.get("text", "")
@@ -2304,6 +2340,32 @@ def get_csrf_token(request):
     })
 
 # TTS test endpoint
+@csrf_exempt
+def test_asr(request):
+    """Test ASR functionality with Whisper"""
+    if request.method == 'POST' and 'audio' in request.FILES:
+        from .asr import transcribe_audio, test_whisper
+        
+        audio_file = request.FILES['audio']
+        
+        # Test Whisper status
+        whisper_status = test_whisper()
+        
+        # Transcribe audio
+        result = transcribe_audio(audio_file)
+        
+        return JsonResponse({
+            'whisper_status': whisper_status,
+            'transcription_result': result,
+            'audio_file_info': {
+                'name': audio_file.name,
+                'size': audio_file.size,
+                'content_type': audio_file.content_type
+            }
+        })
+    
+    return JsonResponse({'error': 'No audio file provided'})
+
 @csrf_exempt
 def test_tts(request):
     """Test TTS generation system with custom voice support"""

@@ -1200,8 +1200,8 @@ def start_interview_by_uuid(request, interview_uuid):
                     else:
                         logger.error(f"❌ Whisper transcription failed: {transcription_result['error']}")
                         return JsonResponse({
-                            'error': 'Could not understand your speech. Please try again.',
-                            'response': 'I had trouble understanding what you said. Could you please repeat that?',
+                            'error': 'Server-side speech recognition not available. Please use Chrome or Edge browser.',
+                            'response': 'Please use Chrome or Edge browser for speech recognition, or type your response.',
                             'audio': '',
                             'audio_duration': 3.0,
                             'success': False,

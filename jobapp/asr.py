@@ -50,6 +50,13 @@ def transcribe_audio(audio_file):
     Returns:
         dict: {'success': bool, 'text': str, 'error': str}
     """
+    if not FASTER_WHISPER_AVAILABLE:
+        return {
+            'success': False,
+            'text': '',
+            'error': 'Server-side ASR not available. Please use Chrome or Edge browser for speech recognition.'
+        }
+        
     model = load_whisper_model()
     if not model:
         return {

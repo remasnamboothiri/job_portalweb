@@ -140,7 +140,7 @@
           <p><strong>📍 Location:</strong> {{ job.location }}</p>
           <p><strong>👤 Posted by:</strong> {{ job.posted_by.username }}</p>
         </div>
-        <div class="col-md-4 text-center">
+        {% comment %} <div class="col-md-4 text-center">
           {% if job.featured_image %}
             <img src="{{ job.featured_image.url }}" alt="{{ job.title }}" class="img-fluid rounded shadow" style="max-width: 200px; max-height: 150px; object-fit: cover;">
             <small class="text-muted d-block mt-2">Job Image</small>
@@ -149,7 +149,7 @@
               <span class="text-muted">No Image Available</span>
             </div>
           {% endif %}
-        </div>
+        </div> {% endcomment %}
       </div>
 
       <!-- Job Description -->

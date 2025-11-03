@@ -86,7 +86,7 @@ class Job(models.Model):
     company = models.CharField(max_length=200)
     location = models.CharField(max_length=200)
     description = models.TextField(max_length=20000)
-    featured_image = models.ImageField(upload_to='job_images/', blank=True, null=True)
+    #featured_image = models.ImageField(upload_to='job_images/', blank=True, null=True)
     
     # New fields based on the images
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, default='other')

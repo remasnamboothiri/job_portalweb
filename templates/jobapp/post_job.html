@@ -528,7 +528,7 @@
                   </h3>
 
                   <!-- Featured Image Upload -->
-                  <div class="form-group">
+                  {% comment %} <div class="form-group">
                     <label for="{{ form.featured_image.id_for_label }}" class="form-label">
                       <i class="fas fa-image me-2"></i>Upload Featured Image
                     </label>
@@ -547,7 +547,7 @@
                     {% if form.featured_image.errors %}
                       <div class="text-danger">{{ form.featured_image.errors.0 }}</div>
                     {% endif %}
-                  </div>
+                  </div> {% endcomment %}
 
                   <!-- Job Title -->
                   <div class="form-group">

@@ -38,7 +38,7 @@ class JobForm(forms.ModelForm):
         fields = [
             'title', 'company', 'location', 'department', 'employment_type', 
             'experience_level', 'description', 'required_skills', 
-            'salary_min', 'salary_max', 'status', 'featured_image',
+            'salary_min', 'salary_max', 'status', 
             'enable_ai_interview', 'interview_duration', 'interview_question_count'
             
         ]
@@ -90,10 +90,10 @@ class JobForm(forms.ModelForm):
             'status': forms.Select(attrs={
                 'class': 'form-control',
             }),
-             'featured_image': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*',
-            }),
+            #  'featured_image': forms.FileInput(attrs={
+            #     'class': 'form-control',
+            #     'accept': 'image/*',
+            # }),
             'enable_ai_interview': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
             }),
@@ -119,7 +119,7 @@ class JobForm(forms.ModelForm):
             'enable_ai_interview': 'Enable AI Interview for this position',
             'interview_duration': 'Default Duration',
             'interview_question_count': 'Question Count',
-            'featured_image': 'Upload Featured Image',
+            #'featured_image': 'Upload Featured Image',
         }
         
         help_texts = {
@@ -130,7 +130,7 @@ class JobForm(forms.ModelForm):
             'required_skills': 'List key skills separated by commas',
             'salary_min': 'Minimum salary offered',
             'salary_max': 'Maximum salary offered',
-            'featured_image': 'Upload an image to represent this job posting (optional)',
+            #'featured_image': 'Upload an image to represent this job posting (optional)',
         }
         
     def clean_title(self):

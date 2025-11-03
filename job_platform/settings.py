@@ -156,7 +156,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(','
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
         # Add production domain if not in environment variable
-PRODUCTION_DOMAIN = config('PRODUCTION_DOMAIN', default='job-portal-23qb.onrender.com')
+PRODUCTION_DOMAIN = config('PRODUCTION_DOMAIN', default='localhost:8000')
 if PRODUCTION_DOMAIN not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend([PRODUCTION_DOMAIN, '.onrender.com'])
 
@@ -185,7 +185,7 @@ else:
 
         # CSRF settings for production
 CSRF_TRUSTED_ORIGINS = [
-    'https://{config("PRODUCTION_DOMAIN", default="job-portal-23qb.onrender.com")}',
+    'https://{config("PRODUCTION_DOMAIN", default="localhost:8000")}',
     'https://*.onrender.com',
 ]
 

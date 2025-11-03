@@ -92,7 +92,7 @@ def send_interview_email(sender, instance, created, **kwargs):
             # Emergency fallback - generate link manually
             try:
                 from django.conf import settings
-                domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portal-23qb.onrender.com')
+                domain = getattr(settings, 'PRODUCTION_DOMAIN', 'localhost:8000')
                 if settings.DEBUG:
                     domain = 'localhost:8000'
                 protocol = 'https' if not settings.DEBUG else 'http'

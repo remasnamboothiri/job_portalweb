@@ -505,7 +505,7 @@
                 <div class="mt-3">
                   <strong>Interview Link:</strong>
                   <div class="input-group mt-2">
-                    <input type="text" class="form-control" value="https://job-portal-23qb.onrender.com{% url 'interview_ready' interview.uuid %}" readonly id="link-{{ interview.uuid }}">
+                    <input type="text" class="form-control" value="https://{{ request.get_host }}{% url 'interview_ready' interview.uuid %}" readonly id="link-{{ interview.uuid }}">
                     <button class="btn btn-outline-secondary" type="button" onclick="copyLink('{{ interview.uuid }}')">
                       📋 Copy Link
                     </button>
@@ -515,7 +515,7 @@
                   <a href="{% url 'interview_ready' interview.uuid %}" class="btn btn-success" target="_blank">
                     🎥 Open Interview
                   </a>
-                  <a href="mailto:{{ interview.candidate_email }}?subject=Interview Link&body=Your interview link: https://job-portal-23qb.onrender.com{% url 'interview_ready' interview.uuid %}" class="btn btn-info">
+                  <a href="mailto:{{ interview.candidate_email }}?subject=Interview Link&body=Your interview link: https://{{ request.get_host }}{% url 'interview_ready' interview.uuid %}" class="btn btn-info">
                     📧 Email Link
                   </a>
                 </div>

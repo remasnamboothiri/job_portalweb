@@ -767,7 +767,8 @@ def schedule_interview(request, job_id, applicant_id):
                 from django.urls import reverse
                 
                 # Use production domain or localhost
-                domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                #domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                domain = getattr(settings, 'PRODUCTION_DOMAIN', 'localhost:8000') if not settings.DEBUG else 'localhost:8000'
                 protocol = 'https' if not settings.DEBUG else 'http'
                 
                 # Use get_uuid property for safe UUID access
@@ -855,7 +856,10 @@ def schedule_interview_simple(request):
                 logger.info(f"Interview created successfully: {interview.id}")
                 
                 # Email will be sent automatically (or check logs if using console backend)
-                interview_link = f'https://job-portal-23qb.onrender.com/interview/ready/{interview.uuid}/'
+                #interview_link = f'https://job-portal-23qb.onrender.com/interview/ready/{interview.uuid}/'
+                domain = getattr(settings, 'PRODUCTION_DOMAIN', 'localhost:8000')
+                protocol = 'https' if not settings.DEBUG else 'http'
+                interview_link = f'{protocol}://{domain}/interview/ready/{interview.uuid}/'
                 success_message = f'✅ Interview scheduled successfully! 📧 Email sent to {interview.candidate_email}. 🔗 Interview Link: {interview_link}'
                 logger.info(f"✅ Interview scheduled for {interview.candidate_email}")
                 logger.info(f"🔗 Interview Link: {interview_link}")
@@ -954,7 +958,8 @@ def schedule_interview_with_candidate(request, candidate_id):
                 
                 # Send email to candidate
                 try:
-                    domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                    #domain = 'job-portal-23qb.onrender.com' if not settings.DEBUG else 'localhost:8000'
+                    domain = getattr(settings, 'PRODUCTION_DOMAIN', 'localhost:8000') if not settings.DEBUG else 'localhost:8000'
                     protocol = 'https' if not settings.DEBUG else 'http'
                     interview_url = f"{protocol}://{domain}{reverse('interview_ready', args=[interview.uuid])}"
                     
@@ -3357,7 +3362,7 @@ def get_interview_link(request, interview_uuid):
             }, status=403)
         
         # Generate interview URL
-        domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portal-23qb.onrender.com')
+        domain = getattr(settings, 'PRODUCTION_DOMAIN', 'localhost:8000')
         if settings.DEBUG:
             domain = 'localhost:8000'
         protocol = 'https' if not settings.DEBUG else 'http'

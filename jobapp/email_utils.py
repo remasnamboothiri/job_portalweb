@@ -33,7 +33,7 @@ def send_interview_link_email(interview):
     """
     try:
         # Generate interview URL
-        domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portal-23qb.onrender.com')
+        domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portalweb-ga7b.onrender.com')
         if settings.DEBUG:
             domain = 'localhost:8000'
         
@@ -208,7 +208,7 @@ Job Portal Team
         
         # Emergency fallback - just log the link
         try:
-            domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portal-23qb.onrender.com')
+            domain = getattr(settings, 'PRODUCTION_DOMAIN', 'job-portalweb-ga7b.onrender.com')
             if settings.DEBUG:
                 domain = 'localhost:8000'
             protocol = 'https' if not settings.DEBUG else 'http'

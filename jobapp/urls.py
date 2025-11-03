@@ -104,15 +104,13 @@ urlpatterns = [
     
   
     
-    # Test typewriter synchronization
-    path('test-typewriter/', lambda request: render(request, 'jobapp/test_typewriter.html'), name='test_typewriter'),
     
     # Health check endpoints
     path('health/', views.health_check, name='health_check'),
     path('ready/', views.readiness_check, name='readiness_check'),
     
-    # ElevenLabs TTS test
-    path('test-elevenlabs/', lambda request: render(request, 'jobapp/test_elevenlabs.html'), name='test_elevenlabs'),
+    
+    
     
     
     # path('add_candidate/', views.add_candidate, name='add_candidate'),
@@ -138,6 +136,6 @@ urlpatterns = [
     path('interview/<uuid:interview_uuid>/send-email/', views.send_interview_email_manual, name='send_interview_email_manual'),
     path('interview/<uuid:interview_uuid>/get-link/', views.get_interview_link, name='get_interview_link'),
     path('test-email-system/', views.test_email_system, name='test_email_system'),
-    path('email-test/', lambda request: render(request, 'jobapp/email_test.html'), name='email_test'),
+    
     
 ]

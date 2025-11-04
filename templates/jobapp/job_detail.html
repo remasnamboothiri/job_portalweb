@@ -80,18 +80,18 @@
                   <li><a class="dropdown-item" href="{% url 'post_job' %}">Post a Job</a></li> {% endcomment %}
                 </ul>
               </li>
-              <li class="has-children">
+              {% comment %} <li class="has-children">
                 <a href="services.html">Pages</a>
                 <ul class="dropdown">
                   
                   
-                  {% comment %} <li><a href="{% url 'blog' %}">Blog</a></li>
+                  <li><a href="{% url 'blog' %}">Blog</a></li>
                   
                   <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
-                  <li><a href="{% url 'faq' %}">FAQ</a></li> {% endcomment %}
+                  <li><a href="{% url 'faq' %}">FAQ</a></li> 
                   
                 </ul>
-              </li>
+              </li> {% endcomment %}
               
               {% comment %} <li><a href="{% url 'contact' %}">Contact</a></li> {% endcomment %}
               {% comment %} <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li> {% endcomment %}

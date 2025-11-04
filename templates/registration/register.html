@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login | Job Platform</title>
+  <title>Register | Job Platform</title>
 
   
      <link rel="stylesheet" href="{% static 'css/custom-bs.css' %}">
@@ -122,75 +122,105 @@
       <div class="container">
         <div class="row">
           <div class="col-md-7">
-            <h1 class="text-white font-weight-bold">Login</h1>
+            <h1 class="text-white font-weight-bold">Sign Up</h1>
             <div class="custom-breadcrumbs">
               <a href="{% url 'home' %}">Home</a> <span class="mx-2 slash">/</span>
-              <span class="text-white"><strong>Log In</strong></span>
+              <span class="text-white"><strong>Register</strong></span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-
-
-
-
-
-
-
-
  <section class="site-section">
   <div class="container">
     <div class="row justify-content-center">
-      <!-- Login Form -->
-      <div class="col-lg-6">
-        <h2 class="mb-4">Log In To JobBoard</h2>
+      <!-- Sign Up Form -->
+      <div class="col-lg-6 mb-5">
+        <h2 class="mb-4">Sign Up To JobBoard</h2>
         <form method="post" class="p-4 border rounded">
           {% csrf_token %}
-          
+
+          <!-- Registration Form Errors -->
+          {% if form.errors %}
+            <div class="alert alert-danger">
+              {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                  <div>{{ field|title }}: {{ error }}</div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          {% endif %}
+
           <div class="row form-group">
             <div class="col-md-12 mb-3 mb-md-0">
-              <label class="text-black" for="loginUsername">{{ form.username.label }}</label>
-              {{ form.username }}
+              <label class="text-black" for="signupusername">Username</label>
+              <input type="text" id="signupusername" name="username" class="form-control" placeholder="username" 
+                     value="{{ form.username.value|default:'' }}" required>
               {% if form.username.errors %}
                 <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
               {% endif %}
             </div>
           </div>
           
+          <div class="row form-group">
+            <div class="col-md-12 mb-3 mb-md-0">
+              <label class="text-black" for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" name="email" class="form-control" placeholder="Email address" 
+                     value="{{ form.email.value|default:'' }}" required>
+              {% if form.email.errors %}
+                <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="row form-group">
+            <div class="col-md-12 mb-3 mb-md-0">
+              <label class="text-black" for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" name="password1" class="form-control" placeholder="Password" required>
+              {% if form.password1.errors %}
+                <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
           <div class="row form-group mb-4">
             <div class="col-md-12 mb-3 mb-md-0">
-              <label class="text-black" for="loginPassword">{{ form.password.label }}</label>
-              {{ form.password }}
-              {% if form.password.errors %}
-                <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+              <label class="text-black" for="signupPasswordConfirm">Re-Type Password</label>
+              <input type="password" id="signupPasswordConfirm" name="password2" class="form-control" placeholder="Re-type Password" required>
+              {% if form.password2.errors %}
+                <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
               {% endif %}
             </div>
           </div>
 
-          <!-- Login Form Errors -->
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger py-1 mb-3">
-              {{ form.non_field_errors.0 }}
-            </div>
-          {% endif %}
-
-          <div class="row form-group mb-3">
+          <div class="row form-group mb-4">
             <div class="col-md-12">
-              <input type="submit" value="Log In" class="btn px-4 btn-primary text-white">
+              <div class="form-check">
+                <input type="checkbox" id="registerAsRecruiter" name="is_recruiter" class="form-check-input" value="1" 
+                       {% if form.is_recruiter.value %}checked{% endif %}>
+                <label class="form-check-label text-black" for="registerAsRecruiter">
+                  Register as Recruiter
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <div class="col-md-12">
+              <input type="submit" value="Sign Up" class="btn px-4 btn-primary text-white">
             </div>
           </div>
           
           <div class="text-center mt-3">
-            <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+            <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
           </div>
           
           <!-- Social Login -->
           <div class="text-center">
-            <p class="mb-2">Or login with:</p>
+            <p class="mb-2">Or register with:</p>
             <a href="{% provider_login_url 'google' %}" class="btn btn-outline-primary btn-sm">
-              <i class="bi bi-google"></i> Login with Google
+              <i class="bi bi-google"></i> Register with Google
             </a>
           </div>
         </form>
@@ -253,20 +283,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-  
-  
-  

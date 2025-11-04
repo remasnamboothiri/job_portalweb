@@ -198,68 +198,39 @@ def home_view(request):
     return render(request, 'jobapp/home.html')
 
 
-#register view - redirects to login (register.html no longer needed)
 def register_view(request):
-    return redirect('login')
-    
-    
-    
-#login view - handles both login and registration
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            backend = get_backends()[0]
+            user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+            login(request, user)
+            return redirect('Profile_update')
+        else:
+            return render(request, 'registration/register.html', {'form': form})
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'registration/register.html', {'form': form})
 def login_view(request):
     if request.method == 'POST':
-        # Check if this is a registration or login request
-        if 'username' in request.POST and 'password1' in request.POST:
-            # This is a registration request
-            form = UserRegistrationForm(request.POST)
-            if form.is_valid():
-                user = form.save()
-                # ✅ Tell Django which backend to use
-                backend = get_backends()[0]  # Use the first available backend (your default one)
-                user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user:
                 login(request, user)
-                return redirect('Profile_update')  # Redirect to profile page
-            else:
-                # Registration form has errors, show them on login page
-                login_form = LoginForm()
-                return render(request, 'registration/login.html', {
-                    'form': login_form, 
-                    'registration_form': form,
-                    'registration_errors': True
-                })
-        else:
-            # This is a login request
-            form = LoginForm(request.POST)
-            if form.is_valid():
-                username = form.cleaned_data.get('username')
-                password = form.cleaned_data.get('password')
-                user = authenticate(request, username=username, password=password)
-                if user:
-                    login(request, user)
-                    # Redirect based on user type
-                    if user.is_recruiter:
-                        return redirect('recruiter_dashboard')
-                    else:
-                        return redirect('Profile_update')
+                if user.is_recruiter:
+                    return redirect('recruiter_dashboard')
                 else:
-                    form.add_error(None, 'invalid credentials')
-            
-            # Login form has errors, show them on login page
-            registration_form = UserRegistrationForm()
-            return render(request, 'registration/login.html', {
-                'form': form, 
-                'registration_form': registration_form,
-                'login_errors': True
-            })
-                
+                    return redirect('Profile_update')
+            else:
+                form.add_error(None, 'Invalid credentials')
+        return render(request, 'registration/login.html', {'form': form})
     else:
-        # GET request - show both forms
         form = LoginForm()
-        registration_form = UserRegistrationForm()
-    
-    return render(request, 'registration/login.html', {
-        'form': form,
-        'registration_form': registration_form
-    })
+    return render(request, 'registration/login.html', {'form': form})
 # logout view 
 def logout_view(request):
     logout(request)

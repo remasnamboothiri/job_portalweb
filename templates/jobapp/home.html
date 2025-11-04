@@ -83,7 +83,7 @@
       text-decoration: none;
     }
 
-    .footer a:hover {
+    .footer a:hover {  
       color: white;
       text-decoration: underline;
     }
@@ -112,7 +112,7 @@
           <nav class="mx-auto site-navigation">
             <ul class="site-menu js-clone-nav d-none d-xl-block ml-0 pl-0">
               <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
-              <li><a href="{% url 'about' %}">About</a></li>
+              {% comment %} <li><a href="{% url 'about' %}">About</a></li> {% endcomment %}
               <li class="has-children">
                 <a href="#">Job Listings</a>
                 <ul class="dropdown">
@@ -125,15 +125,15 @@
                 <ul class="dropdown">
                   
                   
-                  <li><a href="{% url 'blog' %}">Blog</a></li>
+                  {% comment %} <li><a href="{% url 'blog' %}">Blog</a></li>
                   
                   <li><a href="{% url 'testimonials' %}">Testimonials</a></li>
-                  <li><a href="{% url 'faq' %}">FAQ</a></li>
+                  <li><a href="{% url 'faq' %}">FAQ</a></li> {% endcomment %}
                   
                 </ul>
               </li>
               
-              <li><a href="{% url 'contact' %}">Contact</a></li>
+              {% comment %} <li><a href="{% url 'contact' %}">Contact</a></li> {% endcomment %}
               {% comment %} <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li> {% endcomment %}
               <li class="d-lg-none"><a href="{% url 'login' %}">Login</a></li>
               <li class="d-lg-none"><a href="{% url 'register' %}">Register</a></li>

@@ -2166,39 +2166,39 @@ def test_voice_direct(request):
 
 
 # contact view
-def contact_view(request):
-    return render(request, 'jobapp/contact.html')
+# def contact_view(request):
+#     return render(request, 'jobapp/contact.html')
 
 
 
 # testimonials
 
-def testimonials_view(request):
-    return render(request, 'jobapp/testimonials.html')
+# def testimonials_view(request):
+#     return render(request, 'jobapp/testimonials.html')
 
 
 
 # About View
-def about_view(request):
-    return render(request, 'jobapp/about.html')
+# def about_view(request):
+#     return render(request, 'jobapp/about.html')
 
 
 
 # FAQ view
-def faq_view(request):
-    return render(request, 'jobapp/faq.html')
+# def faq_view(request):
+#     return render(request, 'jobapp/faq.html')
 
 
 # Blog
-def blog_view(request):
-    return render(request, 'jobapp/blog.html')
+# def blog_view(request):
+#     return render(request, 'jobapp/blog.html')
 
 
 
 # blog single
-def blog_single_view(request):
-    """Display single blog post"""
-    return render(request, 'jobapp/blog_single.html')
+# def blog_single_view(request):
+#     """Display single blog post"""
+#     return render(request, 'jobapp/blog_single.html')
 
 
 

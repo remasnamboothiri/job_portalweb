@@ -134,7 +134,7 @@
               </li>
               
               <li><a href="{% url 'contact' %}">Contact</a></li>
-              <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li>
+              {% comment %} <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li> {% endcomment %}
               <li class="d-lg-none"><a href="{% url 'login' %}">Login</a></li>
               <li class="d-lg-none"><a href="{% url 'register' %}">Register</a></li>
             </ul>

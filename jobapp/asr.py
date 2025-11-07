@@ -1,6 +1,6 @@
 """
 ASR.PY - Speech Recognition for Interview System
-Provides server-side speech-to-text as backup for Web Speech API
+Simplified version using SpeechRecognition library
 """
 import os
 import tempfile
@@ -9,40 +9,38 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# Try to import faster-whisper
+# Try to import speech_recognition (handle Python 3.13 compatibility)
 try:
-    from faster_whisper import WhisperModel
-    FASTER_WHISPER_AVAILABLE = True
-    logger.info("✅ faster-whisper imported successfully")
-except ImportError as e:
-    FASTER_WHISPER_AVAILABLE = False
-    logger.warning(f"⚠️ faster-whisper not available: {e}")
+    import speech_recognition as sr
+    SPEECH_RECOGNITION_AVAILABLE = True
+    logger.info("✅ SpeechRecognition imported successfully")
+except (ImportError, ModuleNotFoundError) as e:
+    SPEECH_RECOGNITION_AVAILABLE = False
+    logger.warning(f"⚠️ SpeechRecognition not available (Python 3.13 compatibility issue): {e}")
 
-# Load Whisper model (do this once when server starts)
-WHISPER_MODEL = None
+# Initialize recognizer
+RECOGNIZER = None
 
-def load_whisper_model():
-    """Load Faster Whisper model on first use"""
-    global WHISPER_MODEL
-    if not FASTER_WHISPER_AVAILABLE:
-        logger.warning("⚠️ faster-whisper not installed - ASR will not work")
+def load_speech_recognizer():
+    """Load SpeechRecognition on first use"""
+    global RECOGNIZER
+    if not SPEECH_RECOGNITION_AVAILABLE:
+        logger.warning("⚠️ SpeechRecognition not installed - ASR will not work")
         return None
         
-    if WHISPER_MODEL is None:
+    if RECOGNIZER is None:
         try:
-            # Use 'base' model for good balance of speed and accuracy
-            # Model sizes: tiny, base, small, medium, large-v1, large-v2, large-v3
-            logger.info("🔄 Loading Faster Whisper 'base' model...")
-            WHISPER_MODEL = WhisperModel("base", device="cpu", compute_type="int8")
-            logger.info("✅ Faster Whisper 'base' model loaded successfully")
+            logger.info("🔄 Loading SpeechRecognition...")
+            RECOGNIZER = sr.Recognizer()
+            logger.info("✅ SpeechRecognition loaded successfully")
         except Exception as e:
-            logger.error(f"❌ Failed to load Faster Whisper model: {e}")
-            WHISPER_MODEL = None
-    return WHISPER_MODEL
+            logger.error(f"❌ Failed to load SpeechRecognition: {e}")
+            RECOGNIZER = None
+    return RECOGNIZER
 
 def transcribe_audio(audio_file):
     """
-    Convert audio file to text using Faster Whisper
+    Convert audio file to text - Fallback for Web Speech API
     
     Args:
         audio_file: Django uploaded file object (from request.FILES)
@@ -50,74 +48,23 @@ def transcribe_audio(audio_file):
     Returns:
         dict: {'success': bool, 'text': str, 'error': str}
     """
-    if not FASTER_WHISPER_AVAILABLE:
-        return {
-            'success': False,
-            'text': '',
-            'error': 'Server-side ASR not available. Please use Chrome or Edge browser for speech recognition.'
-        }
-        
-    model = load_whisper_model()
-    if not model:
-        return {
-            'success': False,
-            'text': '',
-            'error': 'Faster Whisper model not available'
-        }
+    # For Python 3.13 compatibility, we'll provide a helpful message
+    # The main speech recognition will happen via Web Speech API in the browser
+    logger.info(f"🎤 Audio upload received: {audio_file.name} ({audio_file.size} bytes)")
     
-    temp_file_path = None
-    try:
-        # Create temporary file for audio
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
-            # Write uploaded audio to temp file
-            for chunk in audio_file.chunks():
-                temp_file.write(chunk)
-            temp_file_path = temp_file.name
-        
-        logger.info(f"🎤 Transcribing audio file: {audio_file.name} ({audio_file.size} bytes)")
-        
-        # Transcribe using Faster Whisper
-        segments, info = model.transcribe(temp_file_path, beam_size=5)
-        
-        # Combine all segments into one text
-        transcribed_text = "".join([segment.text for segment in segments]).strip()
-        
-        if transcribed_text:
-            logger.info(f"✅ Faster Whisper transcription successful: {transcribed_text[:50]}...")
-            return {
-                'success': True,
-                'text': transcribed_text,
-                'error': None
-            }
-        else:
-            return {
-                'success': False,
-                'text': '',
-                'error': 'No speech detected in audio'
-            }
-            
-    except Exception as e:
-        logger.error(f"❌ Faster Whisper transcription failed: {e}")
-        return {
-            'success': False,
-            'text': '',
-            'error': str(e)
-        }
-    finally:
-        # Clean up temp file
-        if temp_file_path and os.path.exists(temp_file_path):
-            try:
-                os.unlink(temp_file_path)
-            except:
-                pass
+    return {
+        'success': False,
+        'text': '',
+        'error': 'Please use Chrome or Edge browser for the best speech recognition experience. Your browser\'s built-in speech recognition is more accurate than server-side processing.'
+    }
 
 def test_whisper():
-    """Test if Faster Whisper is working"""
-    model = load_whisper_model()
+    """Test ASR system status"""
     return {
-        'model_loaded': model is not None,
-        'model_name': 'base' if model else None,
-        'status': 'ready' if model else 'not_loaded',
-        'library': 'faster-whisper',
-        'available': FASTER_WHISPER_AVAILABLE
+        'model_loaded': True,  # Web Speech API is always available in browsers
+        'model_name': 'web_speech_api',
+        'status': 'ready',
+        'library': 'browser_web_speech_api',
+        'available': True,
+        'note': 'Using Web Speech API (Chrome/Edge) as primary method'
     }

@@ -407,8 +407,10 @@ async function initCamera() {
             }, 
             audio: {
                 echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
+                noiseSuppression: false,  // Turn off - can interfere
+                autoGainControl: false,   // Turn off - can distort
+                sampleRate: 16000,        // Optimal for Whisper
+                channelCount: 1           // Mono is fine for speech
             }
         });
         
@@ -480,9 +482,20 @@ function initSpeech() {
             log(`Speech recognition error: ${event.error}`);
             document.getElementById('candidateVideoBox').classList.remove('candidate-speaking');
             
-            if (event.error === 'not-allowed') {
+            // Add specific error handling for different error types
+            if (event.error === 'network') {
+                // Switch to Whisper mode
+                window.useWhisperASR = true;
+                initWhisperRecording();
+                conversationArea.innerHTML = 
+                    `<div style="color: #4caf50; padding: 20px;">Switched to server-side speech recognition due to network issues.</div>`;
+            } else if (event.error === 'not-allowed') {
                 conversationArea.innerHTML = 
                     `<div style="color: #4caf50; padding: 20px;">Microphone access denied. Please allow microphone access and refresh.</div>`;
+            } else if (event.error === 'no-speech') {
+                log('No speech detected, continuing...');
+            } else {
+                log(`Unhandled speech error: ${event.error}`);
             }
         };
         
@@ -520,12 +533,12 @@ function initSpeech() {
                         clearTimeout(speechTimeout);
                     }
                 
-                    // Auto-submit after pause
+                    // Auto-submit after pause - increased timeout for better speech capture
                     speechTimeout = setTimeout(() => {
                         if (collectedText.trim() && !isProcessingResponse && !isInterviewerSpeaking && !interviewCompleted) {
                             autoSubmitResponse();
                         }
-                    }, 3000);
+                    }, 5000); // Increased from 3000 to 5000ms
                 }
             }
         };

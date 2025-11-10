@@ -16,7 +16,10 @@ try:
     logger.info("✅ SpeechRecognition imported successfully")
 except (ImportError, ModuleNotFoundError) as e:
     SPEECH_RECOGNITION_AVAILABLE = False
-    logger.warning(f"⚠️ SpeechRecognition not available (Python 3.13 compatibility issue): {e}")
+    logger.info(f"ℹ️ SpeechRecognition not available - using Web Speech API only: {e}")
+except Exception as e:
+    SPEECH_RECOGNITION_AVAILABLE = False
+    logger.info(f"ℹ️ SpeechRecognition compatibility issue - using Web Speech API: {e}")
 
 # Initialize recognizer
 RECOGNIZER = None

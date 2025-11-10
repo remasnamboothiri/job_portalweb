@@ -196,7 +196,7 @@
 
 <!-- HOME -->
     <!-- HOME -->
-    <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
+    {% comment %} <section class="section-hero overlay inner-page bg-image" style="background-image: url('{% static 'images/hero_1.jpg' %}');" id="home-section">
       <div class="container">
         <div class="row">
           <div class="col-md-7">
@@ -208,7 +208,7 @@
           </div>
         </div>
       </div>
-    </section>
+    </section> {% endcomment %}
 
 
 <!-- ✅ Page Content -->
@@ -307,23 +307,8 @@
     <div class="col-md-9">
       <!-- Applications & Interviews Section (default visible) -->
       <div id="applications_section" class="dashboard-section">
-        <h3 class="mb-3">Applications & Interviews</h3>
-        {% for app in applications %}
-          <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title">{{ app.job.title }}</h5>
-              <p><strong>Applicant:</strong> {{ app.applicant.username }}</p>
-              <p><strong>Status:</strong> {{ app.status }}</p>
-              <a href="{% url 'schedule_interview' app.job.id app.applicant.id %}" class="btn btn-primary">
-                Schedule Interview
-              </a>
-            </div>
-          </div>
-        {% empty %}
-          <div class="alert alert-info text-center">No applications found for your posted jobs.</div>
-        {% endfor %}
-        
-        <!-- Key Metrics -->
+
+          <!-- Key Metrics -->
 <div style="display: flex; gap: 20px; margin-bottom: 2rem;">
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
@@ -361,6 +346,23 @@
         <div style="font-size: 12px; color: #666;">avg conversion</div>
     </div>
 </div>
+        <h3 class="mb-3">Applications & Interviews</h3>
+        {% for app in applications %}
+          <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">{{ app.job.title }}</h5>
+              <p><strong>Applicant:</strong> {{ app.applicant.username }}</p>
+              <p><strong>Status:</strong> {{ app.status }}</p>
+              <a href="{% url 'schedule_interview' app.job.id app.applicant.id %}" class="btn btn-primary">
+                Schedule Interview
+              </a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="alert alert-info text-center">No applications found for your posted jobs.</div>
+        {% endfor %}
+        
+      
       </div>
 
       <!-- MODIFIED: Your Posted Jobs Section -->

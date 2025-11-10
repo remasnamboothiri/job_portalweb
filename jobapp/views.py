@@ -2246,54 +2246,54 @@ def debug_db(request):
         
         
 # for tts checking   
-def chat_view(request):
-    if request.method == "POST":
-        try:
-            # Handle both form data and JSON
-            if request.content_type == 'application/json':
-                data = json.loads(request.body)
-                user_input = data.get("message")
-            else:
-                user_input = request.POST.get("message")
+# def chat_view(request):
+#     if request.method == "POST":
+#         try:
+#             # Handle both form data and JSON
+#             if request.content_type == 'application/json':
+#                 data = json.loads(request.body)
+#                 user_input = data.get("message")
+#             else:
+#                 user_input = request.POST.get("message")
             
-            if not user_input:
-                return JsonResponse({"error": "No message provided"}, status=400)
+#             if not user_input:
+#                 return JsonResponse({"error": "No message provided"}, status=400)
             
-            print(f"🔵 User input: {user_input}")
+#             print(f"🔵 User input: {user_input}")
             
-            # Your AI/chatbot logic here
-            response_text = f" {user_input}. "
+#             # Your AI/chatbot logic here
+#             response_text = f" {user_input}. "
             
-            # Generate TTS audio
-            print("🔵 Generating TTS...")
-            audio_path = generate_tts(response_text)
-            print(f"🔵 TTS result: {audio_path}")
+#             # Generate TTS audio
+#             print("🔵 Generating TTS...")
+#             audio_path = generate_tts(response_text)
+#             print(f"🔵 TTS result: {audio_path}")
             
-            # Return JSON for AJAX requests
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                if audio_path:
-                    print(f"✅ Returning audio path: {audio_path}")
-                else:
-                    print("❌ No audio path generated")
+#             # Return JSON for AJAX requests
+#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                 if audio_path:
+#                     print(f"✅ Returning audio path: {audio_path}")
+#                 else:
+#                     print("❌ No audio path generated")
                     
-                return JsonResponse({
-                    "response": response_text,
-                    "audio_path": audio_path,
-                    "success": True
-                })
+#                 return JsonResponse({
+#                     "response": response_text,
+#                     "audio_path": audio_path,
+#                     "success": True
+#                 })
             
-            # Return template for regular requests
-            return render(request, "jobapp/chat.html", {
-                "response": response_text,
-                "audio_path": audio_path,
-                "user_input": user_input
-            })
+#             # Return template for regular requests
+#             return render(request, "jobapp/chat.html", {
+#                 "response": response_text,
+#                 "audio_path": audio_path,
+#                 "user_input": user_input
+#             })
             
-        except Exception as e:
-            print(f"❌ Error in chat_view: {str(e)}")
-            return JsonResponse({"error": "Internal server error"}, status=500)
+#         except Exception as e:
+#             print(f"❌ Error in chat_view: {str(e)}")
+#             return JsonResponse({"error": "Internal server error"}, status=500)
     
-    return render(request, "jobapp/chat.html")
+#     return render(request, "jobapp/chat.html")
 
 
 def serve_media(request, path):

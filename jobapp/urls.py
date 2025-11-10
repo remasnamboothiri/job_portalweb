@@ -68,8 +68,8 @@ urlpatterns = [
     path('debug/', views.debug_db, name='debug'),
     path('test-auth/', views.test_recruiter_auth, name='test_auth'),
     
-    path('chat/', views.chat_view, name='chat'),
-    path('debug-dashboard/', debug_dashboard_view, name='debug_dashboard'),
+    # path('chat/', views.chat_view, name='chat'),
+    # path('debug-dashboard/', debug_dashboard_view, name='debug_dashboard'),
     
     # Recording and TTS endpoints
     path('save-interview-recording/', views.save_interview_recording, name='save_interview_recording'),

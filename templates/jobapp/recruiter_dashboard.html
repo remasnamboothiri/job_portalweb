@@ -215,10 +215,10 @@
 <div class="container py-5">
   <div class="mb-4 text-center">
     <h2>👤 Welcome, {{ user.username }}</h2>
-    <div class="mt-3">
-      <a href="{% url 'post_job' %}" class="btn btn-success me-3">+ Post a New Job</a>
+    {% comment %} <div class="mt-3"> {% endcomment %}
+      {% comment %} <a href="{% url 'post_job' %}" class="btn btn-success me-3">+ Post a New Job</a> {% endcomment %}
       {% comment %} <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</a> {% endcomment %}
-    </div>
+    {% comment %} </div>  {% endcomment %}
   </div>
 
 
@@ -300,42 +300,7 @@
       </div>
     </div> 
 
-    {% comment %} <!-- MODIFIED SIDEBAR AND CONTENT LAYOUT -->
-<div class="container py-5">
-  <div class="row">
-    <!-- ============================================
-         ENHANCED SIDEBAR FILTER SECTION
-         ============================================ -->
-    <div class="col-lg-3 col-md-4 mb-4">
-      <div class="sidebar-filter-container">
-        <div class="sidebar-filter">
-          <h6 class="text-white text-uppercase mb-4">DASHBOARD FILTERS</h6>
-          <nav class="nav flex-column">
-            <a class="nav-link active" href="#" onclick="showSection('applications_section')" id="filter-applications">
-              <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('post_job_section')" id="filter-post-job">
-              <i class="fas fa-briefcase"></i> Job Listings
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('all_candidates_section')" id="filter-all-candidates">
-              <i class="fas fa-users"></i> Applicants
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('scheduled_interviews_section')" id="filter-scheduled-interviews">
-              <i class="fas fa-video"></i> Interviews
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('edit_jobs_section')" id="filter-edit-jobs">
-              <i class="fas fa-star"></i> Edit Jobs
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('add_candidate_section')" id="filter-add-candidate">
-              <i class="fas fa-user-plus"></i> Add Candidates
-            </a>
-            <a class="nav-link" href="#" onclick="showSection('interview_results_section')" id="filter-interview-results">
-              <i class="fas fa-chart-bar"></i> Interview Results
-            </a>
-          </nav>
-        </div>
-      </div>
-    </div> {% endcomment %}
+    
 
 
     <!-- Main Content Sections -->
@@ -423,15 +388,7 @@
           <div class="card mb-4 shadow-sm">
             <div class="card-body">
               <div class="row align-items-center">
-                {% comment %} <div class="col-md-2">
-                  {% if job.featured_image %}
-                    <img src="{{ job.featured_image.url }}" alt="{{ job.title }}" class="img-thumbnail" style="max-width: 80px; max-height: 60px; object-fit: cover;">
-                  {% else %}
-                    <div class="bg-light border rounded d-inline-block p-2" style="width: 80px; height: 60px; display: flex; align-items: center; justify-content: center;">
-                      <small class="text-muted">No Image</small>
-                    </div>
-                  {% endif %}
-                </div> {% endcomment %}
+                
                 <div class="col-md-6">
                   <h5 class="card-title mb-2">{{ job.title }}</h5>
                   <p class="mb-1"><strong>Company:</strong> {{ job.company }}</p>
@@ -948,35 +905,7 @@
   </div>
 </div>
 
-<!-- ✅ Footer -->
-{% comment %} <footer class="footer">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4">
-        <h5>JobPortal</h5>
-        <p>Your gateway to a better career. Find jobs, post openings, and grow your career or company.</p>
-      </div>
-      <div class="col-md-4">
-        <h6>Quick Links</h6>
-        <ul class="list-unstyled">
-          <li><a href="{% url 'home' %}">Home</a></li>
-          <li><a href="{% url 'job_list' %}">Jobs</a></li>
-          <li><a href="{% url 'login' %}">Login/Register</a></li>
-        </ul>
-      </div>
-      <div class="col-md-4">
-        <h6>Contact</h6>
-        <p>Email: support@jobportal.com</p>
-        <p>Phone: +91-9876543210</p>
-        <p>Kochi, Kerala</p>
-      </div>
-    </div>
-    <div class="text-center pt-3 border-top">
-      <p>&copy; 2025 JobPortal. All rights reserved.</p>
-    </div>
-  </div>
-</footer> {% endcomment %}
-  
+
   
 
 <!-- ✅ Bootstrap JS -->

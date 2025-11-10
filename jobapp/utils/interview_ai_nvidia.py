@@ -68,11 +68,11 @@ Remember: Short responses, acknowledge their answer, ask one clear question.
             messages=[
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": system_prompt # This is interviewer personality
                 },
                 {   
                     "role": "user",
-                    "content": prompt
+                    "content": prompt # This is candidate response + context
                 }
             ],
             temperature=0.5,

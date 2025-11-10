@@ -1095,9 +1095,26 @@ def start_interview_by_uuid(request, interview_uuid):
             candidate_name = interview.candidate_name or "the candidate"
             job_title = interview.job.title if interview.job else "Software Developer"
             
-            if hasattr(interview, 'candidate_resume') and interview.candidate_resume:
+            # Try to find the candidate resume from the Candidate model
+            candidate_resume = None
+            try:
+                # Find the candidate by email and recruiter
+                from .models import Candidate
+                candidate_obj = Candidate.objects.filter(
+                    email=interview.candidate_email,
+                    added_by=interview.job.posted_by
+                ).first()
+                
+                if candidate_obj and candidate_obj.resume:
+                    candidate_resume = candidate_obj.resume
+                    logger.info(f"Found resume for unregistered candidate {candidate_name}")
+            except Exception as e:
+                logger.warning(f"Could not find candidate resume: {e}")
+            
+            if candidate_resume:
                 try:
-                    resume_text = extract_resume_text(interview.candidate_resume)
+                    resume_text = extract_resume_text(candidate_resume)
+                    logger.info(f"Successfully extracted resume text for {candidate_name}")
                 except Exception as e:
                     resume_text = f"Resume could not be processed for {candidate_name}."
                     logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")
@@ -1108,7 +1125,7 @@ def start_interview_by_uuid(request, interview_uuid):
                 if hasattr(interview, 'candidate_phone') and interview.candidate_phone:
                     resume_text += f", Phone: {interview.candidate_phone}"
                 resume_text += f", applying for {job_title} position."
-        
+        # job detail extraction
         try:
             company_name = interview.job.company if interview.job else "Our Company"
         except AttributeError:
@@ -1443,6 +1460,9 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                             # Enhanced fallback responses that acknowledge candidate's input
                             response_lower = candidate_last_response.lower()
                             
+                            
+                            # This logic ONLY runs when the AI fails (as a fallback)
+                            
                             # Analyze candidate's response for emotional tone and content
                             if any(word in response_lower for word in ['nervous', 'anxious', 'worried', 'scared']):
                                 ai_response = f"I completely understand, {candidate_name}. Interviews can feel nerve-wracking, but you're doing fantastic! Let's keep this conversational and relaxed. "
@@ -1472,7 +1492,7 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                                     ai_response += "Great choice of technologies! Can you describe a specific project where you implemented these tools? What made you choose them for that particular solution?"
                                 else:
                                     ai_response += "I'd love to hear about a project you've worked on that you're particularly proud of. Can you walk me through the technical challenges and how you solved them?"
-                            
+                            #Techniacal questions
                             elif question_count <= 6:
                                 if any(word in response_lower for word in ['team', 'collaborate', 'group', 'together', 'pair']):
                                     ai_response += "Collaboration is so crucial in development! Can you give me an example of a time when you had to work through a technical disagreement with a team member? How did you handle it?"
@@ -1482,7 +1502,7 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
                                     ai_response += "Excellent experience with development methodologies! How do you handle changing requirements or tight deadlines while maintaining code quality?"
                                 else:
                                     ai_response += "How do you approach working in team environments, especially when collaborating on complex technical projects? Can you share an example?"
-                            
+                            #Advanced
                             else:
                                 if any(word in response_lower for word in ['goal', 'future', 'career', 'grow', 'learn', 'aspiration']):
                                     ai_response += f"I love hearing about career aspirations! What specifically excites you about this {job_title} role at {company_name}, and how does it align with your professional goals?"

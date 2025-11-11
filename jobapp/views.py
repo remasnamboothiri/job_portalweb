@@ -349,163 +349,10 @@ def post_job(request):
 
 
 
-def debug_job_posting(request):
-    """Debug view to check job posting issues"""
-    debug_info = {}
-    
-    try:
-        # 1. Check if Job model can be imported
-        from .models import Job
-        debug_info['model_import'] = 'SUCCESS'
-        
-        # 2. Check database connection
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-            debug_info['db_connection'] = 'SUCCESS'
-        
-        # 3. Check if jobapp_job table exists
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_name = 'jobapp_job'
-            """)
-            result = cursor.fetchone()
-            debug_info['table_exists'] = 'YES' if result else 'NO'
-            
-        # 4. Check table structure
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns 
-                WHERE table_name = 'jobapp_job'
-                ORDER BY ordinal_position
-            """)
-            columns = cursor.fetchall()
-            debug_info['table_columns'] = [f"{col[0]} ({col[1]})" for col in columns]
-            
-        # 5. Check current job count
-        job_count = Job.objects.count()
-        debug_info['current_job_count'] = job_count
-        
-        # 6. Check if user can create jobs
-        if request.user.is_authenticated:
-            debug_info['user_authenticated'] = True
-            debug_info['user_is_recruiter'] = getattr(request.user, 'is_recruiter', False)
-            debug_info['user_id'] = request.user.id
-        else:
-            debug_info['user_authenticated'] = False
-            
-        # 7. Try to create a test job (without saving)
-        test_job = Job(
-            title="Test Job",
-            company="Test Company", 
-            location="Test Location",
-            description="Test Description for debugging purposes",
-            posted_by=request.user if request.user.is_authenticated else None
-        )
-        debug_info['test_job_creation'] = 'SUCCESS'
-        
-    except Exception as e:
-        debug_info['error'] = str(e)
-        debug_info['error_type'] = type(e).__name__
-        
-    return JsonResponse(debug_info, indent=2)
 
-@require_POST
-def test_job_save(request):
-    """Test saving a job to database"""
-    if not request.user.is_authenticated or not request.user.is_recruiter:
-        return JsonResponse({'error': 'Must be logged in as recruiter'}, status=403)
-        
-    try:
-        with transaction.atomic():
-            # Create test job
-            test_job = Job.objects.create(
-                title="DEBUG TEST JOB - DELETE ME",
-                company="Test Company Debug",
-                location="Test Location",
-                description="This is a test job created for debugging. Please delete this job after testing.",
-                posted_by=request.user
-            )
-            
-            # Verify it was saved
-            saved_job = Job.objects.filter(id=test_job.id).first()
-            
-            if saved_job:
-                return JsonResponse({
-                    'success': True,
-                    'job_id': saved_job.id,
-                    'job_title': saved_job.title,
-                    'message': 'Test job created successfully!'
-                })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Job was created but not found in database'
-                })
-                
-    except Exception as e:
-        logger.error(f"Test job save failed: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'error_type': type(e).__name__
-        })
 
-def fix_database_issues(request):
-    """Attempt to fix common database issues"""
-    if not request.user.is_superuser:
-        return JsonResponse({'error': 'Only superusers can run database fixes'}, status=403)
-    
-    fixes_applied = []
-    errors = []
-    
-    try:
-        # 1. Run migrations
-        try:
-            call_command('makemigrations', 'jobapp')
-            call_command('migrate', 'jobapp')
-            fixes_applied.append('Migrations updated and applied')
-        except Exception as e:
-            errors.append(f'Migration error: {str(e)}')
-        
-        # 2. Check for missing columns and add them
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'jobapp_job'
-            """)
-            existing_columns = [row[0] for row in cursor.fetchall()]
-            
-            required_columns = [
-                'title', 'company', 'location', 'description', 
-                'posted_by_id', 'date_posted', 'status'
-            ]
-            
-            missing_columns = []
-            for col in required_columns:
-                if col not in existing_columns:
-                    missing_columns.append(col)
-            
-            if missing_columns:
-                errors.append(f'Missing columns: {missing_columns}')
-            else:
-                fixes_applied.append('All required columns exist')
-        
-        return JsonResponse({
-            'fixes_applied': fixes_applied,
-            'errors': errors,
-            'status': 'completed'
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e),
-            'fixes_applied': fixes_applied,
-            'errors': errors
-        })
+
+
 
 # Job List view
 def job_list(request):
@@ -1778,406 +1625,6 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
             )
 
 
-#FIXED VERSION - Key changes in start_interview_by_uuid function
-
-
-
-
-
-            
-# ADD THESE COMPLETE FUNCTIONS TO YOUR views.py FILE
-
-@csrf_exempt
-def test_custom_voice_only(request):
-    """Complete test endpoint specifically for custom TTS voice"""
-    try:
-        from jobapp.tts import (
-            generate_tts, 
-            NEW_TTS_API_KEY
-        )
-        
-        # Initialize result dictionary
-        result = {
-            'timestamp': timezone.now().isoformat(),
-            'target_voice_name': 'Custom TTS Voice',
-            'api_key_configured': bool(NEW_TTS_API_KEY),
-            'api_key_length': len(NEW_TTS_API_KEY) if NEW_TTS_API_KEY else 0,
-        }
-        
-        # Show API key preview (safely)
-        if NEW_TTS_API_KEY and len(NEW_TTS_API_KEY) > 20:
-            result['api_key_preview'] = NEW_TTS_API_KEY[:15] + '...' + NEW_TTS_API_KEY[-5:]
-            result['api_key_status'] = 'Configured'
-        else:
-            result['api_key_preview'] = 'Not configured or too short'
-            result['api_key_status'] = 'Invalid'
-        
-        # Test custom TTS generation
-        logger.info("Testing custom TTS voice generation...")
-        test_text = "Hello! This is a test of the custom TTS voice for your AI interview system. I hope you can hear me clearly!"
-        
-        # Generate audio with custom TTS
-        custom_audio = generate_tts(test_text, "female_interview")
-        
-        result['custom_test_successful'] = bool(custom_audio)
-        result['custom_audio_path'] = custom_audio if custom_audio else None
-            
-        if custom_audio:
-            # Check if file actually exists and get details
-            full_path = os.path.join(settings.BASE_DIR, custom_audio.lstrip('/'))
-            if os.path.exists(full_path):
-                file_size = os.path.getsize(full_path)
-                result['audio_file_size'] = file_size
-                result['audio_file_exists'] = True
-                result['audio_file_path'] = full_path
-                result['status'] = 'SUCCESS'
-                result['message'] = 'Custom TTS is working perfectly!'
-                result['audio_url'] = request.build_absolute_uri(custom_audio)
-                result['test_text'] = test_text
-                
-                logger.info(f"SUCCESS: Custom TTS test generated {file_size} byte file")
-            else:
-                result['audio_file_exists'] = False
-                result['status'] = 'FAILED'
-                result['message'] = 'Audio was generated but file not found on disk'
-                logger.error(f"Audio path returned but file not found: {full_path}")
-        else:
-            result['status'] = 'FAILED'
-            result['message'] = 'Custom TTS generation failed - check logs for details'
-            logger.error("Custom TTS generation returned None")
-        
-        # Run basic system health check
-        logger.info("Running basic TTS health check...")
-        try:
-            health_info = {'tts_working': bool(custom_audio)}
-            result['health_check'] = health_info
-            result['health_check_successful'] = True
-        except Exception as e:
-            result['health_check_error'] = str(e)
-            result['health_check_successful'] = False
-            logger.error(f"Health check failed: {e}")
-        
-        # Provide specific recommendations for custom TTS
-        if result['status'] == 'SUCCESS':
-            result['recommendation'] = 'PERFECT! Custom TTS is working correctly for your interviews!'
-            result['next_steps'] = 'Your interview system will use custom TTS for all voice requests.'
-        else:
-            result['recommendation'] = 'Custom TTS issue detected. The interview system will use Google TTS as fallback.'
-            result['action_needed'] = 'Check your TTS API configuration and service status'
-        
-        # Add debugging information
-        result['debug_info'] = {
-            'custom_tts_module_loaded': 'generate_tts' in locals(),
-            'settings_media_root': settings.MEDIA_ROOT,
-            'current_user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
-            'request_method': request.method,
-            'server_time': timezone.now().isoformat()
-        }
-        
-        logger.info(f"Custom TTS test completed with status: {result['status']}")
-        return JsonResponse(result, indent=2)
-        
-    except ImportError as e:
-        logger.error(f"Import error in custom TTS test: {e}")
-        return JsonResponse({
-            'error': 'Import Error',
-            'details': str(e),
-            'recommendation': 'Make sure your updated tts.py file is in place with custom TTS configuration',
-            'status': 'IMPORT_FAILED'
-        }, status=500)
-        
-    except Exception as e:
-        logger.error(f"Custom TTS test failed with exception: {e}")
-        import traceback
-        full_traceback = traceback.format_exc()
-        logger.error(f"Full traceback: {full_traceback}")
-        
-        return JsonResponse({
-            'error': 'Test Failed',
-            'error_type': type(e).__name__,
-            'error_message': str(e),
-            'traceback': full_traceback if settings.DEBUG else 'Enable DEBUG mode for full traceback',
-            'recommendation': 'Check the server logs for detailed error information',
-            'status': 'EXCEPTION_OCCURRED'
-        }, status=500)
-
-
-@csrf_exempt  
-def test_custom_direct_generation(request):
-    """Direct test of custom TTS generation with custom text"""
-    try:
-        from jobapp.tts import generate_tts
-        
-        # Get custom text from query parameter or use comprehensive default
-        default_text = (
-            'Hello! This is your custom TTS voice speaking. I will be conducting your AI interview today. '
-            'Can you hear me clearly? Please let me know if the audio quality is good. '
-            'I am excited to learn more about your background and experience. '
-            'My natural conversation style should make this interview feel comfortable and engaging.'
-        )
-        
-        test_text = request.GET.get('text', default_text)
-        
-        # Limit text length for testing
-        if len(test_text) > 500:
-            test_text = test_text[:497] + "..."
-        
-        logger.info(f"Direct custom TTS test requested")
-        logger.info(f"Text length: {len(test_text)} characters")
-        logger.info(f"Text preview: {test_text[:100]}...")
-        
-        # Record start time
-        import time
-        start_time = time.time()
-        
-        # Generate audio with custom TTS
-        audio_path = generate_tts(test_text, "female_interview")
-        
-        # Record end time
-        generation_time = round(time.time() - start_time, 2)
-        
-        # Prepare result
-        result = {
-            'timestamp': timezone.now().isoformat(),
-            'voice_name': 'Custom TTS Voice',
-            'text_used': test_text,
-            'text_length': len(test_text),
-            'generation_time_seconds': generation_time,
-            'success': bool(audio_path)
-        }
-        
-        if audio_path:
-            # Get file details
-            full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-            
-            if os.path.exists(full_path):
-                file_size = os.path.getsize(full_path)
-                
-                # Try to get audio duration if possible
-                try:
-                    from jobapp.tts import get_audio_duration
-                    duration = get_audio_duration(full_path)
-                    result['estimated_duration_seconds'] = duration
-                except:
-                    result['estimated_duration_seconds'] = 'Could not determine'
-                
-                result.update({
-                    'message': 'Custom TTS audio generated successfully!',
-                    'audio_url': audio_path,
-                    'full_audio_url': request.build_absolute_uri(audio_path),
-                    'file_size_bytes': file_size,
-                    'file_exists': True,
-                    'local_file_path': full_path,
-                    'instructions': 'Click the full_audio_url above to listen to the custom TTS voice',
-                    'status': 'SUCCESS'
-                })
-                
-                # Determine if this was custom TTS API or fallback
-                if 'daisy' in audio_path.lower():
-                    result['service_used'] = 'Custom TTS API'
-                    result['voice_quality'] = 'High quality - Custom TTS API'
-                elif 'gtts' in audio_path.lower():
-                    result['service_used'] = 'Google TTS (Fallback)'
-                    result['voice_quality'] = 'Standard quality - Google TTS fallback'
-                else:
-                    result['service_used'] = 'Unknown TTS service'
-                
-                logger.info(f"SUCCESS: Direct custom TTS test - {file_size} bytes, {generation_time}s generation time")
-                
-            else:
-                result.update({
-                    'message': 'Audio path returned but file not found on disk',
-                    'audio_url': audio_path,
-                    'file_exists': False,
-                    'status': 'FILE_NOT_FOUND'
-                })
-                logger.error(f"Audio path returned but file not found: {full_path}")
-        else:
-            result.update({
-                'message': 'Failed to generate custom TTS voice',
-                'recommendation': 'Check your TTS API status and API key. System may be using gTTS fallback.',
-                'possible_issues': [
-                    'TTS API key invalid or expired',
-                    'API service unavailable',
-                    'Custom voice not accessible in your account',
-                    'Network connectivity issues'
-                ],
-                'status': 'GENERATION_FAILED'
-            })
-            logger.error(f"Direct custom TTS generation failed for text: {test_text[:50]}...")
-        
-        return JsonResponse(result, indent=2)
-            
-    except Exception as e:
-        logger.error(f"Direct custom TTS test failed: {e}")
-        import traceback
-        full_traceback = traceback.format_exc()
-        
-        return JsonResponse({
-            'success': False,
-            'error': 'Direct Test Failed',
-            'error_type': type(e).__name__,
-            'error_message': str(e),
-            'traceback': full_traceback if settings.DEBUG else 'Enable DEBUG for full traceback',
-            'status': 'EXCEPTION_OCCURRED',
-            'voice_name': 'Custom TTS Voice'
-        }, status=500)
-
-
-@csrf_exempt
-def test_custom_interview_simulation(request):
-    """Simulate a complete interview question with custom TTS voice"""
-    try:
-        from jobapp.tts import generate_tts
-        
-        # Get candidate name from query parameter
-        candidate_name = request.GET.get('name', 'John')
-        job_title = request.GET.get('job', 'Software Developer')
-        company_name = request.GET.get('company', 'TechCorp')
-        
-        # Create a realistic interview question
-        interview_question = (
-            f"Hi {candidate_name}, great to meet you and thanks for joining me today! "
-            f"I'm excited to learn more about you. Could you start by telling me a bit about yourself "
-            f"and what interests you about this {job_title} position at {company_name}? "
-            f"I'd love to hear about your background and experience."
-        )
-        
-        logger.info(f"Custom TTS interview simulation for candidate: {candidate_name}")
-        
-        # Generate audio
-        import time
-        start_time = time.time()
-        audio_path = generate_tts(interview_question, "female_interview")
-        generation_time = round(time.time() - start_time, 2)
-        
-        result = {
-            'simulation_type': 'AI Interview Question',
-            'timestamp': timezone.now().isoformat(),
-            'interviewer_voice': 'Custom TTS Voice',
-            'candidate_name': candidate_name,
-            'job_title': job_title,
-            'company_name': company_name,
-            'interview_question': interview_question,
-            'question_length': len(interview_question),
-            'generation_time_seconds': generation_time,
-            'success': bool(audio_path)
-        }
-        
-        if audio_path:
-            full_path = os.path.join(settings.BASE_DIR, audio_path.lstrip('/'))
-            if os.path.exists(full_path):
-                file_size = os.path.getsize(full_path)
-                
-                result.update({
-                    'status': 'SUCCESS',
-                    'message': 'Custom TTS successfully generated interview question!',
-                    'audio_url': request.build_absolute_uri(audio_path),
-                    'file_size_bytes': file_size,
-                    'instructions': 'This is how the custom TTS will sound during actual interviews',
-                    'next_steps': 'If this sounds good, your interview system is ready to use custom TTS!'
-                })
-                
-                logger.info(f"SUCCESS: Interview simulation - {file_size} bytes")
-            else:
-                result.update({
-                    'status': 'FILE_NOT_FOUND',
-                    'message': 'Interview question generated but file not accessible'
-                })
-        else:
-            result.update({
-                'status': 'FAILED',
-                'message': 'Failed to generate interview question with custom TTS voice',
-                'recommendation': 'Check TTS API configuration or use the other test endpoints'
-            })
-        
-        return JsonResponse(result, indent=2)
-        
-    except Exception as e:
-        logger.error(f"Custom TTS interview simulation failed: {e}")
-        return JsonResponse({
-            'status': 'SIMULATION_FAILED',
-            'error': str(e),
-            'message': 'Interview simulation test failed'
-        }, status=500)
-
-
-# OPTIONAL: Quick status check endpoint
-@csrf_exempt
-def custom_voice_status(request):
-    """Quick status check for custom TTS voice availability"""
-    try:
-        from jobapp.tts import generate_tts, NEW_TTS_API_KEY
-        
-        # Test custom TTS with a simple phrase
-        test_audio = generate_tts("Test", "female_interview")
-        
-        status_result = {
-            'voice_name': 'Custom TTS Voice',
-            'api_key_configured': bool(NEW_TTS_API_KEY and len(NEW_TTS_API_KEY) > 20),
-            'tts_working': bool(test_audio),
-            'timestamp': timezone.now().isoformat()
-        }
-        
-        if test_audio:
-            status_result['overall_status'] = 'READY'
-            status_result['message'] = 'Custom TTS is ready for interviews!'
-        else:
-            status_result['overall_status'] = 'NOT_READY'
-            status_result['message'] = 'Custom TTS is not available'
-        
-        return JsonResponse(status_result, indent=2)
-        
-    except Exception as e:
-        return JsonResponse({
-            'overall_status': 'ERROR',
-            'error': str(e),
-            'message': 'Status check failed'
-        }, status=500)   
-   
-            
-
-
-def test_voice_direct(request):
-    """
-    Direct voice test - generates audio file you can download
-    """
-    try:
-        from jobapp.tts import generate_tts
-        
-        # Test text for custom TTS
-        test_text = request.GET.get('text', 'Hello! This is your custom TTS voice speaking. I will be your AI interviewer today. Can you hear me clearly?')
-        
-        logger.info(f"Direct voice test with text: {test_text}")
-        
-        # Generate audio with custom TTS
-        audio_path = generate_tts(test_text, "female_interview")
-        
-        if audio_path:
-            return JsonResponse({
-                'success': True,
-                'message': 'Custom TTS voice generated successfully!',
-                'audio_url': audio_path,
-                'text_used': test_text,
-                'voice': 'Custom TTS Voice',
-                'instructions': f'You can listen to the audio at: {request.build_absolute_uri(audio_path)}'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Failed to generate custom TTS voice',
-                'text_used': test_text,
-                'recommendation': 'Check your TTS API status and API key'
-            })
-            
-    except Exception as e:
-        logger.error(f"Direct custom TTS test failed: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'message': 'Direct custom TTS test failed'
-        })
-
             
 
 
@@ -2225,75 +1672,11 @@ def test_voice_direct(request):
 
         
             
-def debug_db(request):
-    try:
-        db_url = os.environ.get('DATABASE_URL', 'Not found')
-        
-        # Test database connection
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-            db_status = "Database connection: OK"
-        
-        return HttpResponse(f'''
-        DATABASE_URL: {db_url[:50]}...<br>
-        {db_status}<br>
-        Environment: {os.environ.get('RENDER', 'Local')}
-        ''')
-    except Exception as e:
-        return HttpResponse(f'Error: {str(e)}')           
+      
            
         
         
-# for tts checking   
-# def chat_view(request):
-#     if request.method == "POST":
-#         try:
-#             # Handle both form data and JSON
-#             if request.content_type == 'application/json':
-#                 data = json.loads(request.body)
-#                 user_input = data.get("message")
-#             else:
-#                 user_input = request.POST.get("message")
-            
-#             if not user_input:
-#                 return JsonResponse({"error": "No message provided"}, status=400)
-            
-#             print(f"🔵 User input: {user_input}")
-            
-#             # Your AI/chatbot logic here
-#             response_text = f" {user_input}. "
-            
-#             # Generate TTS audio
-#             print("🔵 Generating TTS...")
-#             audio_path = generate_tts(response_text)
-#             print(f"🔵 TTS result: {audio_path}")
-            
-#             # Return JSON for AJAX requests
-#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#                 if audio_path:
-#                     print(f"✅ Returning audio path: {audio_path}")
-#                 else:
-#                     print("❌ No audio path generated")
-                    
-#                 return JsonResponse({
-#                     "response": response_text,
-#                     "audio_path": audio_path,
-#                     "success": True
-#                 })
-            
-#             # Return template for regular requests
-#             return render(request, "jobapp/chat.html", {
-#                 "response": response_text,
-#                 "audio_path": audio_path,
-#                 "user_input": user_input
-#             })
-            
-#         except Exception as e:
-#             print(f"❌ Error in chat_view: {str(e)}")
-#             return JsonResponse({"error": "Internal server error"}, status=500)
-    
-#     return render(request, "jobapp/chat.html")
+
 
 
 def serve_media(request, path):
@@ -2335,83 +1718,8 @@ def get_csrf_token(request):
         'csrf_token': get_token(request)
     })
 
-# TTS test endpoint
-@csrf_exempt
-def test_asr(request):
-    """Test ASR functionality with Whisper"""
-    if request.method == 'POST' and 'audio' in request.FILES:
-        from .asr import transcribe_audio, test_whisper
-        
-        audio_file = request.FILES['audio']
-        
-        # Test Whisper status
-        whisper_status = test_whisper()
-        
-        # Transcribe audio
-        result = transcribe_audio(audio_file)
-        
-        return JsonResponse({
-            'whisper_status': whisper_status,
-            'transcription_result': result,
-            'audio_file_info': {
-                'name': audio_file.name,
-                'size': audio_file.size,
-                'content_type': audio_file.content_type
-            }
-        })
-    
-    return JsonResponse({'error': 'No audio file provided'})
 
-@csrf_exempt
-def test_tts(request):
-    """Test TTS generation system with custom voice support"""
-    if request.method == 'POST':
-        try:
-            if request.content_type == 'application/json':
-                data = json.loads(request.body)
-                text = data.get('text', 'This is a test of the text to speech system')
-                voice = data.get('voice', 'female_professional')
-            else:
-                text = request.POST.get('text', 'This is a test of the text to speech system')
-                voice = request.POST.get('voice', 'female_professional')
-            
-            logger.info(f"TTS test requested with text: '{text}' and voice: '{voice}'")
-            
-            # Test TTS generation with specified voice
-            from jobapp.tts import generate_tts
-            
-            # Test generation with voice model
-            audio_path = generate_tts(text, voice)
-            
-            # Determine which service was used
-            service_used = 'Unknown'
-            if audio_path:
-                if 'daisy' in audio_path:
-                    service_used = 'Custom TTS API'
-                elif 'gtts' in audio_path:
-                    service_used = 'gTTS (Fallback)'
-            
-            response_data = {
-                'success': bool(audio_path),
-                'audio_url': audio_path if audio_path else None,
-                'text': text,
-                'voice': voice,
-                'service_used': service_used,
-                'message': f'TTS test completed successfully using {service_used}' if audio_path else 'TTS test failed'
-            }
-            
-            logger.info(f"TTS test result: {response_data}")
-            return JsonResponse(response_data)
-            
-        except Exception as e:
-            logger.error(f"TTS test error: {e}")
-            return JsonResponse({
-                'success': False,
-                'error': str(e),
-                'message': 'TTS test failed with error'
-            }, status=500)
-    
-    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
 
 # Audio generation endpoint
 @csrf_exempt
@@ -2561,24 +1869,6 @@ def save_interview_recording(request):
     
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
-# Test authentication view
-@login_required
-def test_recruiter_auth(request):
-    """Simple test view to check recruiter authentication"""
-    user_info = {
-        'user_id': request.user.id,
-        'username': request.user.username,
-        'is_authenticated': request.user.is_authenticated,
-        'is_recruiter': getattr(request.user, 'is_recruiter', 'Field not found'),
-        'user_type': type(request.user).__name__,
-        'groups': list(request.user.groups.values_list('name', flat=True)) if hasattr(request.user, 'groups') else 'No groups'
-    }
-    
-    return HttpResponse(f"""
-    <h2>Authentication Test</h2>
-    <pre>{user_info}</pre>
-    <p><a href="/schedule-interview/1/2/">Test Schedule Interview Link</a></p>
-    """)
 
 
 
@@ -2801,79 +2091,8 @@ def recruiter_dashboard(request):
     
     return render(request, 'jobapp/recruiter_dashboard.html', context)
 
-# Test application form view
-@login_required
-def test_apply_form(request, job_id):
-    """Test view for debugging application form"""
-    job = get_object_or_404(Job, id=job_id)
-    
-    if request.method == 'POST':
-        logger.info(f"TEST: Form submitted with POST: {request.POST}")
-        logger.info(f"TEST: Files submitted: {request.FILES}")
-        
-        form = ApplicationForm(request.POST, request.FILES)
-        logger.info(f"TEST: Form is bound: {form.is_bound}")
-        logger.info(f"TEST: Form is valid: {form.is_valid()}")
-        logger.info(f"TEST: Form errors: {form.errors}")
-        
-        if form.is_valid():
-            messages.success(request, 'Form is valid!')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
-    else:
-        form = ApplicationForm()
-    
-    return render(request, 'jobapp/test_apply.html', {'form': form, 'job': job})
 
 
-
-def debug_database_structure(request):
-    """Debug view to see exact database structure"""
-    try:
-        with connection.cursor() as cursor:
-            # Get all jobapp tables
-            cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' AND table_name LIKE 'jobapp_%'
-                ORDER BY table_name
-            """)
-            tables = [row[0] for row in cursor.fetchall()]
-            
-            table_details = {}
-            
-            for table in tables:
-                cursor.execute("""
-                    SELECT column_name, data_type, is_nullable, column_default
-                    FROM information_schema.columns 
-                    WHERE table_name = %s
-                    ORDER BY ordinal_position
-                """, [table])
-                
-                columns = []
-                for col in cursor.fetchall():
-                    columns.append({
-                        'name': col[0],
-                        'type': col[1],
-                        'nullable': col[2],
-                        'default': col[3]
-                    })
-                
-                table_details[table] = columns
-            
-            return JsonResponse({
-                'status': 'success',
-                'tables': tables,
-                'details': table_details
-            }, indent=2)
-            
-    except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        })
         
 
 # specific crud operation for  updating job structure           
@@ -3015,56 +2234,7 @@ def get_candidate_email(request, candidate_id):
 
 
 
-@login_required
-@user_passes_test(lambda u: u.is_recruiter)
-def test_interview_results(request):
-    """Test view to create sample interview results"""
-    try:
-        # Get the most recent interview for this recruiter
-        interview = Interview.objects.filter(
-            job__posted_by=request.user
-        ).order_by('-created_at').first()
-        
-        if not interview:
-            return JsonResponse({
-                'success': False,
-                'message': 'No interviews found for testing'
-            })
-        
-        # Create sample conversation history with more realistic data
-        sample_conversation = [
-            {'speaker': 'interviewer', 'message': 'Hello! Thanks for joining me today. Could you start by telling me a bit about yourself and what interests you about this position?', 'question_number': 1},
-            {'speaker': 'candidate', 'message': 'Hi! I am a software developer with 3 years of experience in full-stack development. I have worked extensively with Python, Django, JavaScript, and React. I am particularly interested in this position because it offers opportunities to work on challenging projects and grow my skills in cloud technologies.', 'question_number': 1},
-            {'speaker': 'interviewer', 'message': 'That sounds great! Can you tell me about a challenging project you have worked on recently and how you approached solving the problems you encountered?', 'question_number': 2},
-            {'speaker': 'candidate', 'message': 'Recently, I worked on a e-commerce platform where we had performance issues with the database queries. I identified the bottlenecks using profiling tools, optimized the queries by adding proper indexes, and implemented caching strategies using Redis. This reduced the page load time by 60%.', 'question_number': 2},
-            {'speaker': 'interviewer', 'message': 'Excellent problem-solving approach! How do you handle working in a team environment, especially when there are conflicting opinions on technical decisions?', 'question_number': 3},
-            {'speaker': 'candidate', 'message': 'I believe in open communication and data-driven decisions. When there are conflicting opinions, I try to understand different perspectives, present the pros and cons of each approach, and if needed, create small prototypes to test the solutions. I also value team consensus and am willing to compromise when it benefits the overall project.', 'question_number': 3},
-        ]
-        
-        # Generate results
-        result = generate_interview_results(interview, sample_conversation)
-        
-        if result:
-            return JsonResponse({
-                'success': True,
-                'message': f'Test results generated for interview {interview.uuid}',
-                'interview_id': str(interview.uuid),
-                'candidate_name': interview.candidate_name,
-                'job_title': interview.job.title if interview.job else 'N/A'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Failed to generate test results'
-            })
-        
-    except Exception as e:
-        logger.error(f"Test interview results failed: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
-        
+
         
         
      
@@ -3081,6 +2251,8 @@ def generate_interview_results(interview, conversation_history):
         logger.info(f"📊 Conversation history has {len(conversation_history)} exchanges")
         
         # Extract questions and answers from conversation history
+        #Collect the Conversation - Takes all questions asked by AI interviewer,Takes all answers given by candidate,
+        #Counts how many questions were asked , Measures how detailed the answers were
         questions_asked = []
         answers_given = []
         candidate_responses = []
@@ -3101,6 +2273,9 @@ def generate_interview_results(interview, conversation_history):
                     'question': entry['message'],
                     'timestamp': entry.get('timestamp', timezone.now().isoformat())
                 })
+                
+                
+                
         
         logger.info(f"📝 Extracted {len(questions_asked)} questions and {len(answers_given)} answers")
         
@@ -3125,6 +2300,11 @@ def generate_interview_results(interview, conversation_history):
             return True
         
         # Generate basic scores based on conversation quality
+        # Calculate Scores -Technical Score: How well they know technology (1-10)
+        #-Communication Score: How clearly they speak (1-10)
+        #-Problem-Solving Score: How they think through problems (1-10)
+        #-Overall Score: Average of all scores
+        
         total_responses = len(candidate_responses)
         avg_response_length = sum(len(response) for response in candidate_responses) / max(total_responses, 1)
         
@@ -3136,9 +2316,14 @@ def generate_interview_results(interview, conversation_history):
         problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
         overall_score = (technical_score + communication_score + problem_solving_score) / 3
         
+        
+        
         # Generate detailed AI feedback using actual conversation analysis
         try:
             # Build full conversation for AI analysis
+            #Generate AI Feedback
+            
+            
             full_conversation = "\n\n".join([
                 f"{entry['speaker'].title()}: {entry['message']}"
                 for entry in conversation_history
@@ -3177,6 +2362,9 @@ Focus your analysis on: technical competency demonstrated, communication clarity
                 timeout=30
             )
             
+            
+            
+            #Make Hiring Recommendation
             if detailed_analysis and len(detailed_analysis) > 100:
                 ai_feedback = detailed_analysis
                 # Extract recommendation from AI response
@@ -3224,6 +2412,7 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
         logger.info(f"💡 Recommendation: {recommendation}")
         
         # CRITICAL FIX: Save to database with explicit field assignment
+        #Save Everything to Database
         try:
             interview.questions_asked = json.dumps(questions_asked)
             interview.answers_given = json.dumps(answers_given)
@@ -3252,6 +2441,8 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
                 'results_generated_at', 'transcript', 'started_at'
             ])
             
+            
+            
             logger.info(f"✅ Interview results saved successfully for {interview.uuid}")
             logger.info(f"📊 Final scores - Overall: {interview.overall_score}/10, Technical: {interview.technical_score}/10")
             logger.info(f"💼 Recommendation: {interview.recommendation}")
@@ -3263,6 +2454,7 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
                 logger.info(f"✅ VERIFICATION PASSED: Results confirmed in database")
                 
                 # Send completion email automatically
+                # Email Confirmation code
                 try:
                     send_interview_status_email(interview, 'completed')
                     logger.info(f"✅ Completion email sent for interview {interview.uuid}")
@@ -3296,6 +2488,140 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
             pass
             
         return False
+    
+    
+#interview results view 
+@login_required
+@user_passes_test(lambda u: u.is_recruiter)
+def interview_results(request, interview_uuid):
+    """Display interview results for completed interviews - FIXED VERSION"""
+    try:
+        logger.info(f"📊 Results page accessed for interview {interview_uuid}")
+        
+        # Get the interview and ensure the recruiter owns it
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+        logger.info(f"✅ Interview found: {interview.candidate_name} for {interview.job.title}")
+        logger.info(f"📝 Interview status: {interview.status}")
+        logger.info(f"🎯 Has results: {interview.has_results}")
+        logger.info(f"💯 Overall score: {interview.overall_score}")
+        logger.info(f"💬 AI feedback length: {len(interview.ai_feedback) if interview.ai_feedback else 0}")
+        
+        if interview.job.posted_by != request.user:
+            logger.warning(f"⚠️ Permission denied - wrong recruiter")
+            messages.error(request, 'You do not have permission to view this interview.')
+            return redirect('recruiter_dashboard')
+        
+        
+        # Check if results exist
+        if not interview.has_results:
+            logger.warning(f"⚠️ No results available for interview {interview_uuid}")
+            logger.info(f"Debug info - Status: {interview.status}, Completed: {interview.completed_at}")
+            logger.info(f"Debug info - Questions: {bool(interview.questions_asked)}, Answers: {bool(interview.answers_given)}")
+            
+            # Try to regenerate results if interview is completed but has no results
+            if interview.status == 'completed' and interview.completed_at:
+                logger.info(f"🔄 Attempting to regenerate results...")
+                messages.info(request, 'Results are being generated for this interview. Please refresh in a moment.')
+            else:
+                messages.warning(request, 'This interview is not yet completed or has no results.')
+            
+            return redirect('recruiter_dashboard')
+        
+        # Parse the questions and answers from JSON
+        questions_asked = []
+        answers_given = []
+        
+        try:
+            if interview.questions_asked:
+                questions_asked = json.loads(interview.questions_asked)
+                logger.info(f"✅ Parsed {len(questions_asked)} questions")
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"❌ Could not parse questions_asked: {e}")
+        
+        try:
+            if interview.answers_given:
+                answers_given = json.loads(interview.answers_given)
+                logger.info(f"✅ Parsed {len(answers_given)} answers")
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"❌ Could not parse answers_given: {e}")
+        
+        # Combine questions and answers for display 
+        qa_pairs = []
+        for i in range(max(len(questions_asked), len(answers_given))):
+            question = questions_asked[i] if i < len(questions_asked) else None
+            answer = answers_given[i] if i < len(answers_given) else None
+            
+            qa_pairs.append({
+                'question_number': i + 1,
+                'question': question['question'] if question else 'Question not recorded',
+                'answer': answer['answer'] if answer else 'Answer not recorded',
+                'question_timestamp': question.get('timestamp') if question else None,
+                'answer_timestamp': answer.get('timestamp') if answer else None
+            })
+        
+        logger.info(f"✅ Created {len(qa_pairs)} Q&A pairs for display")
+        
+        # Calculate interview duration if available -  actual start time
+        interview_duration = None
+        if interview.completed_at and interview.started_at:
+            duration_seconds = (interview.completed_at - interview.started_at).total_seconds()
+            # Ensure duration is positive and reasonable (max 60 minutes for interviews)
+            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                interview_duration = f"{minutes}m {seconds}s"
+            elif duration_seconds > 3600:
+                # If duration seems too long, use the scheduled duration instead
+                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
+                interview_duration = f"{scheduled_duration}m (scheduled duration)"
+            else:
+                interview_duration = "Less than 1 minute"
+        elif interview.completed_at and interview.created_at:
+            # Fallback to created_at if started_at is not available (for old interviews)
+            duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
+            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                interview_duration = f"{minutes}m {seconds}s (estimated)"
+            elif duration_seconds > 3600:
+                # If duration seems too long, use the scheduled duration instead
+                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
+                interview_duration = f"{scheduled_duration}m (scheduled duration)"
+            else:
+                interview_duration = "Duration unavailable"
+        
+        logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
+        if interview.started_at and interview.completed_at:
+            actual_duration = (interview.completed_at - interview.started_at).total_seconds()
+            logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
+            logger.info(f"⏱️ Actual duration: {actual_duration:.0f} seconds ({actual_duration/60:.1f} minutes)")
+            logger.info(f"🎯 Scheduled duration: {getattr(interview, 'interview_duration_minutes', 15)} minutes")
+        else:
+            logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
+        
+        
+        
+        # Prepare Data for Template - Packages all data into a dictionary called context
+        #-Sends data to HTML template (interview_results.html)
+        #-Template uses this data to create the beautiful results page
+        context = {
+            'interview': interview,
+            'qa_pairs': qa_pairs,
+            'interview_duration': interview_duration,
+            'total_questions': len(questions_asked),
+            'total_answers': len(answers_given),
+        }
+        
+        logger.info(f"✅ Rendering results page with {len(qa_pairs)} Q&A pairs")
+        return render(request, 'jobapp/interview_results.html', context)
+    #Error Handling   
+    except Exception as e:
+        logger.error(f"❌ Error displaying interview results for {interview_uuid}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        messages.error(request, 'Could not load interview results. Please try again.')
+        return redirect('recruiter_dashboard')    
 
 
 # EMAIL MANAGEMENT VIEWS
@@ -3377,158 +2703,9 @@ def get_interview_link(request, interview_uuid):
             'message': f'Failed to get interview link: {str(e)}'
         }, status=500)
 
-@login_required
-@user_passes_test(lambda u: u.is_recruiter)
-def test_email_system(request):
-    """Test email system configuration"""
-    try:
-        # Test email configuration
-        config_result = test_email_configuration()
-        
-        # Get email settings info
-        settings_info = get_email_settings_info()
-        
-        return JsonResponse({
-            'success': True,
-            'configuration_test': config_result,
-            'email_settings': settings_info,
-            'message': 'Email system test completed'
-        })
-        
-    except Exception as e:
-        logger.error(f"Email system test failed: {e}")
-        return JsonResponse({
-            'success': False,
-            'message': f'Email system test failed: {str(e)}'
-        }, status=500)
 
 
 
 
 
-#interview results view 
-@login_required
-@user_passes_test(lambda u: u.is_recruiter)
-def interview_results(request, interview_uuid):
-    """Display interview results for completed interviews - FIXED VERSION"""
-    try:
-        logger.info(f"📊 Results page accessed for interview {interview_uuid}")
-        
-        # Get the interview and ensure the recruiter owns it
-        interview = get_object_or_404(Interview, uuid=interview_uuid)
-        
-        logger.info(f"✅ Interview found: {interview.candidate_name} for {interview.job.title}")
-        logger.info(f"📝 Interview status: {interview.status}")
-        logger.info(f"🎯 Has results: {interview.has_results}")
-        logger.info(f"💯 Overall score: {interview.overall_score}")
-        logger.info(f"💬 AI feedback length: {len(interview.ai_feedback) if interview.ai_feedback else 0}")
-        
-        if interview.job.posted_by != request.user:
-            logger.warning(f"⚠️ Permission denied - wrong recruiter")
-            messages.error(request, 'You do not have permission to view this interview.')
-            return redirect('recruiter_dashboard')
-        
-        # FIXED: Don't check status first - check if results exist
-        if not interview.has_results:
-            logger.warning(f"⚠️ No results available for interview {interview_uuid}")
-            logger.info(f"Debug info - Status: {interview.status}, Completed: {interview.completed_at}")
-            logger.info(f"Debug info - Questions: {bool(interview.questions_asked)}, Answers: {bool(interview.answers_given)}")
-            
-            # Try to regenerate results if interview is completed but has no results
-            if interview.status == 'completed' and interview.completed_at:
-                logger.info(f"🔄 Attempting to regenerate results...")
-                messages.info(request, 'Results are being generated for this interview. Please refresh in a moment.')
-            else:
-                messages.warning(request, 'This interview is not yet completed or has no results.')
-            
-            return redirect('recruiter_dashboard')
-        
-        # Parse the questions and answers from JSON
-        questions_asked = []
-        answers_given = []
-        
-        try:
-            if interview.questions_asked:
-                questions_asked = json.loads(interview.questions_asked)
-                logger.info(f"✅ Parsed {len(questions_asked)} questions")
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.error(f"❌ Could not parse questions_asked: {e}")
-        
-        try:
-            if interview.answers_given:
-                answers_given = json.loads(interview.answers_given)
-                logger.info(f"✅ Parsed {len(answers_given)} answers")
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.error(f"❌ Could not parse answers_given: {e}")
-        
-        # Combine questions and answers for display
-        qa_pairs = []
-        for i in range(max(len(questions_asked), len(answers_given))):
-            question = questions_asked[i] if i < len(questions_asked) else None
-            answer = answers_given[i] if i < len(answers_given) else None
-            
-            qa_pairs.append({
-                'question_number': i + 1,
-                'question': question['question'] if question else 'Question not recorded',
-                'answer': answer['answer'] if answer else 'Answer not recorded',
-                'question_timestamp': question.get('timestamp') if question else None,
-                'answer_timestamp': answer.get('timestamp') if answer else None
-            })
-        
-        logger.info(f"✅ Created {len(qa_pairs)} Q&A pairs for display")
-        
-        # Calculate interview duration if available - FIXED to use actual start time
-        interview_duration = None
-        if interview.completed_at and interview.started_at:
-            duration_seconds = (interview.completed_at - interview.started_at).total_seconds()
-            # Ensure duration is positive and reasonable (max 60 minutes for interviews)
-            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
-                minutes = int(duration_seconds // 60)
-                seconds = int(duration_seconds % 60)
-                interview_duration = f"{minutes}m {seconds}s"
-            elif duration_seconds > 3600:
-                # If duration seems too long, use the scheduled duration instead
-                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
-                interview_duration = f"{scheduled_duration}m (scheduled duration)"
-            else:
-                interview_duration = "Less than 1 minute"
-        elif interview.completed_at and interview.created_at:
-            # Fallback to created_at if started_at is not available (for old interviews)
-            duration_seconds = (interview.completed_at - interview.created_at).total_seconds()
-            if duration_seconds > 0 and duration_seconds <= 3600:  # Max 1 hour
-                minutes = int(duration_seconds // 60)
-                seconds = int(duration_seconds % 60)
-                interview_duration = f"{minutes}m {seconds}s (estimated)"
-            elif duration_seconds > 3600:
-                # If duration seems too long, use the scheduled duration instead
-                scheduled_duration = getattr(interview, 'interview_duration_minutes', 15)
-                interview_duration = f"{scheduled_duration}m (scheduled duration)"
-            else:
-                interview_duration = "Duration unavailable"
-        
-        logger.info(f"⏱️ Interview duration calculated: {interview_duration}")
-        if interview.started_at and interview.completed_at:
-            actual_duration = (interview.completed_at - interview.started_at).total_seconds()
-            logger.info(f"📅 Started: {interview.started_at}, Completed: {interview.completed_at}")
-            logger.info(f"⏱️ Actual duration: {actual_duration:.0f} seconds ({actual_duration/60:.1f} minutes)")
-            logger.info(f"🎯 Scheduled duration: {getattr(interview, 'interview_duration_minutes', 15)} minutes")
-        else:
-            logger.info(f"⚠️ Missing timestamps - Started: {interview.started_at}, Completed: {interview.completed_at}")
-        
-        context = {
-            'interview': interview,
-            'qa_pairs': qa_pairs,
-            'interview_duration': interview_duration,
-            'total_questions': len(questions_asked),
-            'total_answers': len(answers_given),
-        }
-        
-        logger.info(f"✅ Rendering results page with {len(qa_pairs)} Q&A pairs")
-        return render(request, 'jobapp/interview_results.html', context)
-        
-    except Exception as e:
-        logger.error(f"❌ Error displaying interview results for {interview_uuid}: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        messages.error(request, 'Could not load interview results. Please try again.')
-        return redirect('recruiter_dashboard')
+

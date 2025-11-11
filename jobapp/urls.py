@@ -3,7 +3,7 @@
 from django.urls import path
 from django.shortcuts import render
 from . import views
-from .debug_dashboard import debug_dashboard_view 
+
 
 
 urlpatterns = [
@@ -64,31 +64,21 @@ urlpatterns = [
     # # blog_single
     # path('blog/single/', views.blog_single_view, name='blog_single'),
     
-    # debugging
-    path('debug/', views.debug_db, name='debug'),
-    path('test-auth/', views.test_recruiter_auth, name='test_auth'),
+    
     
     # path('chat/', views.chat_view, name='chat'),
     # path('debug-dashboard/', debug_dashboard_view, name='debug_dashboard'),
     
     # Recording and TTS endpoints
     path('save-interview-recording/', views.save_interview_recording, name='save_interview_recording'),
-    path('test-tts/', views.test_tts, name='test_tts'),
-    path('test-asr/', views.test_asr, name='test_asr'),
+    
     path('generate-audio/', views.generate_audio, name='generate_audio'),
     path('get-csrf-token/', views.get_csrf_token, name='get_csrf_token'),
     
-    #monika sound 
-    # Add these to your urlpatterns in urls.py
-    # path('test-monika-voice/', views.test_monika_voice, name='test_monika_voice'),
-    path('test-voice-direct/', views.test_voice_direct, name='test_voice_direct'),
     
     
-    # Custom TTS Voice Testing Endpoints
-    path('test-custom-voice/', views.test_custom_voice_only, name='test_custom_voice'),
-    path('test-custom-direct/', views.test_custom_direct_generation, name='test_custom_direct'),
-    path('test-custom-interview/', views.test_custom_interview_simulation, name='test_custom_interview'),
-    path('custom-voice-status/', views.custom_voice_status, name='custom_voice_status'),
+    
+    
     
     # Add candidate from dashboard
     path('add-candidate-dashboard/', views.add_candidate_dashboard, name='add_candidate_dashboard'),
@@ -96,8 +86,7 @@ urlpatterns = [
     # API endpoint for candidate email
     path('api/candidate/<int:candidate_id>/email/', views.get_candidate_email, name='get_candidate_email'),
     
-    # Test interview results
-    path('test-interview-results/', views.test_interview_results, name='test_interview_results'),
+    
     
     # Interview results view
     path('interview-results/<uuid:interview_uuid>/', views.interview_results, name='interview_results'),
@@ -109,24 +98,6 @@ urlpatterns = [
     path('health/', views.health_check, name='health_check'),
     path('ready/', views.readiness_check, name='readiness_check'),
     
-    
-    
-    
-    
-    # path('add_candidate/', views.add_candidate, name='add_candidate'),
-    
-    
-    
-    path('debug-db/', views.debug_database_structure, name='debug_db'),
-    
-    
-    #visible of jobs 
-    path('debug/job-posting/', views.debug_job_posting, name='debug_job_posting'),
-    path('debug/test-job-save/', views.test_job_save, name='test_job_save'),
-    path('debug/fix-database/', views.fix_database_issues, name='fix_database_issues'),
-    
-    
-    
     #edit job , Job Management URLs
     path('jobs/<int:job_id>/edit/', views.edit_job, name='edit_job'),
     path('jobs/<int:job_id>/delete/', views.delete_job, name='delete_job'),
@@ -135,7 +106,7 @@ urlpatterns = [
     # Email Management URLs
     path('interview/<uuid:interview_uuid>/send-email/', views.send_interview_email_manual, name='send_interview_email_manual'),
     path('interview/<uuid:interview_uuid>/get-link/', views.get_interview_link, name='get_interview_link'),
-    path('test-email-system/', views.test_email_system, name='test_email_system'),
+    
     
     
 ]

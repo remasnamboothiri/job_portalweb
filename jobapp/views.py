@@ -931,23 +931,9 @@ def start_interview_by_uuid(request, interview_uuid):
             
             if resume_file:
                 try:
-                    # Check if file exists first
-                    if resume_file.name and hasattr(resume_file, 'path'):
-                        try:
-                            full_path = os.path.join(settings.MEDIA_ROOT, resume_file.name)
-                            file_exists = os.path.exists(full_path)
-                        except:
-                            file_exists = False
-                    else:
-                        file_exists = False
-                    
-                    if file_exists:
-                        # Open the file properly before passing to extract_resume_text
-                        with resume_file.open('rb') as file_obj:
-                            resume_text = extract_resume_text(file_obj)
-                    else:
-                        logger.warning(f"Resume file not found on server: {resume_file.name}")
-                        resume_text = f"Resume file not available for {candidate_name}. Please re-upload the resume."
+                    # Open the file properly before passing to extract_resume_text
+                    with resume_file.open('rb') as file_obj:
+                        resume_text = extract_resume_text(file_obj)
                 except Exception as e:
                     resume_text = "Resume could not be processed."
                     logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
@@ -976,24 +962,10 @@ def start_interview_by_uuid(request, interview_uuid):
             
             if candidate_resume:
                 try:
-                    # Check if file exists first
-                    if candidate_resume.name and hasattr(candidate_resume, 'path'):
-                        try:
-                            full_path = os.path.join(settings.MEDIA_ROOT, candidate_resume.name)
-                            file_exists = os.path.exists(full_path)
-                        except:
-                            file_exists = False
-                    else:
-                        file_exists = False
-                    
-                    if file_exists:
-                        # Open the file properly before passing to extract_resume_text
-                        with candidate_resume.open('rb') as resume_file:
-                            resume_text = extract_resume_text(resume_file)
-                        logger.info(f"Successfully extracted resume text for {candidate_name}")
-                    else:
-                        logger.warning(f"Resume file not found on server: {candidate_resume.name}")
-                        resume_text = f"Resume file not available for {candidate_name}. Please re-upload the resume."
+                    # Open the file properly before passing to extract_resume_text
+                    with candidate_resume.open('rb') as resume_file:
+                        resume_text = extract_resume_text(resume_file)
+                    logger.info(f"Successfully extracted resume text for {candidate_name}")
                 except Exception as e:
                     resume_text = f"Resume could not be processed for {candidate_name}."
                     logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")

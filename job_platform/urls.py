@@ -19,7 +19,8 @@ from django.urls import path, include, re_path
 from django.conf.urls.static import static
 from django.conf import settings
 from django.views.static import serve
-from jobapp.views import serve_media, get_csrf_token, test_tts, generate_audio
+from jobapp.views import serve_media, get_csrf_token, generate_audio
+
 import os
 
 urlpatterns = [
@@ -29,7 +30,7 @@ urlpatterns = [
     path('api/', include('jobapp.api.urls')),
     path('media/<path:path>', serve_media, name='serve_media'),
     path('get-csrf-token/', get_csrf_token, name='get_csrf_token'),
-    path('test-tts/', test_tts, name='test_tts'),
+    
     path('generate-audio/', generate_audio, name='generate_audio'),
     path('favicon.ico', serve, {'document_root': settings.STATIC_ROOT, 'path': 'favicon.ico'}),
     path('ftco-32x32.png', serve, {'document_root': settings.STATIC_ROOT, 'path': 'favicon.ico'}),

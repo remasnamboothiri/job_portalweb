@@ -975,9 +975,37 @@ def start_interview_by_uuid(request, interview_uuid):
                             resume_text = extract_resume_text(resume_file)
                         logger.info(f"Successfully extracted resume text for {candidate_name}")
                     else:
-                        # File is missing - continue without resume
-                        resume_text = f"Resume file is not available for {candidate_name}."
-                        logger.info(f"Resume file missing for {candidate_name}, continuing interview without resume")
+                        # Try to find similar file in candidate_resumes folder
+                        resume_found = False
+                        try:
+                            candidate_resumes_dir = os.path.join(settings.MEDIA_ROOT, 'candidate_resumes')
+                            if os.path.exists(candidate_resumes_dir):
+                                # Get base filename without Django's random suffix
+                                original_name = candidate_resume.name
+                                base_name = original_name.split('/')[-1]  # Get filename only
+                                name_without_suffix = base_name.split('_')[:-1]  # Remove last part (random suffix)
+                                if name_without_suffix:
+                                    search_pattern = '_'.join(name_without_suffix)
+                                    
+                                    # Look for files that start with the base name
+                                    for filename in os.listdir(candidate_resumes_dir):
+                                        if filename.startswith(search_pattern) and filename.endswith('.pdf'):
+                                            found_file_path = os.path.join(candidate_resumes_dir, filename)
+                                            logger.info(f"Found similar resume file: {filename} for {candidate_name}")
+                                            
+                                            # Try to extract from found file
+                                            with open(found_file_path, 'rb') as resume_file:
+                                                resume_text = extract_resume_text(resume_file)
+                                            logger.info(f"Successfully extracted resume text from {filename} for {candidate_name}")
+                                            resume_found = True
+                                            break
+                        except Exception as search_error:
+                            logger.warning(f"Error searching for similar resume file: {search_error}")
+                        
+                        if not resume_found:
+                            # File is missing - continue without resume
+                            resume_text = f"Resume file is not available for {candidate_name}."
+                            logger.info(f"Resume file missing for {candidate_name}, continuing interview without resume")
                 except Exception as e:
                     resume_text = f"Resume could not be processed for {candidate_name}."
                     logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")

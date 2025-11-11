@@ -931,9 +931,15 @@ def start_interview_by_uuid(request, interview_uuid):
             
             if resume_file:
                 try:
-                    # Open the file properly before passing to extract_resume_text
-                    with resume_file.open('rb') as file_obj:
-                        resume_text = extract_resume_text(file_obj)
+                    # Check if file actually exists before trying to open it
+                    if hasattr(resume_file, 'path') and os.path.exists(resume_file.path):
+                        # Open the file properly before passing to extract_resume_text
+                        with resume_file.open('rb') as file_obj:
+                            resume_text = extract_resume_text(file_obj)
+                    else:
+                        # File is missing - continue without resume
+                        resume_text = f"Resume file is not available for {candidate_name}."
+                        logger.info(f"Resume file missing for {candidate_name}, continuing interview without resume")
                 except Exception as e:
                     resume_text = "Resume could not be processed."
                     logger.warning(f"Resume extraction error for interview {interview_uuid}: {e}")
@@ -962,10 +968,16 @@ def start_interview_by_uuid(request, interview_uuid):
             
             if candidate_resume:
                 try:
-                    # Open the file properly before passing to extract_resume_text
-                    with candidate_resume.open('rb') as resume_file:
-                        resume_text = extract_resume_text(resume_file)
-                    logger.info(f"Successfully extracted resume text for {candidate_name}")
+                    # Check if file actually exists before trying to open it
+                    if hasattr(candidate_resume, 'path') and os.path.exists(candidate_resume.path):
+                        # Open the file properly before passing to extract_resume_text
+                        with candidate_resume.open('rb') as resume_file:
+                            resume_text = extract_resume_text(resume_file)
+                        logger.info(f"Successfully extracted resume text for {candidate_name}")
+                    else:
+                        # File is missing - continue without resume
+                        resume_text = f"Resume file is not available for {candidate_name}."
+                        logger.info(f"Resume file missing for {candidate_name}, continuing interview without resume")
                 except Exception as e:
                     resume_text = f"Resume could not be processed for {candidate_name}."
                     logger.warning(f"Resume extraction error for unregistered candidate in interview {interview_uuid}: {e}")

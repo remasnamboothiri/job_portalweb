@@ -309,10 +309,7 @@
         </div>
         
         
-         {% comment %} <div class="stats">
-            <div class="stat"> <span id="questionCount"></span></div> 
-            <div class="stat">Time: <span id="timer">15:00</span></div> 
-        </div>  {% endcomment %}
+        
         
         <div class="video-grid">
             <div class="video-box" id="aiVideoBox">
@@ -732,7 +729,7 @@ function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         const onAudioEnded = () => {
             log('Audio playback completed');
             audio.removeEventListener('ended', onAudioEnded);
-            setTimeout(() => enableCandidateResponse(), 1000);
+            setTimeout(() => enableCandidateResponse(), 200);
         };
         
         audio.addEventListener('canplaythrough', onCanPlay);
@@ -754,7 +751,7 @@ function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
         
         if (window.TypewriterSync) {
             window.TypewriterSync.createTextOnly(conversationArea, question, { fast: false }).then(() => {
-                setTimeout(() => enableCandidateResponse(), 1000);
+                setTimeout(() => enableCandidateResponse(), 200);
             });
         } else {
             startFallbackTypewriter(conversationArea, question);
@@ -775,7 +772,7 @@ function startFallbackTypewriter(element, question, audioDuration = null) {
             setTimeout(typeChar, charDelay);
         } else {
             if (!audioDuration) {
-                setTimeout(() => enableCandidateResponse(), 1000);
+                setTimeout(() => enableCandidateResponse(), 200);
             }
         }
     };
@@ -798,7 +795,7 @@ function enableCandidateResponse() {
     
     setTimeout(() => {
         audioStatus.style.display = 'none';
-    }, 4000);
+    }, 2000); // Reduced from 4000ms to 2000ms
     
     if (audioEndedTimeout) {
         clearTimeout(audioEndedTimeout);
@@ -814,8 +811,7 @@ function enableCandidateResponse() {
             startMicrophone();
             log('✓ Microphone enabled and listening for candidate response');
         }
-    }, 100); // Reduced from 500ms to 100ms
-}
+    }, 50); // Reduced from 50ms 
 
 // Whisper ASR variables
 let mediaRecorder = null;
@@ -1212,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         isInitialized = true;
         showCurrentQuestion(question, audioUrl, duration);
-    }, 2000);
+    }, 1000);
     
     log('System initialization complete');
 });

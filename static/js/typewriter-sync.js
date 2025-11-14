@@ -81,7 +81,7 @@
     function estimateSpeechDuration(text, wordsPerMinute = 140) {
         if (!text || !text.trim()) {
             return 2.0;
-        }
+        } 
         
         const wordCount = text.split(/\s+/).length;
         const baseDuration = (wordCount / wordsPerMinute) * 60;

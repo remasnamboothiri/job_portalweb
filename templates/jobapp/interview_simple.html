@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Interview - {{ candidate_name }}</title>
-    <link rel="stylesheet" href="{% static 'css/professional-interview.css' %}">
+    <link rel="stylesheet" href="{% static 'css/professional-interview-v2.css' %}">
     <style>
         body {
             background: #202124;
@@ -314,7 +314,7 @@
         <div class="video-grid">
             <div class="video-box" id="aiVideoBox">
                 <div class="ai-avatar" id="aiAvatar">
-                    <img src="{% static 'images/ai_avatar.png' %}"  style= " width: 100%; height: 100%; object-fit: cover;">
+                    <img src="{% static 'images/ai_avatar-v2.png' %}"  style= " width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <div class="participant-name">AI Interviewer</div>
             </div>
@@ -359,7 +359,7 @@
     {% csrf_token %}
     
     <!-- Load typewriter script -->
-    <script src="{% static 'js/typewriter-sync.js' %}"></script>
+    <script src="{% static 'js/typewriter-sync-v2.js' %}"></script>
 
     <script>
     // Template data passed from Django

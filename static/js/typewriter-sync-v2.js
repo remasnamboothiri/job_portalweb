@@ -81,7 +81,7 @@
     function estimateSpeechDuration(text, wordsPerMinute = 140) {
         if (!text || !text.trim()) {
             return 2.0;
-        } 
+        }
         
         const wordCount = text.split(/\s+/).length;
         const baseDuration = (wordCount / wordsPerMinute) * 60;
@@ -108,4 +108,3 @@
     console.log('⚡ Ultra fast 25ms per character - no delays, no waiting');
     
 })();
-// Force Git update

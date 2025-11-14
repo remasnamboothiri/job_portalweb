@@ -252,10 +252,17 @@ USE_TZ = True
 STATIC_URL = '/static/'
  #for development
 
-if DEBUG:
-    STATICFILES_DIRS = [
-        BASE_DIR / 'static',
-    ]
+# if DEBUG:
+#     STATICFILES_DIRS = [
+#         BASE_DIR / 'static',
+#     ]
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+if not DEBUG:
+    # Additional production static dirs if needed
+    pass
  # STATIC_ROOT = BASE_DIR / 'staticfiles'  # For collectstatic
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

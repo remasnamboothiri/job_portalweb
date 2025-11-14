@@ -1,0 +1,309 @@
+/* Professional AI Interview Styles */
+
+/* Microphone always-on indicator */
+.btn.recording {
+    background: #ea4335 !important;
+    animation: pulse-recording 2s infinite;
+    box-shadow: 0 0 20px rgba(234, 67, 53, 0.5);
+}
+
+@keyframes pulse-recording {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 20px rgba(234, 67, 53, 0.5);
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(234, 67, 53, 0.8);
+    }
+}
+
+/* Professional interview status indicator */
+.interview-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.interview-status.recording {
+    background: rgba(234, 67, 53, 0.9);
+}
+
+.interview-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+/* Audio level indicator */
+.audio-level-indicator {
+    position: fixed;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    z-index: 1000;
+}
+
+.audio-level-bar {
+    width: 4px;
+    height: 20px;
+    background: #5f6368;
+    border-radius: 2px;
+    transition: all 0.1s ease;
+}
+
+.audio-level-bar.active {
+    background: #4CAF50;
+    height: 30px;
+}
+
+/* Professional interview notice */
+.professional-notice {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1000;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+}
+
+/* Microphone warning styles */
+.mic-warning {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    z-index: 1000;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    25% { transform: translateX(-50%) translateY(-5px); }
+    75% { transform: translateX(-50%) translateY(5px); }
+}
+
+/* Enhanced conversation area for live transcription */
+.conversation-text {
+    position: relative;
+    min-height: 60px;
+}
+
+.conversation-text.live-transcription {
+    border-left: 4px solid #4CAF50;
+    padding-left: 20px;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.conversation-text.ai-speaking {
+    border-left: 4px solid #2196F3;
+    padding-left: 20px;
+    background: rgba(33, 150, 243, 0.1);
+}
+
+/* Typing indicator for AI responses */
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+}
+
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #666;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Enhanced button styles */
+.btn {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Professional camera frame */
+.video-box {
+    position: relative;
+    overflow: hidden;
+}
+
+.video-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.video-box.recording::before {
+    border-color: rgba(234, 67, 53, 0.5);
+    animation: border-pulse 2s infinite;
+}
+
+@keyframes border-pulse {
+    0%, 100% { border-color: rgba(234, 67, 53, 0.5); }
+    50% { border-color: rgba(234, 67, 53, 0.8); }
+}
+
+/* Audio isolation indicator */
+.audio-isolation-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.audio-isolation-status.active {
+    background: rgba(76, 175, 80, 0.8);
+}
+
+/* Professional interview layout adjustments */
+.container {
+    position: relative;
+}
+
+/* Enhanced stats display */
+.stat {
+    background: rgba(48, 49, 52, 0.9) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .professional-notice,
+    .mic-warning {
+        font-size: 12px;
+        padding: 10px 20px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+    
+    .interview-status {
+        top: 10px;
+        right: 10px;
+        font-size: 10px;
+        padding: 6px 12px;
+    }
+    
+    .audio-level-indicator {
+        bottom: 100px;
+    }
+}
+
+/* Accessibility improvements */
+.btn:focus {
+    outline: 2px solid #4CAF50;
+    outline-offset: 2px;
+}
+
+.conversation-text:focus {
+    outline: 2px solid #2196F3;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .btn.recording {
+        background: #ff0000 !important;
+        border: 2px solid #ffffff;
+    }
+    
+    .professional-notice {
+        background: #008000 !important;
+        border: 2px solid #ffffff;
+    }
+}

@@ -30,6 +30,230 @@
             font-size: 1.75rem;
             font-weight: 600;
             margin: 0;
+            color: white;
+        }
+        .card-body {
+            padding: 35px 40px;
+            background: white;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #41e912ec;
+            border-radius: 6px;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+        }
+        .info-box h5 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+        .info-box .info-grid {
+            display: grid;
+            grid-template-columns: 20% 45% 35%;
+            gap: 15px;
+        }
+        .info-box p {
+            margin-bottom: 0;
+            color: #555;
+            font-size: 0.95rem;
+            word-break: break-word;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .form-control, .form-select {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 11px 14px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #41e912ec;
+            box-shadow: 0 0 0 0.2rem rgba(65, 233, 18, 0.15);
+        }
+        .note-box {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            border-radius: 6px;
+            padding: 14px 20px;
+            margin: 25px 0;
+        }
+        .btn-schedule {
+            background: #41e912ec;
+            border: none;
+            padding: 14px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .btn-schedule:hover {
+            background: #38d110;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 12px rgba(65, 233, 18, 0.3);
+        }
+        .btn-back {
+            background: #6c757d;
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+        .btn-back:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        .row-form {
+            display: grid;
+            grid-template-columns: 2.5fr 2.5fr 2fr;
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 992px) {
+            .row-form {
+                grid-template-columns: 1fr 1fr;
+            }
+            .row-form > div:last-child {
+                grid-column: 1 / -1;
+            }
+        }
+        @media (max-width: 768px) {
+            .row-form {
+                grid-template-columns: 1fr;
+            }
+            .info-box .info-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .card-body {
+                padding: 25px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-3">
+    <div class="interview-card">
+        <div class="card-header text-white">
+            <h2>📅 Schedule Interview</h2>
+        </div>
+        <div class="card-body">
+            <div class="info-box">
+                <h5>📋 Candidate Details</h5>
+                <div class="info-grid">
+                    <div>
+                        <p><strong>Name:</strong><br>{{ candidate.name }}</p>
+                    </div>
+                    <div>
+                        <p><strong>Email:</strong><br>{{ candidate.email }}</p>
+                    </div>
+                    <div>
+                        <p><strong>Phone:</strong><br>{{ candidate.phone }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row-form">
+                    <div>
+                        <label for="{{ form.job.id_for_label }}" class="form-label">{{ form.job.label }} <span class="text-danger">*</span></label>
+                        {{ form.job }}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.scheduled_at.id_for_label }}" class="form-label">{{ form.scheduled_at.label }} <span class="text-danger">*</span></label>
+                        {{ form.scheduled_at }}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.interview_duration_minutes.id_for_label }}" class="form-label">{{ form.interview_duration_minutes.label }} <span class="text-danger">*</span></label>
+                        {{ form.interview_duration_minutes }}
+                        {% if form.interview_duration_minutes.help_text %}
+                            <div class="form-text mt-1">{{ form.interview_duration_minutes.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="note-box">
+                    <small>
+                        <strong>📧 Note:</strong> An email with the interview link will be sent to <strong>{{ candidate.email }}</strong> automatically.
+                    </small>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-schedule text-white">
+                        <i class="fas fa-calendar-check"></i> Schedule Interview
+                    </button>
+                    <a href="{% url 'recruiter_dashboard' %}" class="btn btn-back text-white">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Interview - {{ candidate.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/interview.css' %}">
+    <style>
+        body {
+            background: white;
+            min-height: 100vh;
+            padding: 15px 0;
+        }
+        .interview-card {
+            max-width: 1300px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        .card-header {
+            background: #6c757d !important;
+            padding: 20px;
+            text-align: center;
+        }
+        .card-header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin: 0;
             color: #6c757d;
         }
         .card-body {
@@ -218,4 +442,4 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+</html> {% endcomment %}

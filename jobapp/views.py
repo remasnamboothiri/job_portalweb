@@ -598,7 +598,7 @@ def schedule_interview(request, job_id, applicant_id):
 Your interview for the position of {interview.job.title} has been scheduled.
 
 Interview Details:
-- Date & Time: {interview.interview_date.strftime('%B %d, %Y at %I:%M %p')}
+- Deadline Date: {interview.interview_date.strftime('%B %d, %Y')}
 - Position: {interview.job.title}
 - Company: {interview.job.company}
 - Interview Link: {interview_url}
@@ -696,7 +696,7 @@ def schedule_interview_simple(request):
                         'candidate_email': interview.candidate_email,
                         'candidate_name': interview.candidate_name,
                         'job_title': interview.job.title,
-                        'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if interview.scheduled_at else 'TBD'
+                        'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y') if interview.scheduled_at else 'TBD'
                     })
                 
                 messages.success(request, success_message)
@@ -787,7 +787,7 @@ def schedule_interview_with_candidate(request, candidate_id):
 Your interview for the position of {interview.job.title} has been scheduled.
 
 Interview Details:
-- Date & Time: {interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p')}
+- Deadline Date: {interview.scheduled_at.strftime('%B %d, %Y')}
 - Position: {interview.job.title}
 - Company: {interview.job.company}
 - Interview Link: {interview_url}
@@ -2737,7 +2737,9 @@ def get_interview_link(request, interview_uuid):
             'job_title': interview.job.title,
             'company_name': interview.job.company,
             'interview_id': interview.interview_id,
-            'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y at %I:%M %p') if interview.scheduled_at else 'TBD'
+            'scheduled_date': interview.scheduled_at.strftime('%B %d, %Y') if interview.scheduled_at else 'TBD'
+            
+
         })
         
     except Exception as e:

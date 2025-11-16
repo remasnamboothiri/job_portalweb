@@ -220,13 +220,13 @@ class ScheduleInterviewForm(forms.ModelForm):
         model = Interview
         fields = ['job', 'scheduled_at', 'interview_duration_minutes']
         widgets = {
-            'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'scheduled_at': forms.DateTimeInput(attrs={'type': 'date', 'class': 'form-control'}),
             'job': forms.Select(attrs={'class': 'form-control'}),
             'interview_duration_minutes': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
             'job': 'Which job is it?',
-            'scheduled_at': 'Interview Date & Time',
+            'scheduled_at': 'Interview Deadline Date',
             'interview_duration_minutes': 'Interview Duration',
         }
     
@@ -298,13 +298,13 @@ class ScheduleInterviewWithCandidateForm(forms.Form):
     )
     scheduled_at = forms.DateTimeField(
         widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local', 
+            'type': 'date', 
             'class': 'form-control',
             'required': True
         }),
-        label='Interview deadline',
+        label='Interview Deadline Date',
         required=True,
-        help_text='Select the date and time for the interview'
+        help_text='Select the deadline date  for the interview'
     )
     interview_duration_minutes = forms.ChoiceField(
         choices=[

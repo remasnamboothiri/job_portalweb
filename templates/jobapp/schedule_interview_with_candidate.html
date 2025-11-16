@@ -7,6 +7,202 @@
     <title>Schedule Interview - {{ candidate.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/interview.css' %}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .interview-card {
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background: #41e912ec !important;
+            padding: 30px;
+            text-align: center;
+        }
+        .card-header h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .card-body {
+            padding: 40px;
+            background: white;
+        }
+        .info-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .info-box h5 {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .info-box p {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        }
+        .note-box {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 25px 0;
+        }
+        .btn-schedule {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-schedule:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        .btn-back {
+            background: #6c757d;
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-back:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        .row-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .row-form {
+                grid-template-columns: 1fr;
+            }
+            .card-body {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="interview-card">
+        <div class="card-header text-white">
+            <h2>📅 Schedule Interview</h2>
+        </div>
+        <div class="card-body">
+            <div class="info-box">
+                <h5>📋 Candidate Details</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Name:</strong> {{ candidate.name }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Email:</strong> {{ candidate.email }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Phone:</strong> {{ candidate.phone }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row-form">
+                    <div class="mb-3">
+                        <label for="{{ form.job.id_for_label }}" class="form-label">{{ form.job.label }} <span class="text-danger">*</span></label>
+                        {{ form.job }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.interview_duration_minutes.id_for_label }}" class="form-label">{{ form.interview_duration_minutes.label }} <span class="text-danger">*</span></label>
+                        {{ form.interview_duration_minutes }}
+                        {% if form.interview_duration_minutes.help_text %}
+                            <div class="form-text">{{ form.interview_duration_minutes.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.scheduled_at.id_for_label }}" class="form-label">{{ form.scheduled_at.label }} <span class="text-danger">*</span></label>
+                    {{ form.scheduled_at }}
+                </div>
+                
+                <div class="note-box">
+                    <small>
+                        <strong>📧 Note:</strong> An email with the interview link will be sent to <strong>{{ candidate.email }}</strong> automatically.
+                    </small>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-schedule btn-lg text-white">
+                        <i class="fas fa-calendar-check"></i> Schedule Interview
+                    </button>
+                    <a href="{% url 'recruiter_dashboard' %}" class="btn btn-back text-white">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Interview - {{ candidate.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/interview.css' %}">
 </head>
 <body class="bg-light">
 
@@ -80,4 +276,4 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+</html> {% endcomment %}

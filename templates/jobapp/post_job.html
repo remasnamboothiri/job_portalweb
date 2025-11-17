@@ -467,7 +467,10 @@
               </li> {% endcomment %}
               
               {% comment %} <li><a href="{% url 'contact' %}">Contact</a></li> {% endcomment %}
+              <li class="d-lg-none"><a href="{% url 'job_list' %}">Job List</a></li>
               <li class="d-lg-none"><a href="{% url 'logout' %}">Log Out</a></li>
+              
+              
             </ul>
           </nav>
           
@@ -732,7 +735,7 @@
               <!-- Action Buttons -->
               <div class="action-buttons">
                 <div class="left-actions">
-                  <a href="{% url 'job_list' %}" class="btn-outline-custom">
+                  <a href="{% url 'recruiter_dashboard' %}" class="btn-outline-custom">
                     <i class="fas fa-arrow-left me-2"></i>Cancel
                   </a>
                 </div>

@@ -315,8 +315,8 @@
             <h3 style="font-size: 14px; color: #666; margin: 0;">Active Jobs</h3>
             <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+12%</span>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">9</div>
-        <div style="font-size: 12px; color: #666;">vs last month</div>
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;"> {{ jobs.count }}</div>
+        {% comment %} <div style="font-size: 12px; color: #666;">vs last month</div> {% endcomment %}
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
@@ -324,8 +324,8 @@
             <h3 style="font-size: 14px; color: #666; margin: 0;">Total Applications</h3>
             <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+24%</span>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">156</div>
-        <div style="font-size: 12px; color: #666;">this month</div>
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ applications.count }}</div>
+        {% comment %} <div style="font-size: 12px; color: #666;">this month</div> {% endcomment %}
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
@@ -334,7 +334,7 @@
             <span style="font-size: 12px; color: var(--color-info); font-weight: 500;">+8%</span>
         </div>
         <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ all_candidates.count }}</div>
-        <div style="font-size: 12px; color: #666;">total added</div>
+        {% comment %} <div style="font-size: 12px; color: #666;">total added</div> {% endcomment %}
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
@@ -342,8 +342,8 @@
             <h3 style="font-size: 14px; color: #666; margin: 0;">Hire Rate</h3>
             <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+5%</span>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">22</div>
-        <div style="font-size: 12px; color: #666;">avg conversion</div>
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ completed_interviews.count }}</div>
+        {% comment %} <div style="font-size: 12px; color: #666;">avg conversion</div> {% endcomment %}
     </div>
 </div>
         <h3 class="mb-3">Applications & Interviews</h3>

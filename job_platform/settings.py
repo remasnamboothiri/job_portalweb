@@ -191,7 +191,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Security settings for HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True  # Render handles SSL
+# SECURE_SSL_REDIRECT = True  # Render handles SSL
 
 
 # Only redirect to HTTPS in production

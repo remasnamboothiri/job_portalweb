@@ -1193,6 +1193,8 @@ function enableCandidateResponse() {
     
     // Clear collected text
     collectedText = '';
+    // Enable Whisper ASR mode for better speech recognition
+    window.useWhisperASR = true;
     
     // Start microphone immediately
     setTimeout(() => {

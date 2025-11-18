@@ -189,9 +189,16 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
 ]
 
-# Security settings
+# Security settings for HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = False  # Render handles SSL
+SECURE_SSL_REDIRECT = True  # Render handles SSL
+
+
+# Only redirect to HTTPS in production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+else:
+    SECURE_SSL_REDIRECT = False  # Allow HTTP in local development
 
 # Logging configuration
 LOGGING = {

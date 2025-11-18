@@ -52,7 +52,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
         
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         
         if response.status_code == 200:
             with open(filepath, 'wb') as f:

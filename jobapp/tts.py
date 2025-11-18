@@ -24,7 +24,11 @@ DAISY_VOICE_ID = NEW_TTS_VOICE_ID or "Daisy Studious"
 def generate_elevenlabs_tts(text, voice="female_interview"):
     """Generate TTS using new API with Daisy Studious voice"""
     try:
+        # ADD CONFIGURATION LOGGING
+        logger.info(f"Daisy TTS Config - URL: {NEW_TTS_API_URL}, Voice: {DAISY_VOICE_ID}, Model: {NEW_TTS_MODEL_ID}")
+        logger.info(f"API Key present: {bool(NEW_TTS_API_KEY)}")
         if not NEW_TTS_API_KEY or not NEW_TTS_API_URL:
+            logger.warning("Daisy TTS not configured, using Google TTS")
             return generate_google_tts(text)
         
         # Create filename for caching
@@ -36,6 +40,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         
         # Check cache first
         if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+            logger.info(f"Using cached Daisy TTS: {filename}")
             return f"/media/tts/{filename}"
         
         # API request
@@ -51,17 +56,26 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             "voice_id": DAISY_VOICE_ID,
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
-        
+        logger.info(f"Making Daisy TTS API call for text: {text[:50]}...")
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         
+        logger.info(f"Daisy TTS API Response: Status {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"Daisy TTS API Error: {response.status_code} - {response.text}")
+            
         if response.status_code == 200:
             with open(filepath, 'wb') as f:
                 f.write(response.content)
             
             if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+                logger.info(f"Daisy TTS Success: {filename} ({os.path.getsize(filepath)} bytes)")
                 return f"/media/tts/{filename}"
+            else:
+                logger.error(f"Daisy TTS file too small: {os.path.getsize(filepath) if os.path.exists(filepath) else 0} bytes")
+                
         
         # If failed, fall back to Google TTS
+        logger.warning(f"Daisy TTS failed, falling back to Google TTS")
         return generate_google_tts(text)
         
     except Exception as e:

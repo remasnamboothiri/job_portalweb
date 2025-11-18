@@ -78,7 +78,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
         logger.warning(f"Daisy TTS failed, falling back to Google TTS")
         return generate_google_tts(text)
         
-    except Exception as e:
+    except Exception as e: 
         logger.error(f"Daisy TTS failed: {e}")
         return generate_google_tts(text)
 

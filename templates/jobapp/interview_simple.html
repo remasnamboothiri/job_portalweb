@@ -636,31 +636,29 @@
     {% csrf_token %}
     
     <!-- Load typewriter script -->
-     <script>
+    <script>
         /**
- * Typewriter Synchronization System - INSTANT START VERSION
- * Starts typing immediately while audio loads for natural interview experience
- */
-
-(function() {
-    'use strict';
+         * Typewriter Synchronization System - INSTANT START VERSION
+        * Starts typing immediately while audio loads for natural interview experience
+        */
+        (function() {
+            'use strict';
+            console.log('⚡ Typewriter Sync System Loading - ULTRA FAST VERSION...');
     
-    console.log('⚡ Typewriter Sync System Loading - ULTRA FAST VERSION...');
+        // Configuration - ULTRA FAST
+        const CONFIG = {
+            ultraFastSpeed: 25,         // milliseconds per character - ultra fast
+            minDuration: 500,           // minimum duration in milliseconds
+            maxDuration: 5000,          // maximum duration in milliseconds
+            };
     
-    // Configuration - ULTRA FAST
-    const CONFIG = {
-        ultraFastSpeed: 25,         // milliseconds per character - ultra fast
-        minDuration: 500,           // minimum duration in milliseconds
-        maxDuration: 5000,          // maximum duration in milliseconds
-    };
-    
-    /**
-     * SYNCHRONIZED TYPEWRITER - Types with audio timing
-     */
-    function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
-        return new Promise((resolve) => {
-            element.textContent = '';
-            let index = 0;
+        /**
+        * SYNCHRONIZED TYPEWRITER - Types with audio timing
+        */
+        function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
+            return new Promise((resolve) => {
+                element.textContent = '';
+                let index = 0;
             
             // If we have audio, sync with it
             if (audioElement && audioElement.duration) {
@@ -718,25 +716,25 @@
     /**
      * Ultra fast natural typewriter
      */
-    function createNaturalTypewriter(element, text, duration = null, options = {}) {
-        return new Promise((resolve) => {
-            element.textContent = '';
-            let index = 0;
+    //function createNaturalTypewriter(element, text, duration = null, options = {}) {
+        //return new Promise((resolve) => {
+            //element.textContent = '';
+            //let index = 0;
             
-            console.log(`⚡ ULTRA FAST Natural: ${text.length} chars`);
+            //console.log(`⚡ ULTRA FAST Natural: ${text.length} chars`);
             
-            const typeInterval = setInterval(() => {
-                if (index < text.length) {
-                    element.textContent += text.charAt(index);
-                    index++;
-                } else {
-                    clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST Natural completed');
-                    resolve();
-                }
-            }, 25); // 25ms per character = ultra fast
-        });
-    }
+            //const typeInterval = setInterval(() => {
+            //    if (index < text.length) {
+             //       element.textContent += text.charAt(index);
+             //       index++;
+             //   } else {
+             //       clearInterval(typeInterval);
+             //       console.log('⚡ ULTRA FAST Natural completed');
+             //       resolve();
+             //   }
+            //}, 25); // 25ms per character = ultra fast
+        //});
+    //}
     
     /**
      * Ultra fast typewriter - always 25ms per character
@@ -749,7 +747,7 @@
         
         element.textContent = '';
         console.log('⚡ ULTRA FAST: Starting ultra fast typewriter');
-        return createNaturalTypewriter(element, text, null, options);
+        return createSynchronizedTypewriter(element, text, null, options);
     }
     
     /**
@@ -771,7 +769,7 @@
     window.TypewriterSync = {
         start: startTypewriter,
         createSynchronized: createSynchronizedTypewriter,
-        createNatural: createNaturalTypewriter,
+        // createNatural: createNaturalTypewriter,  // Commented out - function is disabled
         estimateDuration: estimateSpeechDuration,
         config: CONFIG
     };
@@ -1142,7 +1140,7 @@ function showCurrentQuestion(question, audioUrl = null, audioDuration = null) {
             audio.play().then(() => {
                 log('Audio playing');
                 if (window.TypewriterSync) {
-                    window.TypewriterSync.start(conversationArea, question, audio, audioDuration);
+                    window.TypewriterSync.start(conversationArea, question, audio);
                 } else {
                     startFallbackTypewriter(conversationArea, question, audioDuration);
                 }

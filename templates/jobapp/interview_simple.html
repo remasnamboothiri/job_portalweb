@@ -655,25 +655,63 @@
     };
     
     /**
-     * ULTRA FAST TYPEWRITER - No sync, just speed
+     * SYNCHRONIZED TYPEWRITER - Types with audio timing
      */
     function createSynchronizedTypewriter(element, text, audioElement, options = {}) {
         return new Promise((resolve) => {
             element.textContent = '';
             let index = 0;
             
-            console.log(`⚡ ULTRA FAST: Starting typewriter: ${text.length} chars`);
-            
-            const typeInterval = setInterval(() => {
-                if (index < text.length) {
-                    element.textContent += text.charAt(index);
-                    index++;
-                } else {
-                    clearInterval(typeInterval);
-                    console.log('⚡ ULTRA FAST: Typewriter completed');
-                    resolve();
-                }
-            }, 25); // 25ms per character = ultra fast
+            // If we have audio, sync with it
+            if (audioElement && audioElement.duration) {
+                console.log(`🎵 SYNCHRONIZED: Starting typewriter with audio: ${text.length} chars`);
+                
+                // Calculate typing speed based on audio duration
+                const audioDuration = audioElement.duration * 1000; // Convert to milliseconds
+                const charDelay = Math.max(30, audioDuration / text.length); // Minimum 30ms per char
+                
+                console.log(`🎵 Audio duration: ${audioDuration}ms, Char delay: ${charDelay}ms`);
+                
+                // Wait for audio to start playing
+                const startTyping = () => {
+                    const typeInterval = setInterval(() => {
+                        if (index < text.length) {
+                            element.textContent += text.charAt(index);
+                            index++;
+                        } else {
+                            clearInterval(typeInterval);
+                            console.log('🎵 SYNCHRONIZED: Typewriter completed with audio');
+                            resolve();
+                        }
+                    }, charDelay);
+                };
+                
+                // Start typing when audio plays
+                audioElement.addEventListener('play', startTyping, { once: true });
+                
+                // Fallback if audio doesn't play within 2 seconds
+                setTimeout(() => {
+                    if (index === 0) {
+                        console.log('🎵 Audio fallback - starting typing anyway');
+                        startTyping();
+                    }
+                }, 2000);
+                
+            } else {
+                // No audio - type at normal speed
+                console.log(`⌨️ NO AUDIO: Starting normal typewriter: ${text.length} chars`);
+                
+                const typeInterval = setInterval(() => {
+                    if (index < text.length) {
+                        element.textContent += text.charAt(index);
+                        index++;
+                    } else {
+                        clearInterval(typeInterval);
+                        console.log('⌨️ NO AUDIO: Typewriter completed');
+                        resolve();
+                    }
+                }, 80); // 80ms per character = normal typing speed
+            }
         });
     }
     

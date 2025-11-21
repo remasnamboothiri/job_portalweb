@@ -666,7 +666,7 @@
                 
                 // Calculate typing speed based on audio duration
                 const audioDuration = audioElement.duration * 1000; // Convert to milliseconds
-                const charDelay = Math.max(150, audioDuration / text.length); // Minimum 30ms per char
+                const charDelay = Math.max(80, audioDuration / text.length); // Minimum 30ms per char
                 
                 console.log(`🎵 Audio duration: ${audioDuration}ms, Char delay: ${charDelay}ms`);
                 
@@ -708,7 +708,7 @@
                         console.log('⌨️ NO AUDIO: Typewriter completed');
                         resolve();
                     }
-                }, 150); // 80ms per character = normal typing speed
+                }, 80); // 80ms per character = normal typing speed
             }
         });
     }

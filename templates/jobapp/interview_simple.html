@@ -666,7 +666,7 @@
                 
                 // Calculate typing speed based on audio duration
                 const audioDuration = audioElement.duration * 1000; // Convert to milliseconds
-                const charDelay = Math.max(10, audioDuration / text.length); // Minimum 30ms per char
+                const charDelay = Math.max(150, audioDuration / text.length); // Minimum 30ms per char
                 
                 console.log(`🎵 Audio duration: ${audioDuration}ms, Char delay: ${charDelay}ms`);
                 
@@ -708,7 +708,7 @@
                         console.log('⌨️ NO AUDIO: Typewriter completed');
                         resolve();
                     }
-                }, 15); // 80ms per character = normal typing speed
+                }, 150); // 80ms per character = normal typing speed
             }
         });
     }
@@ -1188,7 +1188,7 @@ function startFallbackTypewriter(element, question, audioDuration = null) {
     log('Using fallback typewriter');
     let index = 0;
     const targetDuration = audioDuration ? audioDuration * 1000 : Math.min(question.length * 60, 6000);
-    const charDelay = Math.max(30, Math.min(100, targetDuration / question.length));
+    const charDelay = Math.max(100, Math.min(200, targetDuration / question.length));
     
     const typeChar = () => {
         if (index < question.length) {

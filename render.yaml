@@ -14,15 +14,15 @@ services:
     envVars:
       # Database Configuration
       - key: DATABASE_URL
-        value: postgresql://job_platform_db_user:Zb8C7GofSaCH97AzfQ7a28RgZ8gXzY6E@dpg-d1utkpndiees73b3c5ng-a.oregon-postgres.render.com/job_platform_db
+        value: postgresql://job_platform_db4_user:4sa3QUnAJYV5U9zozaZgOJugT31XOolq@dpg-d4g0dtkhg0os73cn804g-a.oregon-postgres.render.com/job_platform_db4
       - key: DB_NAME
-        value: job_platform_db
+        value: job_platform_db4
       - key: DB_USER
-        value: job_platform_db_user
+        value: job_platform_db4_user
       - key: DB_PASSWORD
-        value: Zb8C7GofSaCH97AzfQ7a28RgZ8gXzY6E
+        value: 4sa3QUnAJYV5U9zozaZgOJugT31XOolq
       - key: DB_HOST
-        value: dpg-d1utkpndiees73b3c5ng-a
+        value: dpg-d4g0dtkhg0os73cn804g-a
       - key: DB_PORT
         value: 5432
       

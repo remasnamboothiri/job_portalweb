@@ -647,7 +647,7 @@
     
         // Configuration - ULTRA FAST
         const CONFIG = {
-            ultraFastSpeed: 25,         // milliseconds per character - ultra fast
+            ultraFastSpeed: 10,         // milliseconds per character - ultra fast
             minDuration: 500,           // minimum duration in milliseconds
             maxDuration: 5000,          // maximum duration in milliseconds
             };
@@ -666,7 +666,7 @@
                 
                 // Calculate typing speed based on audio duration
                 const audioDuration = audioElement.duration * 1000; // Convert to milliseconds
-                const charDelay = Math.max(30, audioDuration / text.length); // Minimum 30ms per char
+                const charDelay = Math.max(10, audioDuration / text.length); // Minimum 30ms per char
                 
                 console.log(`🎵 Audio duration: ${audioDuration}ms, Char delay: ${charDelay}ms`);
                 
@@ -708,7 +708,7 @@
                         console.log('⌨️ NO AUDIO: Typewriter completed');
                         resolve();
                     }
-                }, 80); // 80ms per character = normal typing speed
+                }, 15); // 80ms per character = normal typing speed
             }
         });
     }

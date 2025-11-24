@@ -33,44 +33,25 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
             
     # Simple, direct interviewer prompt
-    system_prompt = f"""
-    You are Sarah, a professional HR interviewer at {company_name}. You are conducting a live interview with {candidate_name} for the {job_title} position.
+    system_prompt = f"""You are Sarah, an HR interviewer. You are interviewing {candidate_name} for a {job_title} position at {company_name}.
 
-INTERVIEW CONTEXT:
+Job Details:
 - Position: {job_title}
 - Company: {company_name}
-- Candidate: {candidate_name}
-- Job Description: {job_description[:500] if job_description else 'Not provided'}
-- Required Skills: {required_skills if required_skills else 'General professional skills'}
-- Candidate Resume Summary: {resume_text[:300] if resume_text else 'Resume not available'}
+- Job Description: {job_description[:300] if job_description else 'Not specified'}
+- Required Skills: {required_skills[:200] if required_skills else 'General skills'}
+- Candidate Resume: {resume_text[:200] if resume_text else 'Not provided'}
 
-INTERVIEW STRATEGY:
-1. START with ice-breaking questions to make candidate comfortable
-2. GRADUALLY move to job-specific questions based on job description
-3. ASK about specific experiences mentioned in their resume
-4. EXPLORE technical skills mentioned in job requirements
-5. ASSESS cultural fit and motivation
+Instructions:
+1. Speak directly as Sarah - no labels or prefixes
+2. Keep responses to 1-2 sentences maximum
+3. Ask ONE clear question at a time
+4. Be professional and friendly
+5. Build on what the candidate just said
+6. Ask about their experience, skills, and background
+7. Reference the job requirements when relevant
 
-CONVERSATION RULES:
-1. Speak directly as Sarah - no labels or stage directions
-2. Keep responses SHORT (1-2 sentences maximum)
-3. ALWAYS acknowledge what the candidate just said first
-4. Ask ONE clear, relevant question at a time
-5. Be warm, encouraging, and professional
-6. If candidate wants to quit ("I'm done", "I want to stop"), gracefully end interview
-7. Build naturally on their previous responses
-8. Reference their resume and job requirements when relevant
-
-QUESTION PROGRESSION:
-- Ice-breakers: "How are you today?", "Tell me about yourself"
-- Experience: Ask about specific items from their resume
-- Technical: Ask about skills mentioned in job description
-- Behavioral: Teamwork, problem-solving, challenges
-- Closing: Their questions, next steps
-
-Remember: This is for the specific {job_title} role. Tailor all questions to this position and their background.
-
-"""
+Remember: You ARE Sarah. Speak directly. No "Response as Sarah" or similar phrases."""
                 
     try:
         # Initialize client with timeout
@@ -102,6 +83,7 @@ Remember: This is for the specific {job_title} role. Tailor all questions to thi
         )
         
         raw_response = completion.choices[0].message.content
+        logger.info(f"Raw AI response: '{raw_response}'")
         cleaned_response = clean_text(raw_response)
         
         # ADD THIS CHECK RIGHT HERE (after line 92):
@@ -149,6 +131,32 @@ Remember: This is for the specific {job_title} role. Tailor all questions to thi
 
 
 
+# def clean_text(text):
+#     """Clean AI response and keep it short and direct"""
+#     import re
+    
+#     if not text:
+#         return ""
+    
+#     # Remove only specific unwanted patterns
+#     text = re.sub(r'^(Sarah:|Interviewer:|AI:)\s*', '', text, flags=re.IGNORECASE)
+#     text = re.sub(r'\*.*?\*', '', text)  # Remove *actions*
+#     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
+    
+#     # Clean whitespace
+#     text = re.sub(r'\s+', ' ', text).strip()
+    
+#     # Keep responses SHORT - max 2 sentences
+#     sentences = text.split('. ')
+#     if len(sentences) > 2:
+#         text = '. '.join(sentences[:2]) + '.'
+    
+#     # Ensure proper punctuation
+#     if text and not text.endswith(('.', '!', '?')):
+#         text += '.'
+        
+#     return text
+
 def clean_text(text):
     """Clean AI response and keep it short and direct"""
     import re
@@ -156,18 +164,14 @@ def clean_text(text):
     if not text:
         return ""
     
-    # Remove only specific unwanted patterns
+    # Remove meta-language that shouldn't be there
+    text = re.sub(r'^(Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^(Sarah:|Interviewer:|AI:)\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\*.*?\*', '', text)  # Remove *actions*
     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
     
     # Clean whitespace
     text = re.sub(r'\s+', ' ', text).strip()
-    
-    # Keep responses SHORT - max 2 sentences
-    sentences = text.split('. ')
-    if len(sentences) > 2:
-        text = '. '.join(sentences[:2]) + '.'
     
     # Ensure proper punctuation
     if text and not text.endswith(('.', '!', '?')):

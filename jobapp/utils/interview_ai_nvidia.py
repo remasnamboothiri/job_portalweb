@@ -97,7 +97,8 @@ Remember: This is for the specific {job_title} role. Tailor all questions to thi
             temperature=0.5,
             max_tokens=150,
             stream=False,
-            stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
+            #stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
+            stop=["\n\n", "Candidate:", "Interviewer:"]
         )
         
         raw_response = completion.choices[0].message.content
@@ -115,25 +116,53 @@ Remember: This is for the specific {job_title} role. Tailor all questions to thi
         logger.error(f"AI API Error: {type(e).__name__}: {str(e)}")
         return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."  # ✅ Direct message
 
+# def clean_text(text):
+#     """Clean AI response and keep it short and direct"""
+#     import re
+    
+#     # Remove ALL meta-language and stage directions
+#     #text = re.sub(r'^(Response as Sarah|Sarah\'s response|As Sarah|Here\'s my response|Sarah responds|Warm Smile|\*.*?\*)[:.]?\s*', '', text, flags=re.IGNORECASE)
+#     text = re.sub(r'\*.*?\*', '', text)  # Remove any *actions*
+#     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
+    
+#     # Remove speaker labels and formatting
+#     text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
+#     #text = re.sub(r'[*#`_>\\-]+', '', text)
+#     text = re.sub(r'[*#`_>\\]+', '', text)  # Keep hyphens for normal text
+#     text = re.sub(r'["""''′`]', '', text)
+    
+#     # Clean whitespace and bullets
+#     text = re.sub(r'\s+', ' ', text).strip()
+#     text = re.sub(r'^\d+\.\s*', '', text)
+#     text = re.sub(r'^[-•]\s*', '', text)
+    
+#     # Keep responses SHORT - max 2 sentences
+#     sentences = text.split('. ')
+#     if len(sentences) > 2:
+#         text = '. '.join(sentences[:2]) + '.'
+    
+#     # Ensure proper punctuation
+#     if text and not text.endswith(('.', '!', '?')):
+#         text += '.'
+        
+#     return text
+
+
+
 def clean_text(text):
     """Clean AI response and keep it short and direct"""
     import re
     
-    # Remove ALL meta-language and stage directions
-    text = re.sub(r'^(Response as Sarah|Sarah\'s response|As Sarah|Here\'s my response|Sarah responds|Warm Smile|\*.*?\*)[:.]?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\*.*?\*', '', text)  # Remove any *actions*
+    if not text:
+        return ""
+    
+    # Remove only specific unwanted patterns
+    text = re.sub(r'^(Sarah:|Interviewer:|AI:)\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\*.*?\*', '', text)  # Remove *actions*
     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
     
-    # Remove speaker labels and formatting
-    text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
-    #text = re.sub(r'[*#`_>\\-]+', '', text)
-    text = re.sub(r'[*#`_>\\]+', '', text)  # Keep hyphens for normal text
-    text = re.sub(r'["""''′`]', '', text)
-    
-    # Clean whitespace and bullets
+    # Clean whitespace
     text = re.sub(r'\s+', ' ', text).strip()
-    text = re.sub(r'^\d+\.\s*', '', text)
-    text = re.sub(r'^[-•]\s*', '', text)
     
     # Keep responses SHORT - max 2 sentences
     sentences = text.split('. ')

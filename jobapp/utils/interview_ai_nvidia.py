@@ -5,52 +5,71 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None,  timeout=None):
+def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=None, job_description=None, required_skills=None, resume_text=None, timeout=None):
     """Ask AI question with proper timeout and error handling"""
     try:
         api_key = config('NVIDIA_API_KEY')
     except:
         logger.error("NVIDIA_API_KEY not found in environment variables")
-        return get_fallback_response(prompt, candidate_name, job_title, company_name)
+        return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
         
     if not api_key:
         logger.error("NVIDIA_API_KEY is empty")
-        return get_fallback_response(prompt, candidate_name, job_title, company_name)
+        return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."  # ✅ Direct message
+    if not candidate_name:
+        candidate_name = "the candidate"
         
-    candidate_name = candidate_name or "the candidate"
-    job_title = job_title or "Software Developer" 
-    company_name = company_name or "Our Company"
+    if not job_title:
+        logger.error("Job title not provided to AI function")
+        return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
+        
+        
+    if not company_name:     
+        logger.error("Company name not provided to AI function")
+        return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
         
     if not prompt or not prompt.strip():
         logger.error("Empty prompt provided to AI function")
-        return f"Hi {candidate_name}! I'm Sarah. Tell me about yourself."
+        return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
             
     # Simple, direct interviewer prompt
     system_prompt = f"""
-You are Sarah, an HR interviewer at {company_name}. You are interviewing {candidate_name} for the {job_title} position.
+    You are Sarah, a professional HR interviewer at {company_name}. You are conducting a live interview with {candidate_name} for the {job_title} position.
 
-RULES:
-1. Speak directly as Sarah - no labels, no "Response as Sarah", no stage directions
+INTERVIEW CONTEXT:
+- Position: {job_title}
+- Company: {company_name}
+- Candidate: {candidate_name}
+- Job Description: {job_description[:500] if job_description else 'Not provided'}
+- Required Skills: {required_skills if required_skills else 'General professional skills'}
+- Candidate Resume Summary: {resume_text[:300] if resume_text else 'Resume not available'}
+
+INTERVIEW STRATEGY:
+1. START with ice-breaking questions to make candidate comfortable
+2. GRADUALLY move to job-specific questions based on job description
+3. ASK about specific experiences mentioned in their resume
+4. EXPLORE technical skills mentioned in job requirements
+5. ASSESS cultural fit and motivation
+
+CONVERSATION RULES:
+1. Speak directly as Sarah - no labels or stage directions
 2. Keep responses SHORT (1-2 sentences maximum)
 3. ALWAYS acknowledge what the candidate just said first
-4. Ask ONE simple, clear question at a time
-5. Be friendly and encouraging
-6. Focus on job-relevant topics
+4. Ask ONE clear, relevant question at a time
+5. Be warm, encouraging, and professional
+6. If candidate wants to quit ("I'm done", "I want to stop"), gracefully end interview
+7. Build naturally on their previous responses
+8. Reference their resume and job requirements when relevant
 
-CONVERSATION STYLE:
-- Listen carefully to their answers
-- Build on what they tell you
-- Ask simple, direct questions
-- Be supportive when they struggle
-- Keep questions short and clear
+QUESTION PROGRESSION:
+- Ice-breakers: "How are you today?", "Tell me about yourself"
+- Experience: Ask about specific items from their resume
+- Technical: Ask about skills mentioned in job description
+- Behavioral: Teamwork, problem-solving, challenges
+- Closing: Their questions, next steps
 
-EXAMPLES:
-- Good: "That's great! What programming languages do you know?"
-- Bad: "Response as Sarah: That's wonderful to hear about your background..."
-- Good: "Nice! Tell me about a project you built."
-- Bad: "I appreciate you sharing that detailed information about your experience..."
+Remember: This is for the specific {job_title} role. Tailor all questions to this position and their background.
 
-Remember: Short responses, acknowledge their answer, ask one clear question.
 """
                 
     try:
@@ -89,7 +108,7 @@ Remember: Short responses, acknowledge their answer, ask one clear question.
         
     except Exception as e:
         logger.error(f"AI API Error: {type(e).__name__}: {str(e)}")
-        return get_fallback_response(prompt, candidate_name, job_title, company_name)
+        return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."  # ✅ Direct message
 
 def clean_text(text):
     """Clean AI response and keep it short and direct"""
@@ -121,28 +140,28 @@ def clean_text(text):
         
     return text
 
-def get_fallback_response(prompt, candidate_name, job_title, company_name):
-    """Generate short, direct fallback responses"""
-    candidate_name = candidate_name or "the candidate"
-    job_title = job_title or "Software Developer"
-    company_name = company_name or "Our Company"
+# def get_fallback_response(prompt, candidate_name, job_title, company_name):
+#     """Generate short, direct fallback responses"""
+#     candidate_name = candidate_name or "the candidate"
+#     job_title = job_title or "Software Developer"
+#     company_name = company_name or "Our Company"
     
-    prompt_lower = prompt.lower()
+#     prompt_lower = prompt.lower()
     
-    # Short, direct fallback responses
-    if any(phrase in prompt_lower for phrase in ['tell me about yourself', 'introduce', 'start']):
-        return f"Hi {candidate_name}! Tell me about your background."
-    elif any(phrase in prompt_lower for phrase in ['technical', 'experience', 'skills', 'technology']):
-        return "That's great! What programming languages do you know?"
-    elif any(phrase in prompt_lower for phrase in ['project', 'challenging', 'problem', 'built', 'developed']):
-        return "Nice! Tell me about a project you built."
-    elif any(phrase in prompt_lower for phrase in ['team', 'collaboration', 'work with others', 'colleagues']):
-        return "Good! How do you work with teams?"
-    elif any(phrase in prompt_lower for phrase in ['goals', 'future', 'career', 'growth']):
-        return "Interesting! What are your career goals?"
-    elif any(phrase in prompt_lower for phrase in ['questions', 'ask', 'company', 'role']):
-        return "Sure! What questions do you have?"
-    elif any(phrase in prompt_lower for phrase in ['thank', 'final', 'wrap', 'end']):
-        return f"Thank you {candidate_name}! We'll be in touch soon."
-    else:
-        return "That's helpful! What interests you about this role?"
+#     # Short, direct fallback responses
+#     if any(phrase in prompt_lower for phrase in ['tell me about yourself', 'introduce', 'start']):
+#         return f"Hi {candidate_name}! Tell me about your background."
+#     elif any(phrase in prompt_lower for phrase in ['technical', 'experience', 'skills', 'technology']):
+#         return "That's great! What programming languages do you know?"
+#     elif any(phrase in prompt_lower for phrase in ['project', 'challenging', 'problem', 'built', 'developed']):
+#         return "Nice! Tell me about a project you built."
+#     elif any(phrase in prompt_lower for phrase in ['team', 'collaboration', 'work with others', 'colleagues']):
+#         return "Good! How do you work with teams?"
+#     elif any(phrase in prompt_lower for phrase in ['goals', 'future', 'career', 'growth']):
+#         return "Interesting! What are your career goals?"
+#     elif any(phrase in prompt_lower for phrase in ['questions', 'ask', 'company', 'role']):
+#         return "Sure! What questions do you have?"
+#     elif any(phrase in prompt_lower for phrase in ['thank', 'final', 'wrap', 'end']):
+#         return f"Thank you {candidate_name}! We'll be in touch soon."
+#     else:
+#         return "That's helpful! What interests you about this role?"

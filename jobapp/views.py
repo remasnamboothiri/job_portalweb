@@ -1017,10 +1017,17 @@ def start_interview_by_uuid(request, interview_uuid):
                     resume_text += f", Phone: {interview.candidate_phone}"
                 resume_text += f", applying for {job_title} position."
         # job detail extraction
+        # Extract comprehensive job context
         try:
             company_name = interview.job.company if interview.job else "Our Company"
+            job_description = interview.job.description if interview.job else ""
+            required_skills = interview.job.required_skills if interview.job else ""
+            job_location = interview.job.location if interview.job else ""
         except AttributeError:
             company_name = "Our Company"
+            job_description = ""
+            required_skills = ""
+            job_location = ""
 
         if not resume_text.strip():
             return HttpResponse(
@@ -1186,251 +1193,178 @@ def start_interview_by_uuid(request, interview_uuid):
             # FIXED: Better audio issue detection
             user_text_lower = user_text.lower().strip()
             
-            simple_audio_phrases = [
-                'can you hear me', 'can you hear me can you hear me',
-                'hello can you hear me', 'can you hear', 'audio test', 'hello hello',
-                'testing testing', 'test test', 'hello', 'testing', 'test',
-                'i am can you hear me', 'hello hello hello', 'hello mam can you hear me',
-                'can you hear me mam', 'hello mam', 'mam can you hear me'
-            ]
-            
-            # More precise audio issue detection - must be exact match and short
-            is_simple_audio_issue = (
-                any(phrase == user_text_lower for phrase in simple_audio_phrases) and 
-                len(user_text_lower) <= 30  # Must be short
-            )
+           
             
             # Build conversation history
             conversation_history = context.get('conversation_history', [])
             
-            # Only add to conversation history if it's not a simple audio test
-            if not is_simple_audio_issue:
-                conversation_history.append({
-                    'speaker': 'candidate',
-                    'message': user_text,
-                    'question_number': question_count,
-                    'timestamp': timezone.now().isoformat(),
-                    'time_remaining': time_remaining
-                })
+            # Always add to conversation history - no special cases
+            conversation_history.append({
+                'speaker': 'candidate',
+                'message': user_text,
+                'question_number': question_count,
+                'timestamp': timezone.now().isoformat(),
+                'time_remaining': time_remaining
+            })
+
+            logger.info(f"User input processed: '{user_text_lower[:50]}...'")
+
+            # Check if candidate wants to quit
+            wants_to_quit = any(phrase in user_text_lower for phrase in [
+                'i want to stop', 'i want to quit', 'i\'m done', 'end interview', 
+                'stop the interview', 'i don\'t want to continue', 'that\'s enough'
+            ])
+            
+            if wants_to_quit:
+                ai_response = f"Of course, {candidate_name}. Thank you for your time today. We appreciate you taking the time to speak with us about the {job_title} position. We'll be in touch soon with next steps. Have a great day!"
+                context['interview_completed'] = True
+                interview.status = 'completed'
+                interview.completed_at = timezone.now()
+                interview.save()
             else:
-                logger.info(f"Skipping conversation history for audio test: {user_text}")
-                # For audio tests, don't increment question count
-                context['question_count'] = max(0, context.get('question_count', 0) - 1)
-                question_count = context['question_count']
-            
-            logger.info(f"Content analysis - Audio issue: {is_simple_audio_issue}, User text: '{user_text_lower}'")
-            
-            # Generate AI response - WRAP IN TRY-CATCH
-            logger.info(f"About to generate AI response - Audio issue: {is_simple_audio_issue}, Time up: {is_time_up}, Last question: {is_last_question}")
-            try:
-                if is_time_up:
-                    # Time is up - end the interview
-                    ai_response = f"Thank you so much for your time today, {candidate_name}! We've covered a lot of ground in our conversation. I really enjoyed learning about your background, skills, and experiences. Your insights have been valuable, and we appreciate your interest in the {job_title} position at {company_name}. Our team will review everything we discussed and get back to you with next steps within 2-3 business days. Have a wonderful day!"
+                # Generate AI response - WRAP IN TRY-CATCH
+                logger.info(f"About to generate AI response - Time up: {is_time_up}, Last question: {is_last_question}")
+                try:
+                    if is_time_up:
+                        # Generate AI-powered closing based on actual conversation
+                        conversation_summary = "\n".join([
+                            f"{entry['speaker']}: {entry['message'][:100]}..." 
+                            for entry in conversation_history[-3:] if conversation_history
+                        ])
                     
-                    context['interview_completed'] = True
-                    # Mark interview as completed in database
-                    interview.status = 'completed'
-                    interview.completed_at = timezone.now()
-                    # Ensure started_at is set if not already
-                    if not interview.started_at:
-                        interview.started_at = timezone.now() - timezone.timedelta(minutes=15)  # Estimate 15 minutes ago
-                    interview.save()
-                    logger.info(f"Interview time completed for {interview_uuid}")
+                        closing_prompt = f"""
+                        Our interview time is now complete. Based on our conversation:
+                        {conversation_summary}
+    
+                        Provide a warm, professional closing that:
+                        1. Thanks {candidate_name} for their time
+                        2. Briefly acknowledges something positive from our discussion
+                        3. Explains they'll hear back within 2-3 business days
+                        4. Ends on an encouraging note
+                        Keep it brief and sincere.
+                    """
+                
+                        ai_response = ask_ai_question(
+                            closing_prompt,
+                            candidate_name=candidate_name,
+                            job_title=job_title,
+                            company_name=company_name,
+                            job_description=job_description,
+                            required_skills=required_skills,
+                            resume_text=resume_text,
+                            timeout=20
+                        )
                     
-                    # Generate interview results immediately
-                    try:
-                        generate_interview_results(interview, conversation_history)
-                        logger.info(f"Interview results generated for {interview_uuid}")
-                    except Exception as e:
-                        logger.error(f"Failed to generate interview results: {e}")
                     
-                elif is_last_question:
-                    # 2 minutes or less - notify this is the last question
-                    follow_up_questions = [
-                        f"We're coming to the end of our time together, {candidate_name}. For my final question: Is there anything important about your skills, experience, or qualifications that we haven't discussed yet that you'd like me to know about?",
+                        context['interview_completed'] = True
+                        # Mark interview as completed in database
+                        interview.status = 'completed'
+                        interview.completed_at = timezone.now()
+                        # Ensure started_at is set if not already
+                        if not interview.started_at:
+                            interview.started_at = timezone.now() - timezone.timedelta(minutes=15)  # Estimate 15 minutes ago
+                        interview.save()
+                        logger.info(f"Interview time completed for {interview_uuid}")
                         
-                        f"This will be our last question today, {candidate_name}. Before we wrap up: What makes you particularly excited about this {job_title} opportunity, and why do you think you'd be a great fit for our team at {company_name}?",
-                        
-                        f"We have just a couple of minutes left, {candidate_name}. As a final question: If you were to start in this role next week, what would be your top priority in your first 30 days?",
-                        
-                        f"For our final question today, {candidate_name}: What's one professional achievement you're most proud of, and what did you learn from that experience?",
-                    ]
-                    
-                    import random
-                    ai_response = random.choice(follow_up_questions)
-                    logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
-                    
-                elif is_simple_audio_issue:
-                    # Audio test response - DON'T increment question count for audio tests
-                    ai_response = f"Yes, I can hear you perfectly, {candidate_name}! Your audio is crystal clear and you sound great. I'm Sarah, and I'm so excited to get to know you better today! Let's dive in - could you tell me about your background, your experience with {job_title} work, and what specifically drew you to apply for this position with {company_name}?"
-                    
-                    # CRITICAL FIX: Reset question count for audio issues to prevent premature completion
-                    context['question_count'] = 0  # Reset to 0 for audio tests
-                    question_count = 0
-                    logger.info(f"Audio test detected - resetting question count to {question_count}")
-                    
-                else:
-                    # Generate intelligent follow-up questions based on candidate's response and conversation flow
-                    logger.info(f"Generating conversational response for question {question_count}")
-                    
-                    try:
-                        # Get conversation context and candidate's responses
-                        candidate_last_response = ""
-                        previous_topics = []
-                        candidate_responses = []
-                        
-                        if conversation_history:
-                            for entry in conversation_history:
-                                if entry['speaker'] == 'candidate':
-                                    candidate_responses.append(entry['message'])
-                                    candidate_last_response = entry['message']  # Keep updating to get the latest
-                                elif entry['speaker'] == 'interviewer':
-                                    # Extract topics already covered
-                                    msg_lower = entry['message'].lower()
-                                    if any(word in msg_lower for word in ['technical', 'technology', 'programming', 'language']):
-                                        previous_topics.append('technical_skills')
-                                    if any(word in msg_lower for word in ['project', 'built', 'developed']):
-                                        previous_topics.append('projects')
-                                    if any(word in msg_lower for word in ['team', 'collaborate', 'work together']):
-                                        previous_topics.append('teamwork')
-                                    if any(word in msg_lower for word in ['goal', 'future', 'career']):
-                                        previous_topics.append('career_goals')
-                        
-                        # Build comprehensive context for AI conversation
-                        conversation_summary = "\n".join([f"- {resp[:150]}..." for resp in candidate_responses[-3:]]) if candidate_responses else "No previous responses"
-                        
-                        conversation_context = f"""
-INTERVIEW CONTEXT:
-Candidate: {candidate_name}
-Position: {job_title} at {company_name}
-Question #{question_count}
-Topics covered: {', '.join(set(previous_topics)) if previous_topics else 'None yet'}
-
-CANDIDATE'S RECENT RESPONSES:
-{conversation_summary}
-
-LATEST RESPONSE: "{candidate_last_response}"
-
-As Sarah, respond to what they just shared. Acknowledge their answer, show genuine interest, and ask a follow-up question that builds naturally on what they said. Focus on their experience, skills, and fit for the {job_title} role.
-"""
-                        
-                        # Use AI to generate contextual response
+                        # Generate interview results immediately
                         try:
+                            generate_interview_results(interview, conversation_history)
+                            logger.info(f"Interview results generated for {interview_uuid}")
+                        except Exception as e:
+                            logger.error(f"Failed to generate interview results: {e}")
+                        
+                    elif is_last_question:
+                            # Generate contextual final question
+                            final_question_prompt = f"""
+                            We have about 2 minutes remaining in our interview. 
+        
+                            Based on our conversation and the {job_title} role requirements:
+                            {required_skills[:200] if required_skills else 'General professional skills'}
+        
+                            Ask ONE meaningful final question that:
+                            1. Gives {candidate_name} a chance to highlight their strongest qualification
+                            2. Is directly relevant to the {job_title} position
+                            3. Allows them to end on a positive note
+                            4. Shows you've been listening to their responses
+        
+                            Mention this is our final question.
+                        """
+        
+                            ai_response = ask_ai_question(
+                                final_question_prompt,
+                                candidate_name=candidate_name,
+                                job_title=job_title,
+                                company_name=company_name,
+                                job_description=job_description,
+                                required_skills=required_skills,
+                                resume_text=resume_text,
+                                timeout=15
+                            )
+                        
+                            logger.info(f"Last question triggered for interview {interview_uuid} with {time_remaining}s remaining")
+                        
+                    else:
+                        # Generate intelligent follow-up questions based on candidate's response and conversation flow
+                        logger.info(f"Generating conversational response for question {question_count}")
+                        
+                        try:
+                            # Build comprehensive conversation context
+                            conversation_summary = "\n".join([
+                                f"{entry['speaker']}: {entry['message'][:100]}..." 
+                                for entry in conversation_history[-5:] if conversation_history
+                            ])
+
+                            conversation_context = f"""
+                            INTERVIEW PROGRESS:
+                            Question #{question_count} for {job_title} position
+
+                            RECENT CONVERSATION:
+                            {conversation_summary}
+
+                            CANDIDATE'S LATEST RESPONSE: "{user_text}"
+
+                            JOB REQUIREMENTS: {required_skills[:200] if required_skills else 'General skills'}
+
+                            CANDIDATE BACKGROUND: {resume_text[:200] if resume_text else 'Background not available'}
+
+                            As Sarah, respond naturally to what they just said and ask your next question.
+                            Reference their resume or job requirements when relevant.
+                            """
+
                             ai_response = ask_ai_question(
                                 conversation_context,
                                 candidate_name=candidate_name,
                                 job_title=job_title,
                                 company_name=company_name,
+                                job_description=job_description,
+                                required_skills=required_skills,
+                                resume_text=resume_text,
                                 timeout=15
                             )
-                            
-                            # Clean and validate the AI response
-                            if ai_response:
-                                # Remove any quotes or formatting that might have slipped through
-                                ai_response = ai_response.replace('"', '').replace("'", "").strip()
-                                
-                                # Ensure it's not too long
-                                if len(ai_response) > 350:
-                                    sentences = ai_response.split('. ')
-                                    if len(sentences) > 1:
-                                        ai_response = sentences[0] + '. ' + sentences[1] + '.'
-                                    else:
-                                        ai_response = ai_response[:347] + "..."
-                                
-                                # Ensure it ends properly
-                                if not ai_response.endswith(('?', '.', '!')):
-                                    ai_response += "?"
-                                
-                                logger.info(f"Generated AI conversational response: {ai_response[:100]}...")
-                            else:
-                                raise Exception("AI returned empty response")
-                            
+
                         except Exception as ai_error:
-                            logger.warning(f"AI response generation failed: {ai_error}, using fallback")
-                            
-                            # Enhanced fallback responses that acknowledge candidate's input
-                            response_lower = candidate_last_response.lower()
-                            
-                            
-                            # This logic ONLY runs when the AI fails (as a fallback)
-                            
-                            # Analyze candidate's response for emotional tone and content
-                            if any(word in response_lower for word in ['nervous', 'anxious', 'worried', 'scared']):
-                                ai_response = f"I completely understand, {candidate_name}. Interviews can feel nerve-wracking, but you're doing fantastic! Let's keep this conversational and relaxed. "
-                            elif any(word in response_lower for word in ['excited', 'passionate', 'love', 'enjoy', 'enthusiastic']):
-                                ai_response = f"I can really hear the passion in your voice, {candidate_name}! That enthusiasm is exactly what we love to see. "
-                            elif any(word in response_lower for word in ['challenge', 'difficult', 'problem', 'struggle']):
-                                ai_response = f"That sounds like a great learning experience, {candidate_name}. I appreciate you sharing that challenge with me. "
-                            else:
-                                ai_response = f"Thank you for sharing that, {candidate_name}. That's really insightful! "
-                            
-                            # Add contextual follow-up based on question progression and content
-                            if question_count <= 3:
-                                # ICE-BREAKING QUESTIONS (First 3 questions to make candidate comfortable)
-                                if question_count == 1:
-                                    ai_response += f"Nice to meet you! How are you feeling today?"
-                                elif question_count == 2:
-                                    ai_response += f"Great! Now that we're getting to know each other, are you ready to start our interview for the {job_title} position at {company_name}?"
-                                else:  # question_count == 3
-                                    ai_response += f"Perfect! Let's begin. Could you tell me a bit about yourself and what drew you to apply for this {job_title} role?"
-                            
-                            elif question_count <= 4:
-                                if any(word in response_lower for word in ['python', 'javascript', 'java', 'react', 'django', 'node', 'html', 'css', 'sql']):
-                                    ai_response += "Excellent technical foundation! Can you walk me through a specific project where you used these technologies? I'm particularly interested in any challenges you faced and how you overcame them."
-                                elif any(word in response_lower for word in ['project', 'built', 'created', 'developed', 'application', 'website']):
-                                    ai_response += "That sounds like a fascinating project! What was the most challenging technical problem you encountered while building it, and how did you approach solving it?"
-                                elif any(word in response_lower for word in ['framework', 'library', 'tool', 'database']):
-                                    ai_response += "Great choice of technologies! Can you describe a specific project where you implemented these tools? What made you choose them for that particular solution?"
-                                else:
-                                    ai_response += "I'd love to hear about a project you've worked on that you're particularly proud of. Can you walk me through the technical challenges and how you solved them?"
-                            #Techniacal questions
-                            elif question_count <= 6:
-                                if any(word in response_lower for word in ['team', 'collaborate', 'group', 'together', 'pair']):
-                                    ai_response += "Collaboration is so crucial in development! Can you give me an example of a time when you had to work through a technical disagreement with a team member? How did you handle it?"
-                                elif any(word in response_lower for word in ['problem', 'challenge', 'difficult', 'bug', 'issue', 'debug']):
-                                    ai_response += "Great problem-solving approach! How do you typically approach debugging complex issues, especially when working with a team? Do you have a systematic process?"
-                                elif any(word in response_lower for word in ['agile', 'scrum', 'methodology', 'process']):
-                                    ai_response += "Excellent experience with development methodologies! How do you handle changing requirements or tight deadlines while maintaining code quality?"
-                                else:
-                                    ai_response += "How do you approach working in team environments, especially when collaborating on complex technical projects? Can you share an example?"
-                            #Advanced
-                            else:
-                                if any(word in response_lower for word in ['goal', 'future', 'career', 'grow', 'learn', 'aspiration']):
-                                    ai_response += f"I love hearing about career aspirations! What specifically excites you about this {job_title} role at {company_name}, and how does it align with your professional goals?"
-                                elif any(word in response_lower for word in ['company', 'role', 'position', 'opportunity', 'culture']):
-                                    ai_response += "That's exactly the kind of thinking we value! Do you have any questions about the day-to-day responsibilities, our team dynamics, or the company culture?"
-                                elif any(word in response_lower for word in ['technology', 'innovation', 'cutting-edge', 'latest']):
-                                    ai_response += f"Your interest in technology trends is great! How do you stay updated with the latest developments in {job_title}, and what emerging technologies are you most excited about?"
-                                else:
-                                    ai_response += f"What draws you most to this {job_title} position at {company_name}? What aspects of the role or our company culture interest you the most?"
-                        
-                    except Exception as qgen_error:
-                        logger.error(f"Error generating conversational response: {qgen_error}")
-                        # Enhanced fallback that's more engaging and job-focused
-                        ai_response = f"Thank you for sharing that, {candidate_name}. That's really valuable insight! I'd love to learn more about your passion for {job_title} work. What aspects of technology and development motivate you most, and how do you see yourself contributing to our team?"
-            
-            except Exception as response_gen_error:
-                logger.error(f"CRITICAL: Error generating AI response: {response_gen_error}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                ai_response = f"Thank you for that response, {candidate_name}. Could you tell me more about your background and experience?"
-                # Mark as completion error to prevent interview from ending
-                context['interview_completed'] = False
+                            logger.error(f"AI response generation failed: {ai_error}")
+                            # Enhanced fallback that's more engaging and job-focused
+                            ai_response = f"Thank you for sharing that, {candidate_name}. That's really valuable insight! I'd love to learn more about your passion for {job_title} work. What aspects of technology and development motivate you most, and how do you see yourself contributing to our team?"
+                
+                except Exception as response_gen_error:
+                    logger.error(f"CRITICAL: Error generating AI response: {response_gen_error}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    ai_response = f"Thank you for that response, {candidate_name}. Could you tell me more about your background and experience?"
+                    # Mark as completion error to prevent interview from ending
+                    context['interview_completed'] = False
             
             logger.info(f"AI response generated successfully ({len(ai_response)} chars)")
 
-    
-            # Add AI response to history (skip for audio tests)
-            if not is_simple_audio_issue:
-                conversation_history.append({
-                    'speaker': 'interviewer', 
-                    'message': ai_response,
-                    'question_number': question_count,
-                    'timestamp': timezone.now().isoformat(),
-                    'time_remaining': time_remaining
-                })
-            else:
-                logger.info(f"Skipping AI response history for audio test response")
+            # Add interviewer response to conversation history
+            conversation_history.append({
+                'speaker': 'interviewer',
+                'message': ai_response,
+                'question_number': question_count,
+                'timestamp': timezone.now().isoformat(),
+                'time_remaining': time_remaining
+            })
     
             # Keep conversation history manageable
             if len(conversation_history) > 40:
@@ -1539,8 +1473,38 @@ As Sarah, respond to what they just shared. Acknowledge their answer, show genui
             logger.info(f"About to return JsonResponse for interview {interview_uuid}")
             return JsonResponse(response_data)
         
-        # HANDLE GET REQUEST - Show interview UI with first question
-        ai_question = f"Hi there! I'm Sarah. Before we begin, could you please tell me your name?"
+        # Generate personalized opening question based on job and resume
+        opening_prompt = f"""
+        This is the start of an interview for the {job_title} position at {company_name}.
+
+        CANDIDATE INFO:
+        - Name: {candidate_name}
+        - Resume: {resume_text[:200] if resume_text else 'Resume not provided'}
+
+        JOB INFO:
+        - Position: {job_title}
+        - Company: {company_name}
+        - Key Requirements: {required_skills[:200] if required_skills else 'General professional skills'}
+
+        As Sarah, provide a warm opening that: 
+        1. Introduces yourself
+        2. Makes them feel comfortable
+        3. Asks an appropriate ice-breaking question
+        4. Sets a positive tone for the interview
+
+        Keep it brief and friendly.
+        """
+
+        ai_question = ask_ai_question(
+            opening_prompt,
+            candidate_name=candidate_name,
+            job_title=job_title,
+            company_name=company_name,
+            job_description=job_description,
+            required_skills=required_skills,
+            resume_text=resume_text,
+            timeout=15
+        ) or f"Hello {candidate_name}! I'm Sarah, and I'm excited to learn more about you today. How are you feeling?"
         
         logger.info(f"Generated AI initial question for interview {interview_uuid}")
         

@@ -95,13 +95,18 @@ Remember: This is for the specific {job_title} role. Tailor all questions to thi
                 }
             ],
             temperature=0.5,
-            max_tokens=50,
+            max_tokens=150,
             stream=False,
             stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
         )
         
         raw_response = completion.choices[0].message.content
         cleaned_response = clean_text(raw_response)
+        
+        # ADD THIS CHECK RIGHT HERE (after line 92):
+        if not cleaned_response or len(cleaned_response.strip()) < 5:
+            logger.warning(f"AI returned empty/short response: '{cleaned_response}'")
+            return f"That's interesting, {candidate_name}. Could you tell me more about your experience with {job_title} work?"
         
         logger.info(f"AI API call successful, response length: {len(cleaned_response)}")
         return cleaned_response
@@ -121,7 +126,8 @@ def clean_text(text):
     
     # Remove speaker labels and formatting
     text = re.sub(r'^(Sarah|Interviewer|AI):\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'[*#`_>\\-]+', '', text)
+    #text = re.sub(r'[*#`_>\\-]+', '', text)
+    text = re.sub(r'[*#`_>\\]+', '', text)  # Keep hyphens for normal text
     text = re.sub(r'["""''′`]', '', text)
     
     # Clean whitespace and bullets

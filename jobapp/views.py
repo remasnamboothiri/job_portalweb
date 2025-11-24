@@ -1184,7 +1184,7 @@ def start_interview_by_uuid(request, interview_uuid):
             logger.info(f"Question count incremented from {current_count} to {question_count} for interview {interview_uuid}")
     
             # Check if this should be the last question (2 minutes or less remaining)
-            is_last_question = time_remaining <= 120  # 2 minutes = 120 seconds
+            is_last_question = time_remaining <= 60  # 1 minite
             is_time_up = time_remaining <= 30  # 30 seconds or less
             
             # LOG the decision logic
@@ -1281,13 +1281,13 @@ def start_interview_by_uuid(request, interview_uuid):
                             Based on our conversation and the {job_title} role requirements:
                             {required_skills[:200] if required_skills else 'General professional skills'}
         
-                            Ask ONE meaningful final question that:
+                            Ask ONE meaningful question that:
                             1. Gives {candidate_name} a chance to highlight their strongest qualification
                             2. Is directly relevant to the {job_title} position
                             3. Allows them to end on a positive note
                             4. Shows you've been listening to their responses
-        
-                            Mention this is our final question.
+
+                            Be natural and conversational.
                         """
         
                             ai_response = ask_ai_question(

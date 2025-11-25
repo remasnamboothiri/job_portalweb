@@ -1233,15 +1233,16 @@ def start_interview_by_uuid(request, interview_uuid):
                         ])
                     
                         closing_prompt = f"""
-                        Our interview time is now complete. Based on our conversation:
+                        The interview time is now complete. Based on our conversation:
                         {conversation_summary}
     
-                        Provide a warm, professional closing that:
-                        1. Thanks {candidate_name} for their time
-                        2. Briefly acknowledges something positive from our discussion
-                        3. Explains they'll hear back within 2-3 business days
+                        Provide a direct, warm closing message that:
+                        1. Thanks {candidate_name} for their time and participation
+                        2. Briefly acknowledges something positive from the discussion
+                        3. Explains they'll hear back within 3-4 business days
                         4. Ends on an encouraging note
-                        Keep it brief and sincere.
+                        
+                        Speak directly as Sarah the interviewer. Do not use phrases like "Here is a warm, professional closing" - just give the actual closing message.
                     """
                 
                         ai_response = ask_ai_question(
@@ -1274,14 +1275,14 @@ def start_interview_by_uuid(request, interview_uuid):
                             logger.error(f"Failed to generate interview results: {e}")
                         
                     elif is_last_question:
-                            # Generate contextual final question
+                            # Generate contextual final question with clear indication it's the last one
                             final_question_prompt = f"""
-                            We have about 2 minutes remaining in our interview. 
+                            This is the last question of our interview. 
         
                             Based on our conversation and the {job_title} role requirements:
                             {required_skills[:200] if required_skills else 'General professional skills'}
         
-                            Ask ONE meaningful question that:
+                            Start by saying "This is our final question" then ask ONE meaningful question that:
                             1. Gives {candidate_name} a chance to highlight their strongest qualification
                             2. Is directly relevant to the {job_title} position
                             3. Allows them to end on a positive note

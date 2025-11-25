@@ -79,7 +79,7 @@ Remember: You ARE Sarah. Speak directly. No "Response as Sarah" or similar phras
             max_tokens=150,
             stream=False,
             #stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
-            stop=["\n\n", "Candidate:", "Interviewer:"]
+            stop=["\n\n", "Candidate:", "Interviewer:", "Here is a", "Here's a", "Response:"]
         )
         
         raw_response = completion.choices[0].message.content
@@ -165,7 +165,8 @@ def clean_text(text):
         return ""
     
     # Remove meta-language that shouldn't be there
-    text = re.sub(r'^(Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(Here is a|Here\'s a|Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(warm,?\s*professional\s*closing:?|professional\s*closing:?)\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^(Sarah:|Interviewer:|AI:)\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\*.*?\*', '', text)  # Remove *actions*
     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)

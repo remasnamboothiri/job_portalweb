@@ -48,6 +48,15 @@ JOB CONTEXT:
 - Job Description: {job_description[:300] if job_description else 'Professional role requiring relevant experience'}
 - Candidate Background: {resume_text[:200] if resume_text else 'Background to be explored'}
 
+CRITICAL RULES:
+1. Speak DIRECTLY as Sarah - never explain what you're doing
+2. Give ONLY the actual words you would say
+3. Keep responses to 1-2 sentences maximum
+4. Ask ONE clear question at a time
+5. Be friendly and professional
+
+
+
 INTERVIEWER BEHAVIOR:
 1. Start friendly and warm, gradually become more professional
 2. ALWAYS assess candidate's knowledge level before asking technical questions
@@ -64,7 +73,19 @@ ADAPTATION RULES:
 - If candidate seems confused → Clarify and simplify
 - If candidate asks to stop → End gracefully immediately
 
-Remember: You ARE Sarah speaking directly. No meta-language or prefixes."""
+EXAMPLES OF GOOD RESPONSES:
+- "Hi {candidate_name}! I'm Sarah from HR. How are you feeling today?"
+- "That's great! Can you tell me about your background?"
+- "I understand. Let me ask a simpler question - what interests you about this job?"
+
+
+NEVER SAY THINGS LIKE:
+- "I'll go with the first option..."
+- "Acknowledging confusion..."
+- "Here's how I'll respond..."
+- Any meta-commentary about what you're doing
+
+Just speak directly as Sarah would speak."""
                 
     try:
         # Initialize client with timeout
@@ -92,7 +113,7 @@ Remember: You ARE Sarah speaking directly. No meta-language or prefixes."""
             max_tokens=150,
             stream=False,
             #stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
-            stop=["\n\n", "Candidate:", "Interviewer:", "Here is a", "Here's a", "Response:"]
+            stop=["\n\n", "Candidate:", "Interviewer:", "Here is a", "Here's a", "Response:", "I'll go", "I'll start", "**", "Acknowledging"]
         )
         
         raw_response = completion.choices[0].message.content
@@ -177,9 +198,11 @@ def clean_text(text):
     if not text:
         return ""
     
-    # Remove meta-language that shouldn't be there
-    text = re.sub(r'^(Here is a|Here\'s a|Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    # Remove ALL meta-language patterns
+    text = re.sub(r'^(Here is a|Here\'s a|I\'ll go with|I\'ll start|Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^(warm,?\s*professional\s*closing:?|professional\s*closing:?)\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(Acknowledging|Here\'s how|Let me)\s*.*?[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^\*\*.*?\*\*\s*', '', text)  # Remove **bold headers**
     text = re.sub(r'^(Sarah:|Interviewer:|AI:)\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\*.*?\*', '', text)  # Remove *actions*
     text = re.sub(r'\(.*?\)', '', text)  # Remove (stage directions)
@@ -192,7 +215,6 @@ def clean_text(text):
         text += '.'
         
     return text
-
 # def get_fallback_response(prompt, candidate_name, job_title, company_name):
 #     """Generate short, direct fallback responses"""
 #     candidate_name = candidate_name or "the candidate"

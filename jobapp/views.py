@@ -1212,8 +1212,14 @@ def start_interview_by_uuid(request, interview_uuid):
             # Check if candidate wants to quit
             wants_to_quit = any(phrase in user_text_lower for phrase in [
                 'i want to stop', 'i want to quit', 'i\'m done', 'end interview', 
-                'stop the interview', 'i don\'t want to continue', 'that\'s enough'
+                'stop the interview', 'i don\'t want to continue', 'that\'s enough',
+                'i don\'t want to do this', 'can we stop', 'i want to end this',
+                'not interested anymore', 'i give up', 'this is too hard'
             ])
+
+            # Also check for very short responses that might indicate disengagement
+            if len(user_text.strip()) < 10 and any(word in user_text_lower for word in ['ok', 'fine', 'whatever', 'idk', 'dunno']):
+                logger.info(f"Detected possible disengagement from candidate: '{user_text}'")
             
             if wants_to_quit:
                 ai_response = f"Of course, {candidate_name}. Thank you for your time today. We appreciate you taking the time to speak with us about the {job_title} position. We'll be in touch soon with next steps. Have a great day!"
@@ -1316,21 +1322,32 @@ def start_interview_by_uuid(request, interview_uuid):
                             ])
 
                             conversation_context = f"""
-                            INTERVIEW PROGRESS:
-                            Question #{question_count} for {job_title} position
+INTERVIEW PROGRESS: Question #{question_count} for {job_title} position
 
-                            RECENT CONVERSATION:
-                            {conversation_summary}
+CANDIDATE'S RESPONSE: "{user_text}"
 
-                            CANDIDATE'S LATEST RESPONSE: "{user_text}"
+RECENT CONVERSATION:
+{conversation_summary}
 
-                            JOB REQUIREMENTS: {required_skills[:200] if required_skills else 'General skills'}
+INTERVIEW PHASE GUIDANCE:
+- Questions 1-2: Ice-breaking (How are you? Tell me about yourself?)
+- Questions 3-5: Background exploration (Experience, education, interests)
+- Questions 6-8: Job-specific questions (Skills, technical knowledge)
+- Questions 9+: Behavioral & cultural fit
 
-                            CANDIDATE BACKGROUND: {resume_text[:200] if resume_text else 'Background not available'}
+RESPONSE ASSESSMENT:
+- If their answer was basic/short → Ask simpler follow-up questions
+- If their answer was detailed/technical → Ask more advanced questions
+- If they seem confused → Clarify and guide them
+- If they mention wanting to quit → End interview gracefully
 
-                            As Sarah, respond naturally to what they just said and ask your next question.
-                            Reference their resume or job requirements when relevant.
-                            """
+JOB CONTEXT:
+- Position: {job_title}
+- Key Requirements: {required_skills[:200] if required_skills else 'General skills'}
+- Candidate Background: {resume_text[:200] if resume_text else 'To be explored'}
+
+As Sarah, acknowledge their response and ask the next appropriate question based on the interview phase and their knowledge level.
+"""
 
                             ai_response = ask_ai_question(
                                 conversation_context,
@@ -1476,25 +1493,21 @@ def start_interview_by_uuid(request, interview_uuid):
         
         # Generate personalized opening question based on job and resume
         opening_prompt = f"""
-        This is the start of an interview for the {job_title} position at {company_name}.
+You are starting an interview with {candidate_name} for {job_title} at {company_name}.
 
-        CANDIDATE INFO:
-        - Name: {candidate_name}
-        - Resume: {resume_text[:200] if resume_text else 'Resume not provided'}
+INTERVIEW APPROACH:
+1. Start with a warm, friendly greeting
+2. Introduce yourself as Sarah from HR
+3. Ask a simple ice-breaking question to make them comfortable
+4. Keep it conversational and welcoming
 
-        JOB INFO:
-        - Position: {job_title}
-        - Company: {company_name}
-        - Key Requirements: {required_skills[:200] if required_skills else 'General professional skills'}
+FIRST QUESTION OPTIONS (choose one that fits):
+- "Hi {candidate_name}! I'm Sarah from HR. How are you feeling today?"
+- "Hello {candidate_name}! I'm Sarah, and I'm excited to learn about you. How has your day been so far?"
+- "Hi there! I'm Sarah from {company_name}. Thanks for joining me today. How are you doing?"
 
-        As Sarah, provide a warm opening that: 
-        1. Introduces yourself
-        2. Makes them feel comfortable
-        3. Asks an appropriate ice-breaking question
-        4. Sets a positive tone for the interview
-
-        Keep it brief and friendly.
-        """
+Keep it simple, warm, and under 2 sentences. This is just the ice-breaker.
+"""
 
         ai_question = ask_ai_question(
             opening_prompt,

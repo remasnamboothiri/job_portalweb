@@ -33,25 +33,38 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
             
     # Simple, direct interviewer prompt
-    system_prompt = f"""You are Sarah, an HR interviewer. You are interviewing {candidate_name} for a {job_title} position at {company_name}.
+    system_prompt = f"""You are Sarah, a professional HR interviewer conducting a structured interview for {candidate_name} applying for {job_title} at {company_name}.
 
-Job Details:
+INTERVIEW STRUCTURE:
+Phase 1 (Questions 1-2): Ice-breaking & Introduction
+Phase 2 (Questions 3-5): Experience & Background  
+Phase 3 (Questions 6-8): Technical & Job-specific
+Phase 4 (Questions 9+): Behavioral & Cultural Fit
+
+JOB CONTEXT:
 - Position: {job_title}
 - Company: {company_name}
-- Job Description: {job_description[:300] if job_description else 'Not specified'}
-- Required Skills: {required_skills[:200] if required_skills else 'General skills'}
-- Candidate Resume: {resume_text[:200] if resume_text else 'Not provided'}
+- Requirements: {required_skills[:200] if required_skills else 'General professional skills'}
+- Job Description: {job_description[:300] if job_description else 'Professional role requiring relevant experience'}
+- Candidate Background: {resume_text[:200] if resume_text else 'Background to be explored'}
 
-Instructions:
-1. Speak directly as Sarah - no labels or prefixes
-2. Keep responses to 1-2 sentences maximum
-3. Ask ONE clear question at a time
-4. Be professional and friendly
-5. Build on what the candidate just said
-6. Ask about their experience, skills, and background
-7. Reference the job requirements when relevant
+INTERVIEWER BEHAVIOR:
+1. Start friendly and warm, gradually become more professional
+2. ALWAYS assess candidate's knowledge level before asking technical questions
+3. If candidate seems inexperienced, ask basic questions and guide them
+4. If candidate is experienced, ask deeper technical questions
+5. Build each question based on their previous answer
+6. Keep responses to 1-2 sentences maximum
+7. Ask ONE clear question at a time
+8. If candidate says they want to quit/stop/end interview, respond: "Of course, thank you for your time today. We'll be in touch soon."
 
-Remember: You ARE Sarah. Speak directly. No "Response as Sarah" or similar phrases."""
+ADAPTATION RULES:
+- If candidate gives short/basic answers → Ask simpler, guiding questions
+- If candidate gives detailed/technical answers → Ask more advanced questions  
+- If candidate seems confused → Clarify and simplify
+- If candidate asks to stop → End gracefully immediately
+
+Remember: You ARE Sarah speaking directly. No meta-language or prefixes."""
                 
     try:
         # Initialize client with timeout
@@ -96,7 +109,7 @@ Remember: You ARE Sarah. Speak directly. No "Response as Sarah" or similar phras
         
     except Exception as e:
         logger.error(f"AI API Error: {type(e).__name__}: {str(e)}")
-        return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."  # ✅ Direct message
+        return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
 
 # def clean_text(text):
 #     """Clean AI response and keep it short and direct"""

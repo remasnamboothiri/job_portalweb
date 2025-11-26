@@ -1213,8 +1213,10 @@ def start_interview_by_uuid(request, interview_uuid):
             wants_to_quit = any(phrase in user_text_lower for phrase in [
                 'i want to stop', 'i want to quit', 'i\'m done', 'end interview', 
                 'stop the interview', 'i don\'t want to continue', 'that\'s enough',
-                'i don\'t want to do this', 'can we stop', 'i want to end this',
-                'not interested anymore', 'i give up', 'this is too hard'
+                'not interested in continuing', 'not interested while this interview continue',
+                'please cut this interview', 'please end this interview', 'cut this interview call',
+                'not in good health', 'my health', 'bad situation', 'health isn\'t okay',
+                'pick this interview qui', 'quit this interview'
             ])
 
             # Also check for very short responses that might indicate disengagement

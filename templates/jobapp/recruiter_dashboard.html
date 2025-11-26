@@ -532,7 +532,8 @@
                 <div class="mt-3">
                   {% if interview.is_completed %}
                     <div class="alert alert-success">
-                      <i class="fas fa-check-circle"></i> Interview completed on {{ interview.completed_at|date:"M d, Y - g:i A" }}
+                      {% comment %} <i class="fas fa-check-circle"></i> Interview completed on {{ interview.completed_at|date:"M d, Y \a\t g:i A" }} {% endcomment %}
+                      <i class="fas fa-check-circle"></i> Interview completed on {{ interview.get_completed_datetime_display }}
                     </div>
                   {% elif interview.is_expired %}
                     <div class="alert alert-warning">

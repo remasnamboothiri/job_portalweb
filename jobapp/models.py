@@ -347,6 +347,14 @@ class Interview(models.Model):
         else:
             return 'bg-primary'  # Blue for active
     
+    
+    def get_completed_datetime_display(self):
+        """Get formatted completion date and time"""
+        if self.completed_at:
+            return self.completed_at.strftime("%b %d, %Y at %I:%M %p")
+        return "Not completed"
+    
+    
     def __str__(self):
         return f"Interview for {self.job.title} - {self.candidate_name}"
 

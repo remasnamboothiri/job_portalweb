@@ -193,7 +193,8 @@
                 </div>
                 <div class="col-md-3">
                     <strong>Interview Date:</strong><br>
-                    {{ interview.completed_at|date:"M d, Y" }}
+                    {% comment %} {{ interview.completed_at|date:"M d, Y \a\t g:i A" }} {% endcomment %}
+                    {{ interview.get_completed_datetime_display }}
                     {% if interview_duration %}
                         <br><small class="text-muted">Duration: {{ interview_duration }}</small>
                     {% endif %}

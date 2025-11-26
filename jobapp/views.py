@@ -2117,8 +2117,8 @@ def edit_job(request, job_id):
         logger.info(f"FILES data keys: {list(request.FILES.keys())}")
         
         # Log current image before update
+        # logger.info(f"Current job image before update: {job.featured_image}")
         logger.info(f"Current job image before update: {job.featured_image}")
-        
         form = JobForm(request.POST, request.FILES, instance=job)
         
         if form.is_valid():
@@ -2129,6 +2129,7 @@ def edit_job(request, job_id):
             form.save_m2m()  # For tags
             
             # Log image after update
+            #logger.info(f"Job image after update: {updated_job.featured_image}")
             logger.info(f"Job image after update: {updated_job.featured_image}")
             
             messages.success(request, f'Job "{updated_job.title}" updated successfully!')
@@ -2139,7 +2140,7 @@ def edit_job(request, job_id):
                     'success': True, 
                     'message': 'Job updated successfully!',
                     'job_title': updated_job.title,
-                    'image_url': updated_job.featured_image.url if updated_job.featured_image else None
+                    'image_url': None  # Since featured_image field no longer exists
                 })
             
             return redirect('recruiter_dashboard')

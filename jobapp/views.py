@@ -1229,6 +1229,13 @@ def start_interview_by_uuid(request, interview_uuid):
                 interview.status = 'completed'
                 interview.completed_at = timezone.now()
                 interview.save()
+                
+                # CRITICAL: Generate interview results immediately when quitting
+                try:
+                    generate_interview_results(interview, conversation_history)
+                    logger.info(f"Interview results generated for quit scenario: {interview_uuid}")
+                except Exception as e:
+                        logger.error(f"Failed to generate interview results for quit: {e}")
             else:
                 # Generate AI response - WRAP IN TRY-CATCH
                 logger.info(f"About to generate AI response - Time up: {is_time_up}, Last question: {is_last_question}")

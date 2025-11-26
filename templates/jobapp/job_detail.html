@@ -88,6 +88,9 @@
               
               {% comment %} <li><a href="{% url 'contact' %}">Contact</a></li> {% endcomment %}
               {% comment %} <li class="d-lg-none"><a href="{% url 'post_job' %}"><span class="mr-2">+</span> Post a Job</a></li> {% endcomment %}
+              <a href="{% url 'recruiter_dashboard' %}" class="back-btn me-2">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+              </a>
               <li class="d-lg-none"><a href="{% url 'logout' %}">Log out</a></li>
             </ul>
           </nav>

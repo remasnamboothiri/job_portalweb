@@ -2741,3 +2741,26 @@ def get_interview_link(request, interview_uuid):
 
 
 
+#Automatic Functionality function
+@login_required
+def check_interview_updates(request):
+    """Check if there are new interview results"""
+    try:
+        user_jobs = Job.objects.filter(posted_by=request.user)
+        recent_cutoff = timezone.now() - timezone.timedelta(minutes=2)
+        
+        new_results = Interview.objects.filter(
+            job__in=user_jobs,
+            status='completed',
+            results_generated_at__gte=recent_cutoff
+        ).exclude(
+            overall_score__isnull=True,
+            ai_feedback__isnull=True
+        )
+        
+        return JsonResponse({
+            'has_updates': new_results.exists(),
+            'count': new_results.count()
+        })
+    except:
+        return JsonResponse({'has_updates': False, 'count': 0})

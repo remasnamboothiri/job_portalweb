@@ -1220,6 +1220,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     <script src="{% static 'js/custom.js' %}"></script>
 
+    <!-- Auto-Refresh Script -->
+    <script>
+    function checkForUpdates() {
+        fetch('/api/check-updates/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_updates) {
+                location.reload();
+            }
+        })
+        .catch(error => console.log('Check failed'));
+    }
+    
+    // Check every 30 seconds
+    setInterval(checkForUpdates, 30000);
+    </script>
+
     
   
 </body>

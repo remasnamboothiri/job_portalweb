@@ -94,7 +94,8 @@ urlpatterns = [
     path('interview-results/<uuid:interview_uuid>/', views.interview_results, name='interview_results'),
     
   
-    
+    # Auto-refresh API
+    path('api/check-updates/', views.check_interview_updates, name='check_updates'),
     
     # Health check endpoints
     path('health/', views.health_check, name='health_check'),

@@ -2116,9 +2116,8 @@ def edit_job(request, job_id):
         logger.info(f"POST data keys: {list(request.POST.keys())}")
         logger.info(f"FILES data keys: {list(request.FILES.keys())}")
         
-        # Log current image before update
-        # logger.info(f"Current job image before update: {job.featured_image}")
-        logger.info(f"Current job image before update: {job.featured_image}")
+        # Log current image before update - featured_image field removed
+        logger.info(f"Edit job form processing for job {job_id}")
         form = JobForm(request.POST, request.FILES, instance=job)
         
         if form.is_valid():
@@ -2128,9 +2127,8 @@ def edit_job(request, job_id):
             updated_job.save()
             form.save_m2m()  # For tags
             
-            # Log image after update
-            #logger.info(f"Job image after update: {updated_job.featured_image}")
-            logger.info(f"Job image after update: {updated_job.featured_image}")
+            # Log successful update
+            logger.info(f"Job {job_id} updated successfully")
             
             messages.success(request, f'Job "{updated_job.title}" updated successfully!')
             

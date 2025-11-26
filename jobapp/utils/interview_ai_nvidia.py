@@ -33,59 +33,27 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         return f"I apologize {candidate_name}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."
             
     # Simple, direct interviewer prompt
-    system_prompt = f"""You are Sarah, a professional HR interviewer conducting a structured interview for {candidate_name} applying for {job_title} at {company_name}.
-
-INTERVIEW STRUCTURE:
-Phase 1 (Questions 1-2): Ice-breaking & Introduction
-Phase 2 (Questions 3-5): Experience & Background  
-Phase 3 (Questions 6-8): Technical & Job-specific
-Phase 4 (Questions 9+): Behavioral & Cultural Fit
+    system_prompt = f"""You are Sarah, an HR interviewer at {company_name}. You are interviewing {candidate_name} for the {job_title} position.
 
 JOB CONTEXT:
 - Position: {job_title}
 - Company: {company_name}
-- Requirements: {required_skills[:200] if required_skills else 'General professional skills'}
-- Job Description: {job_description[:300] if job_description else 'Professional role requiring relevant experience'}
-- Candidate Background: {resume_text[:200] if resume_text else 'Background to be explored'}
+- Requirements: {required_skills[:200] if required_skills else 'General skills'}
 
-CRITICAL RULES:
-1. Speak DIRECTLY as Sarah - never explain what you're doing
-2. Give ONLY the actual words you would say
-3. Keep responses to 1-2 sentences maximum
-4. Ask ONE clear question at a time
-5. Be friendly and professional
+RULES:
+1. Speak directly as Sarah - no explanations
+2. Keep responses to 1-2 sentences only
+3. Ask ONE question at a time
+4. Be friendly and professional
+5. If candidate is confused, ask simpler questions
+6. If candidate wants to quit, say: "Of course, thank you for your time today. We'll be in touch soon."
 
-
-
-INTERVIEWER BEHAVIOR:
-1. Start friendly and warm, gradually become more professional
-2. ALWAYS assess candidate's knowledge level before asking technical questions
-3. If candidate seems inexperienced, ask basic questions and guide them
-4. If candidate is experienced, ask deeper technical questions
-5. Build each question based on their previous answer
-6. Keep responses to 1-2 sentences maximum
-7. Ask ONE clear question at a time
-8. If candidate says they want to quit/stop/end interview, respond: "Of course, thank you for your time today. We'll be in touch soon."
-
-ADAPTATION RULES:
-- If candidate gives short/basic answers → Ask simpler, guiding questions
-- If candidate gives detailed/technical answers → Ask more advanced questions  
-- If candidate seems confused → Clarify and simplify
-- If candidate asks to stop → End gracefully immediately
-
-EXAMPLES OF GOOD RESPONSES:
+EXAMPLES:
 - "Hi {candidate_name}! I'm Sarah from HR. How are you feeling today?"
 - "That's great! Can you tell me about your background?"
-- "I understand. Let me ask a simpler question - what interests you about this job?"
+- "I understand. What interests you about this job?"
 
-
-NEVER SAY THINGS LIKE:
-- "I'll go with the first option..."
-- "Acknowledging confusion..."
-- "Here's how I'll respond..."
-- Any meta-commentary about what you're doing
-
-Just speak directly as Sarah would speak."""
+Never say: "Here's my response", "I'll go with", "Acknowledging", or any meta-commentary."""
                 
     try:
         # Initialize client with timeout
@@ -123,7 +91,8 @@ Just speak directly as Sarah would speak."""
         # ADD THIS CHECK RIGHT HERE (after line 92):
         if not cleaned_response or len(cleaned_response.strip()) < 5:
             logger.warning(f"AI returned empty/short response: '{cleaned_response}'")
-            return f"That's interesting, {candidate_name}. Could you tell me more about your experience with {job_title} work?"
+            #return f"That's interesting, {candidate_name}. Could you tell me more about your experience with {job_title} work?"
+            return f"I understand. Let me ask a simple question - what interests you about this {job_title} position?"
         
         logger.info(f"AI API call successful, response length: {len(cleaned_response)}")
         return cleaned_response
@@ -199,7 +168,7 @@ def clean_text(text):
         return ""
     
     # Remove ALL meta-language patterns
-    text = re.sub(r'^(Here is a|Here\'s a|I\'ll go with|I\'ll start|Response as Sarah|Sarah responds|As Sarah)[:.]?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(Here is a|Here\'s a|I\'ll go with|I\'ll start|Response as Sarah|Sarah responds|As Sarah|Here\'s my response)[:.]?\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^(warm,?\s*professional\s*closing:?|professional\s*closing:?)\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^(Acknowledging|Here\'s how|Let me)\s*.*?[:.]?\s*', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^\*\*.*?\*\*\s*', '', text)  # Remove **bold headers**

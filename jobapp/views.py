@@ -1216,29 +1216,51 @@ def start_interview_by_uuid(request, interview_uuid):
                 'not interested in continuing', 'not interested while this interview continue',
                 'please cut this interview', 'please end this interview', 'cut this interview call',
                 'not in good health', 'my health', 'bad situation', 'health isn\'t okay',
-                'pick this interview qui', 'quit this interview'
-            ])
-
-            # Also check for very short responses that might indicate disengagement
-            if len(user_text.strip()) < 10 and any(word in user_text_lower for word in ['ok', 'fine', 'whatever', 'idk', 'dunno']):
-                logger.info(f"Detected possible disengagement from candidate: '{user_text}'")
+                'pick this interview qui', 'quit this interview',
+                'not interesting for continuing', 'please get the interview',
+                'i am not interesting for continuing this interview'
+            ]) 
             
-            if wants_to_quit:
-                ai_response = f"Of course, {candidate_name}. Thank you for your time today. We appreciate you taking the time to speak with us about the {job_title} position. We'll be in touch soon with next steps. Have a great day!"
+            # CRITICAL FIX: Also check if AI already said goodbye
+            ai_said_goodbye = False
+            for entry in conversation_history[-3:]:  # Check last 3 messages
+                if (entry.get('speaker') == 'interviewer' and 
+                    any(goodbye_phrase in entry.get('message', '').lower() for goodbye_phrase in [
+                        'thank you for your time today', 'we\'ll be in touch soon',
+                        'of course, thank you for your time', 'thank you for participating'
+                    ])):
+                    ai_said_goodbye = True
+                    break
+            
+            # CRITICAL FIX: Check if interview should end first
+            should_end_interview = (
+                wants_to_quit or 
+                ai_said_goodbye or
+                (any(phrase in user_text_lower for phrase in ['thank you mam', 'okay thank you', 'thanks mam']) 
+                 and len(conversation_history) > 4)  # Only if interview has progressed
+            )
+
+            if should_end_interview:
+                logger.info(f"Interview should end - quit: {wants_to_quit}, goodbye: {ai_said_goodbye}")
+                ai_response = f"Thank you, {candidate_name}. The interview is now complete. Have a great day!"
                 context['interview_completed'] = True
                 interview.status = 'completed'
                 interview.completed_at = timezone.now()
                 interview.save()
                 
-                # CRITICAL: Generate interview results immediately when quitting
+                # Generate interview results immediately
                 try:
                     generate_interview_results(interview, conversation_history)
-                    logger.info(f"Interview results generated for quit scenario: {interview_uuid}")
+                    logger.info(f"Interview results generated for completion: {interview_uuid}")
                 except Exception as e:
-                        logger.error(f"Failed to generate interview results for quit: {e}")
+                    logger.error(f"Failed to generate interview results: {e}")
             else:
+                # Also check for very short responses that might indicate disengagement
+                if len(user_text.strip()) < 10 and any(word in user_text_lower for word in ['ok', 'fine', 'whatever', 'idk', 'dunno']):
+                    logger.info(f"Detected possible disengagement from candidate: '{user_text}'")
+                    
                 # Generate AI response - WRAP IN TRY-CATCH
-                logger.info(f"About to generate AI response - Time up: {is_time_up}, Last question: {is_last_question}")
+                logger.info(f"About to generate AI response - Time up: {is_time_up}, Last question: {is_last_question}")    
                 try:
                     if is_time_up:
                         # Generate AI-powered closing based on actual conversation
@@ -1330,32 +1352,21 @@ def start_interview_by_uuid(request, interview_uuid):
                                 for entry in conversation_history[-5:] if conversation_history
                             ])
 
+                            # CRITICAL FIX: Use improved prompt to prevent meta-responses
                             conversation_context = f"""
-INTERVIEW PROGRESS: Question #{question_count} for {job_title} position
+You are Sarah, a friendly HR interviewer. The candidate just said: "{user_text}"
 
-CANDIDATE'S RESPONSE: "{user_text}"
+STRICT RULES:
+1. NEVER explain your reasoning or mention "rules"
+2. NEVER say things like "Since the candidate..." or "Following the rules..."
+3. Always respond AS Sarah, not ABOUT Sarah
+4. Keep responses under 50 words
+5. Ask ONE simple question at a time
+6. If confused, ask for clarification simply
 
-RECENT CONVERSATION:
-{conversation_summary}
+Current question #{question_count} for {job_title} position.
 
-INTERVIEW PHASE GUIDANCE:
-- Questions 1-2: Ice-breaking (How are you? Tell me about yourself?)
-- Questions 3-5: Background exploration (Experience, education, interests)
-- Questions 6-8: Job-specific questions (Skills, technical knowledge)
-- Questions 9+: Behavioral & cultural fit
-
-RESPONSE ASSESSMENT:
-- If their answer was basic/short → Ask simpler follow-up questions
-- If their answer was detailed/technical → Ask more advanced questions
-- If they seem confused → Clarify and guide them
-- If they mention wanting to quit → End interview gracefully
-
-JOB CONTEXT:
-- Position: {job_title}
-- Key Requirements: {required_skills[:200] if required_skills else 'General skills'}
-- Candidate Background: {resume_text[:200] if resume_text else 'To be explored'}
-
-As Sarah, acknowledge their response and ask the next appropriate question based on the interview phase and their knowledge level.
+Respond naturally as Sarah would:
 """
 
                             ai_response = ask_ai_question(

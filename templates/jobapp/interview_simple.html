@@ -1423,22 +1423,39 @@ function endInterview() {
         interviewCompleted = true;
         
         stopMicrophone();
-        
-        // Stop camera and microphone
+
+        // FIXED: Properly stop camera and clear video
         if (userStream) {
             userStream.getTracks().forEach(track => {
                 track.stop();
                 log(`${track.kind} track stopped`);
             });
-        }
+
+            // CRITICAL FIX: Clear the video element to turn off camera display
+            const videoElement = document.getElementById('userVideo');
+            if (videoElement) {
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+                log('Video element cleared and hidden');
+            }
+        }  
+        
+        // Stop camera and microphone
+        //if (userStream) {
+          //  userStream.getTracks().forEach(track => {
+          //      track.stop();
+           //     log(`${track.kind} track stopped`);
+           // });
+        //}
 
         // Hide all interview elements
         document.querySelector('.video-grid').style.display = 'none';
         document.querySelector('.transcript-section').style.display = 'none';
         document.querySelector('.stats').style.display = 'none';
         document.getElementById('micBtn').style.display = 'none';
+        document.querySelector('.controls').style.display = 'none'; // ADDED: Hide controls too
 
-                // Show large full-page completion message
+        // Show large full-page completion message
         document.body.innerHTML = `
             <div style="
                 display: flex;
@@ -1490,6 +1507,7 @@ function endInterview() {
                 </button> {% endcomment %}
             </div>
         `;
+     }
     }
 }
         
@@ -1516,20 +1534,37 @@ function updateTimer() {
         log('Time expired');
         interviewCompleted = true;
         stopMicrophone();
-        
-        // Stop camera and microphone
+
+
+        // FIXED: Properly stop camera and clear video
         if (userStream) {
             userStream.getTracks().forEach(track => {
                 track.stop();
                 log(`${track.kind} track stopped`);
             });
-        }
+
+             // CRITICAL FIX: Clear the video element to turn off camera display
+            const videoElement = document.getElementById('userVideo');
+            if (videoElement) {
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+                log('Video element cleared and hidden');
+            }
+         }
+        // Stop camera and microphone
+       // if (userStream) {
+        //    userStream.getTracks().forEach(track => {
+        //        track.stop();
+        //        log(`${track.kind} track stopped`);
+        //    });
+        //}
 
         // Hide video boxes, transcript, and mic button
         document.querySelector('.video-grid').style.display = 'none';
         document.querySelector('.transcript-section').style.display = 'none';
         document.querySelector('.stats').style.display = 'none';
         document.getElementById('micBtn').style.display = 'none';
+        document.querySelector('.controls').style.display = 'none'; // ADDED: Hide controls too
 
 
         // Show large full-page completion message

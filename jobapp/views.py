@@ -1235,9 +1235,9 @@ def start_interview_by_uuid(request, interview_uuid):
             # CRITICAL FIX: Check if interview should end first
             should_end_interview = (
                 wants_to_quit or 
-                ai_said_goodbye or
-                (any(phrase in user_text_lower for phrase in ['thank you mam', 'okay thank you', 'thanks mam']) 
-                 and len(conversation_history) > 4)  # Only if interview has progressed
+                is_time_up 
+                #ai_said_goodbye or
+                #(question_count >= 15 and time_remaining <= 120)  # Many questions AND low time
             )
 
             if should_end_interview:
@@ -1512,33 +1512,8 @@ Respond naturally as Sarah would:
             return JsonResponse(response_data)
         
         # Generate personalized opening question based on job and resume
-        opening_prompt = f"""
-You are starting an interview with {candidate_name} for {job_title} at {company_name}.
-
-INTERVIEW APPROACH:
-1. Start with a warm, friendly greeting
-2. Introduce yourself as Sarah from HR
-3. Ask a simple ice-breaking question to make them comfortable
-4. Keep it conversational and welcoming
-
-FIRST QUESTION OPTIONS (choose one that fits):
-- "Hi {candidate_name}! I'm Sarah from HR. How are you feeling today?"
-- "Hello {candidate_name}! I'm Sarah, and I'm excited to learn about you. How has your day been so far?"
-- "Hi there! I'm Sarah from {company_name}. Thanks for joining me today. How are you doing?"
-
-Keep it simple, warm, and under 2 sentences. This is just the ice-breaker.
-"""
-
-        ai_question = ask_ai_question(
-            opening_prompt,
-            candidate_name=candidate_name,
-            job_title=job_title,
-            company_name=company_name,
-            job_description=job_description,
-            required_skills=required_skills,
-            resume_text=resume_text,
-            timeout=15
-        ) or f"Hello {candidate_name}! I'm Sarah, and I'm excited to learn more about you today. How are you feeling?"
+        # FIXED: Simple ice-breaker question instead of complex AI generation
+        ai_question = f"Hi {candidate_name}! I'm Sarah from HR. How are you doing today?"
         
         logger.info(f"Generated AI initial question for interview {interview_uuid}")
         

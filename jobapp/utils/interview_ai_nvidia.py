@@ -78,8 +78,8 @@ Never say: "Here's my response", "I'll go with", "Acknowledging", or any meta-co
                     "content": prompt # This is candidate response + context
                 }
             ],
-            temperature=0.5,
-            max_tokens=150,
+            temperature=0.3,  # Lower temperature for more consistent scoring
+            max_tokens=800, # More tokens for detailed analysis
             stream=False,
             #stop=["\n\n", "Candidate:", "You:", "Interviewer:", "Response as", "Here's my", "As Sarah", "Sarah responds", "*", "(", "Warm"]
             stop=["\n\n", "Candidate:", "Interviewer:", "Here is a", "Here's a", "Response:", "I'll go", "I'll start", "**", "Acknowledging"]

@@ -2266,6 +2266,8 @@ def generate_interview_results(interview, conversation_history):
         logger.info(f"🔄 Starting results generation for interview {interview.uuid}")
         logger.info(f"📊 Conversation history has {len(conversation_history)} exchanges")
         
+        
+        #Step 1: Collect Conversation Data
         # Extract questions and answers from conversation history
         #Collect the Conversation - Takes all questions asked by AI interviewer,Takes all answers given by candidate,
         #Counts how many questions were asked , Measures how detailed the answers were
@@ -2294,6 +2296,12 @@ def generate_interview_results(interview, conversation_history):
                 
         
         logger.info(f"📝 Extracted {len(questions_asked)} questions and {len(answers_given)} answers")
+        # Initialize scores to default values (will be updated by AI analysis)
+        technical_score = 1.0
+        communication_score = 1.0
+        problem_solving_score = 1.0
+        overall_score = 1.0
+        recommendation = 'not_recommended'
         
         # CRITICAL FIX: Handle edge case where no responses were recorded
         if len(candidate_responses) == 0:
@@ -2327,10 +2335,16 @@ def generate_interview_results(interview, conversation_history):
         logger.info(f"📈 Calculating scores - Responses: {total_responses}, Avg length: {avg_response_length:.1f}")
         
         # Simple scoring algorithm based on response quality
-        technical_score = min(10.0, max(1.0, (avg_response_length / 50) * 5))  # Based on response depth
-        communication_score = min(10.0, max(1.0, total_responses * 1.5))  # Based on engagement
-        problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
-        overall_score = (technical_score + communication_score + problem_solving_score) / 3
+        # technical_score = min(10.0, max(1.0, (avg_response_length / 50) * 5))  # Based on response depth
+        # communication_score = min(10.0, max(1.0, total_responses * 1.5))  # Based on engagement
+        # problem_solving_score = min(10.0, max(1.0, 6.0))  # Default middle score
+        # overall_score = (technical_score + communication_score + problem_solving_score) / 3
+        
+        # Initialize scores to 1.0 (will be updated by AI analysis)
+        # technical_score = 1.0
+        # communication_score = 1.0
+        # problem_solving_score = 1.0
+        # overall_score = 1.0
         
         
         
@@ -2347,7 +2361,7 @@ def generate_interview_results(interview, conversation_history):
             
             # Create comprehensive analysis prompt
             analysis_prompt = f"""
-Analyze this job interview conversation and provide a detailed professional assessment:
+You are an expert HR interviewer analyzing this job interview. Provide detailed scores and analysis.
 
 CANDIDATE: {interview.candidate_name}
 POSITION: {interview.job.title if interview.job else 'Software Developer'}
@@ -2356,17 +2370,30 @@ COMPANY: {interview.job.company if interview.job else 'Our Company'}
 FULL INTERVIEW CONVERSATION:
 {full_conversation}
 
-Provide a comprehensive analysis in this exact format:
+Analyze the candidate's responses and provide scores based on ACTUAL CONTENT, not just length or quantity.
+
+SCORING CRITERIA:
+- Technical Score (1-10): Evaluate actual technical knowledge, correct answers, understanding of concepts
+- Communication Score (1-10): Clarity, articulation, professionalism, ability to explain concepts
+- Problem Solving Score (1-10): Logical thinking, approach to challenges, analytical skills
+- Overall Score (1-10): Holistic assessment of candidate suitability
+
+REQUIRED FORMAT:
+TECHNICAL_SCORE: [number 1-10]
+COMMUNICATION_SCORE: [number 1-10]
+PROBLEM_SOLVING_SCORE: [number 1-10]
+OVERALL_SCORE: [number 1-10]
+RECOMMENDATION: [HIGHLY_RECOMMENDED/RECOMMENDED/MAYBE/NOT_RECOMMENDED]
 
 Overall Assessment:
-[Detailed paragraph analyzing the candidate's technical capabilities, communication skills, professional demeanor, problem-solving approach, and team collaboration potential. Be specific about strengths and concerns based on their actual responses.]
+[Detailed analysis of the candidate's performance based on actual responses]
 
 Decision: [Recommended for Hire / Not Recommended for Hire / Requires Further Evaluation]
 
 Feedback for the Candidate:
-[Specific advice for improvement, areas to focus on, and strengths to build upon based on the interview performance.]
+[Specific advice based on their actual responses and performance]
 
-Focus your analysis on: technical competency demonstrated, communication clarity, professional presentation, problem-solving methodology, and cultural fit indicators.
+IMPORTANT: Base scores on ACTUAL INTERVIEW CONTENT, not response length or quantity.
 """
             
             # Get AI analysis using existing function
@@ -2379,55 +2406,92 @@ Focus your analysis on: technical competency demonstrated, communication clarity
             )
             
             
-            
+            #step 3
             #Make Hiring Recommendation
             if detailed_analysis and len(detailed_analysis) > 100:
                 ai_feedback = detailed_analysis
-                # Extract recommendation from AI response
-                if 'not recommended' in detailed_analysis.lower():
-                    recommendation = 'not_recommended'
-                elif 'highly recommended' in detailed_analysis.lower():
-                    recommendation = 'highly_recommended'
-                elif 'recommended' in detailed_analysis.lower():
-                    recommendation = 'recommended'
-                else:
-                    recommendation = 'maybe'
-            else:
-                # Fallback to enhanced basic analysis
-                ai_feedback = f"""Overall Assessment:
-The candidate participated in a {total_responses}-question interview with an average response length of {int(avg_response_length)} characters. Based on their engagement level and response quality, they demonstrated {'strong' if avg_response_length > 100 else 'moderate' if avg_response_length > 50 else 'basic'} communication skills. {'The detailed responses suggest good technical understanding and articulation abilities.' if avg_response_length > 100 else 'The responses indicate room for improvement in providing more comprehensive explanations and technical depth.'}
+    
+                # Extract scores from AI response using regex
+                import re
+    
+                # Extract technical score
+                tech_match = re.search(r'TECHNICAL_SCORE:\s*(\d+(?:\.\d+)?)', detailed_analysis)
+                if tech_match:
+                    technical_score = float(tech_match.group(1))
+    
+                # Extract communication score
+                comm_match = re.search(r'COMMUNICATION_SCORE:\s*(\d+(?:\.\d+)?)', detailed_analysis)
+                if comm_match:
+                    communication_score = float(comm_match.group(1))
+    
+                # Extract problem solving score
+                prob_match = re.search(r'PROBLEM_SOLVING_SCORE:\s*(\d+(?:\.\d+)?)', detailed_analysis)
+                if prob_match:
+                    problem_solving_score = float(prob_match.group(1))
+    
+                # Extract overall score
+                overall_match = re.search(r'OVERALL_SCORE:\s*(\d+(?:\.\d+)?)', detailed_analysis)
+                if overall_match:
+                    overall_score = float(overall_match.group(1))
+    
+                # Extract recommendation
+                rec_match = re.search(r'RECOMMENDATION:\s*(HIGHLY_RECOMMENDED|RECOMMENDED|MAYBE|NOT_RECOMMENDED)', detailed_analysis)
+                if rec_match:
+                    rec_value = rec_match.group(1).lower()
+                    recommendation = rec_value if rec_value in ['highly_recommended', 'recommended', 'maybe', 'not_recommended'] else 'maybe'
+    
+                # Ensure scores are within valid range (1-10)
+                technical_score = max(1.0, min(10.0, technical_score))
+                communication_score = max(1.0, min(10.0, communication_score))
+                problem_solving_score = max(1.0, min(10.0, problem_solving_score))
+                overall_score = max(1.0, min(10.0, overall_score))
 
-Decision: {'Recommended for Hire' if avg_response_length > 100 else 'Requires Further Evaluation'}
+
+            else:
+                # If AI analysis fails, use conservative scoring
+                ai_feedback = f"""Overall Assessment:
+AI analysis was unavailable for this interview. Manual review recommended.
+
+The candidate provided {total_responses} responses during the interview. Due to technical limitations, detailed scoring could not be performed automatically.
+
+Decision: Requires Manual Review
 
 Feedback for the Candidate:
-{'Continue leveraging your strong communication skills and technical knowledge. Focus on maintaining this level of detail in future interviews.' if avg_response_length > 100 else 'To strengthen future opportunities, focus on providing more detailed responses that showcase your technical expertise and problem-solving approach. Practice articulating your experience with specific examples and technical implementations.'}"""
-                recommendation = 'recommended' if avg_response_length > 100 else 'maybe'
+Your interview responses have been recorded. Our team will review them manually and provide feedback within 2-3 business days.
+"""
+                # Conservative scores when AI fails
+                technical_score = 5.0
+                communication_score = 5.0
+                problem_solving_score = 5.0
+                overall_score = 5.0
+                recommendation = 'maybe'
                 
         except Exception as ai_error:
             logger.error(f"AI analysis failed: {ai_error}")
             # Enhanced fallback analysis
+             # Conservative scoring when AI completely fails
             ai_feedback = f"""Overall Assessment:
-The candidate completed the interview with {total_responses} responses averaging {int(avg_response_length)} characters each. {'Their detailed responses demonstrate strong communication skills and technical engagement.' if avg_response_length > 100 else 'Their responses show basic engagement but could benefit from more comprehensive technical explanations.'} The interview duration and response quality suggest {'good' if total_responses >= 5 else 'limited'} interaction with the interviewer.
+AI analysis was unavailable for this interview due to technical issues. Manual review recommended.
 
-Decision: {'Recommended for Hire' if avg_response_length > 100 and total_responses >= 5 else 'Requires Further Evaluation'}
+The candidate provided {total_responses} responses during the interview. Due to technical limitations, detailed scoring could not be performed automatically.
+
+Decision: Requires Manual Review
 
 Feedback for the Candidate:
-{'Your communication style and technical responses were well-received. Continue to build on these strengths in future opportunities.' if avg_response_length > 100 else 'To improve future interview performance, focus on providing more detailed technical explanations, specific examples from your experience, and comprehensive answers that demonstrate your problem-solving approach.'}"""
-            recommendation = 'recommended' if avg_response_length > 100 and total_responses >= 5 else 'maybe'
-        else:
-            ai_feedback = f"""Overall Assessment:
-The interview was brief with only {total_responses} responses recorded. Limited interaction makes it challenging to provide a comprehensive evaluation of the candidate's technical capabilities and communication skills. More extensive dialogue would be needed to assess their problem-solving approach and cultural fit.
+Your interview responses have been recorded. Our team will review them manually and provide feedback within 2-3 business days.
+"""
 
-Decision: Requires Further Evaluation
-
-Feedback for the Candidate:
-Due to the brief nature of this interview, we recommend scheduling a follow-up session to better showcase your technical expertise and experience. Prepare to discuss specific projects, challenges you've overcome, and your approach to problem-solving in more detail."""
-            recommendation = 'maybe'
-        
+            # Conservative scores when AI fails
+            technical_score = 5.0
+            communication_score = 5.0
+            problem_solving_score = 5.0
+            overall_score = 5.0
+            recommendation = 'maybe'        
         logger.info(f"🎯 Scores calculated - Overall: {overall_score:.1f}, Technical: {technical_score:.1f}, Communication: {communication_score:.1f}")
         logger.info(f"💡 Recommendation: {recommendation}")
         
         # CRITICAL FIX: Save to database with explicit field assignment
+    
         #Save Everything to Database
         try:
             interview.questions_asked = json.dumps(questions_asked)
@@ -2506,7 +2570,7 @@ Due to the brief nature of this interview, we recommend scheduling a follow-up s
         return False
     
     
-#interview results view 
+#interview results view  - This function displays the results to recruiters:
 @login_required
 @user_passes_test(lambda u: u.is_recruiter)
 def interview_results(request, interview_uuid):
@@ -2523,6 +2587,7 @@ def interview_results(request, interview_uuid):
         logger.info(f"💯 Overall score: {interview.overall_score}")
         logger.info(f"💬 AI feedback length: {len(interview.ai_feedback) if interview.ai_feedback else 0}")
         
+        #Step 1: Get Interview Data
         if interview.job.posted_by != request.user:
             logger.warning(f"⚠️ Permission denied - wrong recruiter")
             messages.error(request, 'You do not have permission to view this interview.')
@@ -2544,7 +2609,7 @@ def interview_results(request, interview_uuid):
             
             return redirect('recruiter_dashboard')
         
-        # Parse the questions and answers from JSON
+        #  step 2 -Parse the questions and answers from JSON
         questions_asked = []
         answers_given = []
         
@@ -2618,7 +2683,7 @@ def interview_results(request, interview_uuid):
         
         
         
-        # Prepare Data for Template - Packages all data into a dictionary called context
+        # step 3 - Prepare Data for Template - Packages all data into a dictionary called context
         #-Sends data to HTML template (interview_results.html)
         #-Template uses this data to create the beautiful results page
         context = {

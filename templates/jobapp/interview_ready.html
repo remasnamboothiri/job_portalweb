@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Ready - {{ interview.job.title }}</title>
+    <title>Interview Ready - {{ interview.job_position.title }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,266 +13,251 @@
     
     <style>
         body {
-            background: #f8f9fa;
-            height: 100vh;
+            background: linear-gradient(135deg, #eaecf6ff 0%, #ede9f2ff 100%);
+            height: 100vh;  /* CHANGED - fixed height */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;  /* CHANGED - prevent scrolling */
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
-            overflow: hidden;
         }
         
         .interview-container {
-            max-width: 800px;
+            max-width: 750px;
             width: 100%;
+            padding: 0.5rem;
+            max-height: 95vh;  /* ADDED - limit height */
+            overflow-y: auto;  /* ADDED - internal scroll if needed */
+            
         }
         
         .interview-card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
+            
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .header-section {
-            background: #4f46e5;
-            padding: 1.5rem;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 1rem 1rem;  /* CHANGE from 3rem 2rem */
             text-align: center;
             color: white;
         }
         
-        .interview-icon {
-            width: 45px;
-            height: 45px;
-            background: rgba(255,255,255,0.2);
+        .target-icon {
+            width: 50px;      /* CHANGE from 80px */
+            height: 50px;     /* CHANGE from 80px */
+            background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 0.6rem;
+            margin: 0 auto 0.4rem;  /* CHANGE from 1rem */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        .interview-icon i {
-            font-size: 1.2rem;
-            color: white;
+        .target-icon::before {
+            content: '🎯';
+            font-size: 1.3rem;  /* CHANGE from 2rem */
         }
         
         .interview-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 0.3rem;
+            font-size: 1.6rem;  /* CHANGE from 2.5rem */
+            font-weight: 700;
+            margin-bottom: 0.2rem;  /* CHANGE from 0.5rem */
             line-height: 1.2;
         }
         
         .interview-subtitle {
-            font-size: 0.85rem;
+            font-size: 0.85rem;  /* CHANGE from 1.1rem */
             opacity: 0.9;
             margin: 0;
-            line-height: 1.3;
         }
         
-        .content-section {
-            padding: 1.5rem;
+        .details-section {
+            padding: 0.75rem 1rem;  /* CHANGE from 2rem */
         }
         
-        .job-info {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 1.2rem;
-            margin-bottom: 1.2rem;
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;      
+            margin-bottom: 0.75rem;  /* CHANGE from 2rem */
+        }
+        
+        .detail-item {
             text-align: center;
+            background: #f8f9fa;  /* ADDED - visual separation */
+            padding: 0.5rem;
+            border-radius: 8px;
         }
         
-        .job-title {
-            font-size: 1.1rem;
+        .detail-label {
             font-weight: 600;
-            color: #333;
-            margin-bottom: 0.2rem;
-            line-height: 1.2;
-        }
-        
-        .job-company {
-            font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 0.5rem;
-            line-height: 1.2;
-        }
-        
-        .job-duration {
             color: #666;
-            font-size: 0.8rem;
-            line-height: 1.2;
+            margin-bottom: 0.2rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
+        
+        .detail-value {
+            font-size: 0.9rem;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        
         
         .tips-section {
-            background: #e0f2fe;
-            border-left: 4px solid #0288d1;
-            border-radius: 6px;
-            padding: 0.6rem;
-            margin-bottom: 1rem;
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 0.75rem;  /* CHANGE from 1.5rem */
+            margin: 0.75rem 0; /* CHANGE from 2rem 0 */
         }
         
         .tips-title {
-            color: #0277bd;
-            font-weight: 500;
-            margin: 0;
+            color: #1976d2;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
             display: flex;
             align-items: center;
-            font-size: 0.8rem;
-            line-height: 1.3;
+            font-size: 0.85rem;  /* REDUCED */
         }
         
         .tips-title i {
             margin-right: 0.4rem;
+            font-size: 0.8rem;
         }
         
-
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
         
-        .action-section {
+        .tips-list li {
+            padding: 0.25rem 0;
+            color: #555;
+            position: relative;
+            padding-left: 1.2rem;
+            font-size: 0.8rem;  /* REDUCED */
+            line-height: 1.3;
+        }
+        
+        .tips-list li::before {
+            content: '•';
+            color: #1976d2;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons {
+            padding: 0.75rem 1rem;  /* CHANGE from 2rem */
             text-align: center;
+            background: #f8f9fa;
         }
         
         .start-btn {
-            background: #4f46e5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 0.8rem 2rem;
-            border-radius: 8px;
+            padding: 0.7rem 2rem;  /* CHANGE from 1rem 3rem */
+            border-radius: 50px;
             color: white;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;  /* CHANGE from 1.1rem */
             text-decoration: none;
             display: inline-block;
-            transition: all 0.2s ease;
-            margin-bottom: 0.8rem;
-            line-height: 1.2;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
         }
         
         .start-btn:hover {
-            background: #4338ca;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
             color: white;
         }
-        
+
         .start-btn i {
-            margin-right: 0.5rem;
+            font-size: 0.9rem;
+            margin-right: 0.3rem;
         }
         
-        .secondary-actions {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
+        
+        .secondary-buttons {
+            margin-top: 0.5rem;  /* CHANGE from 1rem */
         }
         
         .secondary-btn {
             background: transparent;
-            border: 1px solid #d1d5db;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            color: #6b7280;
+            border: 2px solid #6c757d;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            color: #6c757d;
             text-decoration: none;
-            font-size: 0.8rem;
-            transition: all 0.2s ease;
-            line-height: 1.2;
+            margin: 0 0.3rem;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;  /* REDUCED */
+            display: inline-block;
         }
         
         .secondary-btn:hover {
-            background: #f3f4f6;
-            color: #374151;
-            border-color: #9ca3af;
+            background: #6c757d;
+            color: white;
         }
-        
+
         .secondary-btn i {
-            margin-right: 0.3rem;
-        }
-        
-        .disclaimer {
-            color: #6b7280;
             font-size: 0.75rem;
-            margin-top: 0.6rem;
-            line-height: 1.2;
+            margin-right: 0.2rem;
+        }
+
+         /* Remove any extra spacing */
+        h3, h1, p {
+            margin-top: 0;
         }
         
-        .agreement-section {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .agreement-title {
-            color: #92400e;
-            font-weight: 600;
-            margin-bottom: 0.8rem;
-            display: flex;
-            align-items: center;
+        {% comment %} .disclaimer {
+            text-align: center;
+            color: #666;
             font-size: 0.9rem;
-        }
-        
-        .agreement-title i {
-            margin-right: 0.5rem;
-        }
-        
-        .agreement-items {
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-        }
-        
-        .agreement-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-            cursor: pointer;
-            font-size: 0.8rem;
-            line-height: 1.3;
-            color: #78350f;
-        }
-        
-        .agreement-item input[type="checkbox"] {
-            margin-top: 0.1rem;
-            cursor: pointer;
-        }
-        
-        .start-btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .start-btn:disabled:hover {
-            background: #9ca3af;
-            transform: none;
-        }
+            margin-top: 1rem;
+        } {% endcomment %}
         
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .header-section {
-                padding: 1.5rem;
-            }
-            
-            .content-section {
-                padding: 1.5rem;
+            .details-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
             }
             
             .interview-title {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
             }
             
-            .secondary-actions {
-                flex-direction: column;
-                align-items: center;
+            .interview-container {
+                padding: 0.5rem;
             }
-            
-            .start-btn {
-                padding: 0.9rem 2rem;
-                font-size: 1rem;
-            }
+        }
+
+        /* Ensure no overflow */
+        * {
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -281,79 +266,59 @@
         <div class="interview-card">
             <!-- Header Section -->
             <div class="header-section">
-                <div class="interview-icon">
-                    <i class="fas fa-video"></i>
-                </div>
-                <h1 class="interview-title">Ready to Start?</h1>
-                <p class="interview-subtitle">Your AI interview is set up and ready to begin</p>
+                <div class="target-icon"></div>
+                <h1 class="interview-title">Interview Ready!</h1>
+                <p class="interview-subtitle">Your AI interview has been configured and is ready to begin</p>
             </div>
             
-            <!-- Content Section -->
-            <div class="content-section">
-                <!-- Job Information -->
-                <div class="job-info">
-                    <div class="job-title">{{ interview.job.title }}</div>
-                    <div class="job-company">by {{ interview.job.company }}</div>
-                    <div class="job-duration">
-                        <i class="fas fa-clock"></i> 
-                        {{ interview.interview_duration_minutes|default:"15" }} minutes
+            <!-- Details Section -->
+            <div class="details-section">
+                <h3 class="text-center mb-4" style="color: #333; font-weight: 600;">Interview Details</h3>
+                
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Position</div>
+                        <div class="detail-value">{{ interview.job.title }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">{{ interview.interview_duration_minutes|default:"15" }} minutes</div>
                     </div>
                 </div>
                 
-
                 
-                <!-- Interview Agreement -->
-                <div class="agreement-section">
-                    <div class="agreement-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Interview Requirements - Please Confirm
+                <!-- Tips Section -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Before you begin:
                     </div>
-                    <div class="agreement-items">
-                        <label class="agreement-item">
-                            <input type="checkbox" id="agree1" onchange="checkAgreements()">
-                            <span>I confirm no one else is near me or will appear in my camera view</span>
-                        </label>
-                        <label class="agreement-item">
-                            <input type="checkbox" id="agree2" onchange="checkAgreements()">
-                            <span>I am in a silent space with no background noise or interruptions</span>
-                        </label>
-                        <label class="agreement-item">
-                            <input type="checkbox" id="agree3" onchange="checkAgreements()">
-                            <span>I understand detecting another person may cause interview failure</span>
-                        </label>
-                        <label class="agreement-item">
-                            <input type="checkbox" id="agree4" onchange="checkAgreements()">
-                            <span>I agree that screenshots and videos will be taken as evidence</span>
-                        </label>
-                        <label class="agreement-item">
-                            <input type="checkbox" id="agree5" onchange="checkAgreements()">
-                            <span>I accept all terms and conditions for this interview</span>
-                        </label>
-                    </div>
+                    <ul class="tips-list">
+                        <li>Ensure you're in a quiet, well-lit environment</li>
+                        <li>Look directly at the camera when speaking</li>
+                        <li>Speak clearly and at a normal pace</li>
+                        <li>You can take a moment to think before answering</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{% url 'start_interview' interview.get_uuid %}" class="start-btn">
+                    <i class="fas fa-rocket"></i> Start AI Interview
+                </a>
+                
+                <div class="secondary-buttons">
+                    <a href="#" class="secondary-btn" onclick="testCamera()">
+                        <i class="fas fa-video"></i> Test Camera
+                    </a>
+                    <a href="{% url 'jobseeker_dashboard' %}" class="secondary-btn">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </a>
                 </div>
                 
-                <!-- Action Buttons -->
-                <div class="action-section">
-                    <a href="{% url 'start_interview' interview.get_uuid %}" class="start-btn" id="aiInterviewBtn" onclick="return checkAllAgreed()">
-                        <i class="fas fa-play"></i> Start AI Interview
-                    </a>
-                    
-                    <a href="{% url 'webrtc_interview_room' interview.get_uuid %}" class="start-btn" id="webrtcBtn" style="background: #059669; margin-left: 10px;" onclick="return checkAllAgreed()">
-                        <i class="fas fa-users"></i> Join WebRTC Room
-                    </a>
-                    
-                    <div class="secondary-actions">
-                        <a href="#" class="secondary-btn" onclick="testCamera()">
-                            <i class="fas fa-video"></i> Test Camera
-                        </a>
-                        <a href="{% url 'jobseeker_dashboard' %}" class="secondary-btn">
-                            <i class="fas fa-arrow-left"></i> Go Back
-                        </a>
-                    </div>
-                    
-                    <div class="disclaimer" style="font-size: 1rem; font-weight: 600; color: #dc2626; text-align: center; margin-top: 1.5rem; padding: 1rem; background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px;">
-                        ⚠️ This interview will be recorded for evaluation purposes
-                    </div>
+                <div class="disclaimer">
+                    This interview will be recorded for evaluation purposes only
                 </div>
             </div>
         </div>
@@ -368,52 +333,22 @@
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                     .then(function(stream) {
-                        alert('✅ Camera and microphone are working perfectly!');
+                        alert('Camera and microphone are working properly!');
+                        // Stop the stream
                         stream.getTracks().forEach(track => track.stop());
                     })
                     .catch(function(error) {
-                        alert('❌ Camera/microphone access error: ' + error.message + '\n\nPlease check your browser permissions.');
+                        alert('Error accessing camera/microphone: ' + error.message);
                     });
             } else {
-                alert('❌ Your browser does not support camera access.\n\nPlease use Chrome, Firefox, or Edge.');
+                alert('Your browser does not support camera access.');
             }
         }
         
-        // Check agreement status
-        function checkAgreements() {
-            const checkboxes = ['agree1', 'agree2', 'agree3', 'agree4', 'agree5'];
-            const allChecked = checkboxes.every(id => document.getElementById(id).checked);
-            
-            const aiBtn = document.getElementById('aiInterviewBtn');
-            const webrtcBtn = document.getElementById('webrtcBtn');
-            
-            if (allChecked) {
-                aiBtn.classList.remove('disabled');
-                webrtcBtn.classList.remove('disabled');
-                aiBtn.style.pointerEvents = 'auto';
-                webrtcBtn.style.pointerEvents = 'auto';
-            } else {
-                aiBtn.classList.add('disabled');
-                webrtcBtn.classList.add('disabled');
-                aiBtn.style.pointerEvents = 'none';
-                webrtcBtn.style.pointerEvents = 'none';
-            }
-        }
-        
-        function checkAllAgreed() {
-            const checkboxes = ['agree1', 'agree2', 'agree3', 'agree4', 'agree5'];
-            const allChecked = checkboxes.every(id => document.getElementById(id).checked);
-            
-            if (!allChecked) {
-                alert('Please check all agreement boxes before starting the interview.');
-                return false;
-            }
-            return true;
-        }
-        
-        // Initialize - disable buttons on load
+        // Auto-check system requirements on page load
         document.addEventListener('DOMContentLoaded', function() {
-            checkAgreements();
+            // This is just for demo - in real implementation you'd actually check these
+            console.log('System check completed');
         });
     </script>
 </body>

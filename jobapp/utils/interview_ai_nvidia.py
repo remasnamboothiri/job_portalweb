@@ -17,7 +17,7 @@ def ask_ai_question(prompt, candidate_name=None, job_title=None, company_name=No
         logger.error("NVIDIA_API_KEY is empty")
         return f"I apologize {candidate_name or 'candidate'}, we're experiencing technical difficulties. Let's conclude our interview here. Thank you for your time."  # ✅ Direct message
     if not candidate_name:
-        candidate_name = "the candidate"
+        candidate_name = "the candidate"  
         
     if not job_title:
         logger.error("Job title not provided to AI function")
@@ -61,7 +61,7 @@ Never say: "Here's my response", "I'll go with", "Acknowledging", or any meta-co
         client = OpenAI(               
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=api_key,
-            timeout= timeout or 2.0 # reduced to 2.0 seconds
+            timeout= timeout or 12.0 # reduced to 2.0 seconds
         )
         
         logger.info(f"Making AI API call with timeout=20s")

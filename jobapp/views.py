@@ -2827,3 +2827,35 @@ def check_interview_updates(request):
         })
     except:
         return JsonResponse({'has_updates': False, 'count': 0})
+
+
+def webrtc_interview_room(request, interview_uuid):
+    """
+    WebRTC interview room view
+    """
+    try:
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        
+        # Check if interview is accessible
+        if not interview.is_accessible:
+            if interview.is_completed:
+                return HttpResponse(
+                    '<div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">'
+                    '<h2>Interview Already Completed</h2>'
+                    '<p>This interview has already been completed.</p>'
+                    '</div>'
+                )
+            elif interview.is_expired:
+                return HttpResponse(
+                    '<div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">'
+                    '<h2>Interview Deadline Passed</h2>'
+                    '<p>The deadline for this interview has passed.</p>'
+                    '</div>'
+                )
+        
+        return render(request, 'jobapp/webrtc_room.html', {
+            'interview': interview,
+        })
+        
+    except Exception as e:
+        return HttpResponse(f'WebRTC room could not be loaded. Error: {str(e)}', status=500)

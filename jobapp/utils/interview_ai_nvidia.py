@@ -187,28 +187,3 @@ def clean_text(text):
         text += '.'
         
     return text
-# def get_fallback_response(prompt, candidate_name, job_title, company_name):
-#     """Generate short, direct fallback responses"""
-#     candidate_name = candidate_name or "the candidate"
-#     job_title = job_title or "Software Developer"
-#     company_name = company_name or "Our Company"
-    
-#     prompt_lower = prompt.lower()
-    
-#     # Short, direct fallback responses
-#     if any(phrase in prompt_lower for phrase in ['tell me about yourself', 'introduce', 'start']):
-#         return f"Hi {candidate_name}! Tell me about your background."
-#     elif any(phrase in prompt_lower for phrase in ['technical', 'experience', 'skills', 'technology']):
-#         return "That's great! What programming languages do you know?"
-#     elif any(phrase in prompt_lower for phrase in ['project', 'challenging', 'problem', 'built', 'developed']):
-#         return "Nice! Tell me about a project you built."
-#     elif any(phrase in prompt_lower for phrase in ['team', 'collaboration', 'work with others', 'colleagues']):
-#         return "Good! How do you work with teams?"
-#     elif any(phrase in prompt_lower for phrase in ['goals', 'future', 'career', 'growth']):
-#         return "Interesting! What are your career goals?"
-#     elif any(phrase in prompt_lower for phrase in ['questions', 'ask', 'company', 'role']):
-#         return "Sure! What questions do you have?"
-#     elif any(phrase in prompt_lower for phrase in ['thank', 'final', 'wrap', 'end']):
-#         return f"Thank you {candidate_name}! We'll be in touch soon."
-#     else:
-#         return "That's helpful! What interests you about this role?"

@@ -278,20 +278,21 @@
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('post_job_section')" id="filter-post-job">
             <i class="fas fa-briefcase me-3"></i> Job Listings
           </a>
+          <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('create_job_section')" id="filter-create-job">
+            <i class="fas fa-plus-circle me-3"></i> Post New Job
+          </a>
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('all_candidates_section')" id="filter-all-candidates">
             <i class="fas fa-users me-3"></i> Applicants
           </a>
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('scheduled_interviews_section')" id="filter-scheduled-interviews">
             <i class="fas fa-video me-3"></i> Interviews
           </a>
-          <a class="nav-link text-white d-flex align-items-center py-3" href="{% url 'post_job' %}" >
-            <i class="fas fa-chart-bar me-3"></i> Post A Newjob
-          </a>
+
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('edit_jobs_section')" id="filter-edit-jobs">
             <i class="fas fa-star me-3"></i> Edit Jobs
           </a>
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('add_candidate_section')" id="filter-add-candidate">
-            <i class="fas fa-user-plus me-3"></i> Add Candidates
+            <i class="fas fa-user-plus me-3"></i> Add Candidate
           </a>
           <a class="nav-link text-white d-flex align-items-center py-3" href="#" onclick="showSection('interview_results_section')" id="filter-interview-results">
             <i class="fas fa-chart-bar me-3"></i> Interview Results
@@ -312,40 +313,101 @@
 <div style="display: flex; gap: 20px; margin-bottom: 2rem;">
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; color: #666; margin: 0;">Active Jobs</h3>
-            <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+12%</span>
+            <h3 style="font-size: 14px; color: #666; margin: 0;">Total Jobs</h3>
+            <i class="fas fa-briefcase" style="color: #007bff;"></i>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;"> {{ jobs.count }}</div>
-        {% comment %} <div style="font-size: 12px; color: #666;">vs last month</div> {% endcomment %}
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ jobs.count }}</div>
+        <div style="font-size: 12px; color: #666;">{{ jobs|length|add:"-1" }} active</div>
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; color: #666; margin: 0;">Total Applications</h3>
-            <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+24%</span>
+            <h3 style="font-size: 14px; color: #666; margin: 0;">Interviews</h3>
+            <i class="fas fa-video" style="color: #28a745;"></i>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ applications.count }}</div>
-        {% comment %} <div style="font-size: 12px; color: #666;">this month</div> {% endcomment %}
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ scheduled_interviews.count }}</div>
+        <div style="font-size: 12px; color: #666;">{{ completed_interviews.count }} completed</div>
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; color: #666; margin: 0;">Added Candidates</h3>
-            <span style="font-size: 12px; color: var(--color-info); font-weight: 500;">+8%</span>
+            <h3 style="font-size: 14px; color: #666; margin: 0;">Candidates</h3>
+            <i class="fas fa-users" style="color: #17a2b8;"></i>
         </div>
         <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ all_candidates.count }}</div>
-        {% comment %} <div style="font-size: 12px; color: #666;">total added</div> {% endcomment %}
+        <div style="font-size: 12px; color: #666;">in your pool</div>
     </div>
     
     <div class="card" style="flex: 1; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; color: #666; margin: 0;">Hire Rate</h3>
-            <span style="font-size: 12px; color: var(--color-success); font-weight: 500;">+5%</span>
+            <h3 style="font-size: 14px; color: #666; margin: 0;">Avg Interview</h3>
+            <i class="fas fa-clock" style="color: #ffc107;"></i>
         </div>
-        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ completed_interviews.count }}</div>
-        {% comment %} <div style="font-size: 12px; color: #666;">avg conversion</div> {% endcomment %}
+        <div style="font-size: 32px; font-weight: 600; margin: 12px 0 8px 0; color: #333;">{{ avg_interview_duration|default:"12" }}m</div>
+        <div style="font-size: 12px; color: #666;">duration</div>
     </div>
 </div>
+
+<!-- Recent Interview Activity -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Interview Activity</h5>
+    </div>
+    <div class="card-body">
+        {% if recent_interviews %}
+            {% for interview in recent_interviews|slice:":5" %}
+                <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div>
+                        <strong>{{ interview.candidate_name }}</strong> - {{ interview.job.title }}
+                        <br><small class="text-muted">{{ interview.completed_at|date:"M d, Y H:i"|default:interview.scheduled_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    <div class="text-end">
+                        {% if interview.status == 'completed' %}
+                            {% if interview.recommendation == 'highly_recommended' %}
+                                <span class="badge bg-success">Highly Recommended</span>
+                            {% elif interview.recommendation == 'recommended' %}
+                                <span class="badge bg-primary">Recommended</span>
+                            {% elif interview.recommendation == 'maybe' %}
+                                <span class="badge bg-warning">Maybe</span>
+                            {% elif interview.recommendation == 'not_recommended' %}
+                                <span class="badge bg-danger">Not Recommended</span>
+                            {% elif interview.recommendation == 'never_hire' %}
+                                <span class="badge bg-dark">Never Hire</span>
+                            {% endif %}
+                            <br><small class="text-muted">{{ interview.overall_score|floatformat:1 }}/10</small>
+                        {% elif interview.status == 'scheduled' %}
+                            <span class="badge bg-info">Scheduled</span>
+                        {% elif interview.status == 'expired' %}
+                            <span class="badge bg-secondary">Expired</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted mb-0">No interview activity yet.</p>
+        {% endif %}
+    </div>
+</div>
+        <!-- Hiring Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ recommended_count|default:"0" }}</h4>
+                        <p class="mb-0">Recommended Candidates</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ rejected_count|default:"0" }}</h4>
+                        <p class="mb-0">Rejected Candidates</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <h3 class="mb-3">Applications & Interviews</h3>
         {% for app in applications %}
           <div class="card mb-4 shadow-sm">
@@ -414,7 +476,7 @@
           </div>
         {% empty %}
           <div class="alert alert-info text-center">
-            No jobs posted yet. <a href="{% url 'post_job' %}" class="btn btn-primary btn-sm ms-2">Post Your First Job</a>
+            No jobs posted yet. <button class="btn btn-primary btn-sm ms-2" onclick="showSection('create_job_section')">Post Your First Job</button>
           </div>
         {% endfor %}
         
@@ -464,7 +526,7 @@
           </div>
         {% empty %}
           <div class="alert alert-info text-center">
-            No jobs posted yet. <a href="{% url 'post_job' %}" class="btn btn-primary btn-sm ms-2">Post Your First Job</a>
+            No jobs posted yet. <button class="btn btn-primary btn-sm ms-2" onclick="showSection('create_job_section')">Post Your First Job</button>
           </div>
         {% endfor %}
       </div>
@@ -493,8 +555,64 @@
 
       <!-- Add Candidate Section -->
       <div id="add_candidate_section" class="dashboard-section" style="display:none;">
-        <h3 class="mb-3">Add Candidate</h3>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">+ Add Candidate</button>
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white">
+            <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Candidate</h3>
+          </div>
+          <div class="card-body">
+            <form method="post" action="{% url 'add_candidate_dashboard' %}" enctype="multipart/form-data" id="dashboardCandidateForm">
+              {% csrf_token %}
+              
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Candidate Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="name" required placeholder="Enter full name">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" name="email" required placeholder="candidate@example.com">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" name="phone" required placeholder="+91 9876543210">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Resume (PDF)</label>
+                    <input type="file" class="form-control" name="resume" accept=".pdf,.doc,.docx">
+                    <div class="form-text">Optional - Upload PDF, DOC, or DOCX file</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> All fields marked with <span class="text-danger">*</span> are required. The candidate will be added to your candidate pool and you can schedule interviews with them.
+              </div>
+              
+              <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-success btn-lg">
+                  <i class="fas fa-user-plus me-2"></i>Add Candidate
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('dashboardCandidateForm').reset()">
+                  <i class="fas fa-undo me-2"></i>Reset Form
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="showSection('all_candidates_section')">
+                  <i class="fas fa-users me-2"></i>View Candidates
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
 
       <!-- Scheduled Interviews Section -->
@@ -509,7 +627,7 @@
               </div>
               <p><strong>Candidate:</strong> {{ interview.candidate_name }}</p>
               <p><strong>Email:</strong> {{ interview.candidate_email }}</p>
-              <p><strong>Deadline:</strong> {{ interview.scheduled_at|date:"M d, Y" }}</p>
+              <p><strong>Deadline:</strong> {{ interview.scheduled_at|date:"M d, Y - g:i A" }}</p>
               {% if interview.is_accessible %}
                 <div class="mt-3">
                   <strong>Interview Link:</strong>
@@ -532,8 +650,7 @@
                 <div class="mt-3">
                   {% if interview.is_completed %}
                     <div class="alert alert-success">
-                      {% comment %} <i class="fas fa-check-circle"></i> Interview completed on {{ interview.completed_at|date:"M d, Y \a\t g:i A" }} {% endcomment %}
-                      <i class="fas fa-check-circle"></i> Interview completed on {{ interview.get_completed_datetime_display }}
+                      <i class="fas fa-check-circle"></i> Interview completed on {{ interview.completed_at|date:"M d, Y - g:i A" }}
                     </div>
                   {% elif interview.is_expired %}
                     <div class="alert alert-warning">
@@ -612,7 +729,7 @@
       </div>
       <h5 class="text-muted mb-3">No Candidates Added Yet</h5>
       <p class="text-muted mb-4">You haven't added any candidates yet.</p>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">
+      <button class="btn btn-primary" onclick="showSection('add_candidate_section')">
         Add Your First Candidate
       </button>
     </div>
@@ -621,6 +738,139 @@
 
 
 
+
+      <!-- NEW: Create Job Section -->
+      <div id="create_job_section" class="dashboard-section" style="display:none;">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white">
+            <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Post New Job</h3>
+          </div>
+          <div class="card-body">
+            <form method="post" action="{% url 'post_job' %}" id="dashboardJobForm">
+              {% csrf_token %}
+              
+              <!-- Job Details Section -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Job Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="title" required placeholder="e.g. Senior Frontend Developer">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Company Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="company" required placeholder="e.g. Tech Company Inc.">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-4">
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Department <span class="text-danger">*</span></label>
+                    <select class="form-select" name="department" required>
+                      <option value="">Select Department</option>
+                      <option value="engineering">Engineering</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="sales">Sales</option>
+                      <option value="hr">Human Resources</option>
+                      <option value="finance">Finance</option>
+                      <option value="operations">Operations</option>
+                      <option value="design">Design</option>
+                      <option value="product">Product</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Employment Type <span class="text-danger">*</span></label>
+                    <select class="form-select" name="employment_type" required>
+                      <option value="">Select Type</option>
+                      <option value="full_time">Full Time</option>
+                      <option value="part_time">Part Time</option>
+                      <option value="contract">Contract</option>
+                      <option value="internship">Internship</option>
+                      <option value="freelance">Freelance</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Experience Level <span class="text-danger">*</span></label>
+                    <select class="form-select" name="experience_level" required>
+                      <option value="">Select Level</option>
+                      <option value="entry">Entry Level</option>
+                      <option value="mid">Mid Level</option>
+                      <option value="senior">Senior Level</option>
+                      <option value="lead">Lead</option>
+                      <option value="executive">Executive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Location <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="location" required placeholder="e.g. San Francisco, CA">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Job Status <span class="text-danger">*</span></label>
+                    <select class="form-select" name="status" required>
+                      <option value="draft">Draft</option>
+                      <option value="active" selected>Active</option>
+                      <option value="paused">Paused</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Minimum Salary ($)</label>
+                    <input type="number" class="form-control" name="salary_min" placeholder="e.g. 50000">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Maximum Salary ($)</label>
+                    <input type="number" class="form-control" name="salary_max" placeholder="e.g. 80000">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label fw-bold">Job Description <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="description" rows="6" required placeholder="Describe the role, responsibilities, requirements, and what makes this opportunity exciting..."></textarea>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label fw-bold">Required Skills <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="required_skills" required placeholder="e.g. JavaScript, React, Node.js, Python">
+                <div class="form-text">Separate skills with commas</div>
+              </div>
+              
+              <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-success btn-lg">
+                  <i class="fas fa-paper-plane me-2"></i>Post Job
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('dashboardJobForm').reset()">
+                  <i class="fas fa-undo me-2"></i>Reset Form
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="showSection('post_job_section')">
+                  <i class="fas fa-eye me-2"></i>View Jobs
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <!-- NEW: Interview Results Section -->
       <div id="interview_results_section" class="dashboard-section" style="display:none;">
@@ -917,8 +1167,8 @@
           </div>
           
           <div class="mb-3">
-            <label class="form-label">Interview deadline Date <span class="text-danger">*</span></label>
-            <input type="date" class="form-control" name="scheduled_at" required>
+            <label class="form-label">Interview deadline <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" name="scheduled_at" required>
           </div>
           
           <div class="mb-3">
@@ -1097,6 +1347,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show only Applications & Interviews by default
     showSection('applications_section');
+    
+    // Handle dashboard job form submission
+    const dashboardJobForm = document.getElementById('dashboardJobForm');
+    if (dashboardJobForm) {
+        dashboardJobForm.addEventListener('submit', function(e) {
+            const submitBtn = dashboardJobForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Posting Job...';
+            submitBtn.disabled = true;
+        });
+    }
+    
+    // Handle dashboard candidate form submission
+    const dashboardCandidateForm = document.getElementById('dashboardCandidateForm');
+    if (dashboardCandidateForm) {
+        dashboardCandidateForm.addEventListener('submit', function(e) {
+            const submitBtn = dashboardCandidateForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Adding Candidate...';
+            submitBtn.disabled = true;
+        });
+    }
 });
 
 
@@ -1220,23 +1496,6 @@ document.addEventListener('DOMContentLoaded', function() {
     <script src="{% static 'js/bootstrap-select.min.js' %}"></script>
     
     <script src="{% static 'js/custom.js' %}"></script>
-
-    <!-- Auto-Refresh Script -->
-    <script>
-    function checkForUpdates() {
-        fetch('/api/check-updates/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.has_updates) {
-                location.reload();
-            }
-        })
-        .catch(error => console.log('Check failed'));
-    }
-    
-    // Check every 30 seconds
-    setInterval(checkForUpdates, 30000);
-    </script>
 
     
   

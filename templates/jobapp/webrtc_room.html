@@ -1,5 +1,822 @@
 {% load static %}
 <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Interview - {{ interview.job.title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #1a1a1a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        .interview-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #2d2d2d;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        .interview-info h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .interview-info p {
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .room-info {
+            text-align: right;
+            font-size: 14px;
+        }
+        
+        .video-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            padding: 20px;
+            background: #1a1a1a;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #2d2d2d;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+        
+        .video-container.speaking {
+            border-color: #4CAF50;
+        }
+        
+        .video-container.ai-interviewer {
+            border-color: #2196F3;
+        }
+        
+        .video-container.recruiter-participant {
+            border-color: #FF9800;
+        }
+        
+        .video-container.observer-participant {
+            border-color: #9C27B0;
+        }
+        
+        .video-container.guest-participant {
+            border-color: #607D8B;
+        }
+        
+        .video-container.candidate-participant {
+            border-color: #4CAF50;
+        }
+        
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .ai-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .ai-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+        
+        .participant-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .participant-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: rgba(0,0,0,0.6);
+        }
+        
+        .status-icon.muted { background: #f44336; }
+        .status-icon.unmuted { background: #4CAF50; }
+        
+        .controls {
+            background: #2d2d2d;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            border-top: 1px solid #444;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn.mic { background: #4CAF50; }
+        .control-btn.mic.muted { background: #f44336; }
+        .control-btn.video { background: #2196F3; }
+        .control-btn.video.off { background: #f44336; }
+        .control-btn.screen { background: #FF9800; }
+        .control-btn.end { background: #f44336; }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .room-code {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(33, 150, 243, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .participants-list {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(45, 45, 45, 0.95);
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 200px;
+            display: none;
+        }
+        
+        .participants-list.show {
+            display: block;
+        }
+        
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #555;
+        }
+        
+        .participant-item:last-child {
+            border-bottom: none;
+        }
+        
+        .participant-type {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        
+        .participant-type.candidate { background: #4CAF50; }
+        .participant-type.ai { background: #2196F3; }
+        .participant-type.recruiter { background: #FF9800; }
+        .participant-type.observer { background: #9C27B0; }
+        .participant-type.guest { background: #607D8B; }
+        
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+            
+            .controls {
+                padding: 15px;
+                gap: 10px;
+            }
+            
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="interview-container">
+        <div class="header">
+            <div class="interview-info">
+                <h2>{{ interview.job.title }}</h2>
+                <p>Candidate: {{ interview.candidate_name }}</p>
+            </div>
+            <div class="room-info">
+                <div>Room: {{ room.room_id }}</div>
+                <div>Participants: <span id="participantCount">1</span>/{{ room.max_participants }}</div>
+            </div>
+        </div>
+        
+        <div class="room-code">
+            Room Code: {{ room.room_id }} | Passcode: {{ room.passcode }}
+        </div>
+        
+        <div class="video-grid" id="videoGrid">
+            <!-- AI Interviewer -->
+            <div class="video-container ai-interviewer" id="aiContainer">
+                <div class="ai-placeholder">
+                    <div class="ai-avatar">🤖</div>
+                    <div>AI Interviewer</div>
+                </div>
+                <div class="participant-label">Sarah - AI Interviewer</div>
+                <div class="participant-status">
+                    <div class="status-icon unmuted">🎤</div>
+                </div>
+            </div>
+            
+            <!-- Local Video -->
+            <div class="video-container candidate-participant" id="localContainer">
+                <video id="localVideo" autoplay muted playsinline style="transform: scaleX(-1);"></video>
+                <div class="participant-label">
+                    <span class="participant-type {{ participant_type }}">{{ participant_type }}</span>
+                    {{ display_name }} (You)
+                </div>
+                <div class="participant-status">
+                    <div class="status-icon unmuted" id="micStatus">🎤</div>
+                    <div class="status-icon" id="videoStatus">📹</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn mic" id="micBtn" onclick="toggleMic()">🎤</button>
+            <button class="control-btn video" id="videoBtn" onclick="toggleVideo()">📹</button>
+            {% if room_config.enable_screen_share %}
+            <button class="control-btn screen" id="screenBtn" onclick="toggleScreen()">🖥️</button>
+            {% endif %}
+            <button class="control-btn" onclick="toggleParticipants()">👥</button>
+            <button class="control-btn end" onclick="endInterview()">📞</button>
+        </div>
+    </div>
+    
+    <div class="participants-list" id="participantsList">
+        <h4>Participants</h4>
+        <div id="participantsContent"></div>
+    </div>
+    
+    {% csrf_token %}
+    
+    <script>
+        // WebRTC Configuration
+        const ROOM_CONFIG = {{ room_config|safe }};
+        const PARTICIPANT_TYPE = '{{ participant_type }}';
+        const DISPLAY_NAME = '{{ display_name }}';
+        const INTERVIEW_UUID = '{{ interview.uuid }}';
+        const CSRF_TOKEN = '{{ csrf_token }}';
+        
+        // WebRTC variables
+        let localStream = null;
+        let peerConnections = {};
+        let participants = {};
+        let isAudioEnabled = true;
+        let isVideoEnabled = true;
+        let isScreenSharing = false;
+        let participantId = null;
+        let socket = null;
+        
+        // WebRTC configuration
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
+        // Initialize WebRTC
+        async function initWebRTC() {
+            try {
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720 },
+                    audio: { echoCancellation: true, noiseSuppression: true }
+                });
+                
+                const localVideo = document.getElementById('localVideo');
+                localVideo.srcObject = localStream;
+                localVideo.muted = true; // Prevent audio feedback
+                
+                console.log('✅ Local video stream started');
+                
+                // Join room
+                await joinRoom();
+                
+                // Start WebRTC signaling
+                startSignaling();
+                
+                // Start AI interviewer if candidate
+                if (PARTICIPANT_TYPE === 'candidate') {
+                    startAIInterview();
+                }
+                
+                // Refresh participant list every 3 seconds
+                setInterval(loadExistingParticipants, 3000);
+        }
+        
+        function startSignaling() {
+            // Simple polling-based signaling (for production, use WebSocket)
+            setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/webrtc/signaling/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': CSRF_TOKEN
+                        },
+                        body: JSON.stringify({
+                            type: 'poll',
+                            room_id: ROOM_CONFIG.room_id,
+                            participant_id: participantId
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.messages) {
+                        data.messages.forEach(handleSignalingMessage);
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+        
+        function handleSignalingMessage(message) {
+            const pc = peerConnections[message.fromParticipant];
+            if (!pc) return;
+            
+            switch (message.type) {
+                case 'offer':
+                    handleOffer(pc, message);
+                    break;
+                case 'answer':
+                    handleAnswer(pc, message);
+                    break;
+                case 'ice-candidate':
+                    handleIceCandidate(pc, message);
+                    break;
+            }
+        }
+        
+        async function handleOffer(pc, message) {
+            await pc.setRemoteDescription(message.offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            sendSignalingMessage({
+                type: 'answer',
+                answer: answer,
+                targetParticipant: message.fromParticipant
+            });
+        }
+        
+        async function handleAnswer(pc, message) {
+            await pc.setRemoteDescription(message.answer);
+        }
+        
+        async function handleIceCandidate(pc, message) {
+            await pc.addIceCandidate(message.candidate);
+        }
+                
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                alert('Please allow camera and microphone access to join the interview.');
+            }
+        }
+        
+        async function joinRoom() {
+            try {
+                const response = await fetch('/api/webrtc/signaling/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({
+                        type: 'join',
+                        room_id: ROOM_CONFIG.room_id,
+                        participant_type: PARTICIPANT_TYPE,
+                        display_name: DISPLAY_NAME
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    participantId = data.participant_id;
+                    console.log('Joined room successfully');
+                    console.log('Participants from join:', data.participants);
+                    
+                    // Show all participants except self
+                    const otherParticipants = data.participants.filter(p => p.display_name !== DISPLAY_NAME);
+                    addOtherParticipants(otherParticipants);
+                }
+            } catch (error) {
+                console.error('Error joining room:', error);
+            }
+        }
+        
+        async function loadExistingParticipants() {
+            try {
+                const response = await fetch(`/api/webrtc/room/${ROOM_CONFIG.room_id}/`);
+                const data = await response.json();
+                
+                console.log(`🔍 [${DISPLAY_NAME}] Room info:`, data);
+                
+                if (data.participants) {
+                    // Show ALL participants (including self for count, but exclude from video)
+                    console.log(`👥 [${DISPLAY_NAME}] All participants:`, data.participants);
+                    
+                    // Update participant count to show total
+                    document.getElementById('participantCount').textContent = data.participants.length + 1; // +1 for AI
+                    
+                    // Add video containers for others (not self)
+                    const others = data.participants.filter(p => p.display_name !== DISPLAY_NAME);
+                    addOtherParticipants(others);
+                }
+            } catch (error) {
+                console.error('Error loading participants:', error);
+            }
+        }
+        
+        function addParticipantVideo(participantInfo) {
+            const videoGrid = document.getElementById('videoGrid');
+            const existingContainer = document.getElementById(`participant-${participantInfo.id}`);
+            
+            if (existingContainer) return; // Already exists
+            
+            const container = document.createElement('div');
+            container.className = `video-container ${participantInfo.participant_type}-participant`;
+            container.id = `participant-${participantInfo.id}`;
+            
+            // Create video element for WebRTC stream
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+            
+            const label = document.createElement('div');
+            label.className = 'participant-label';
+            label.innerHTML = `
+                <span class="participant-type ${participantInfo.participant_type}">${participantInfo.participant_type}</span>
+                ${participantInfo.display_name}
+            `;
+            
+            const status = document.createElement('div');
+            status.className = 'participant-status';
+            status.innerHTML = `
+                <div class="status-icon unmuted">🎤</div>
+                <div class="status-icon">📹</div>
+            `;
+            
+            container.appendChild(video);
+            container.appendChild(label);
+            container.appendChild(status);
+            
+            videoGrid.appendChild(container);
+            
+            // Create WebRTC peer connection
+            createPeerConnection(participantInfo.id, video);
+            
+            console.log(`✅ Added participant: ${participantInfo.display_name} (${participantInfo.participant_type})`);
+            
+            // Initiate WebRTC connection
+            setTimeout(() => initiateCall(participantInfo.id), 1000);
+        }
+        
+        async function initiateCall(targetParticipantId) {
+            const pc = peerConnections[targetParticipantId];
+            if (!pc) return;
+            
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                sendSignalingMessage({
+                    type: 'offer',
+                    offer: offer,
+                    targetParticipant: targetParticipantId
+                });
+                
+                console.log(`📞 Sent offer to participant ${targetParticipantId}`);
+            } catch (error) {
+                console.error('Error creating offer:', error);
+            }
+        
+        function createPeerConnection(participantId, videoElement) {
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[participantId] = pc;
+            
+            // Add local stream to peer connection
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+            
+            // Handle remote stream
+            pc.ontrack = (event) => {
+                console.log(`📹 Received remote stream from participant ${participantId}`);
+                videoElement.srcObject = event.streams[0];
+            };
+            
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignalingMessage({
+                        type: 'ice-candidate',
+                        candidate: event.candidate,
+                        targetParticipant: participantId
+                    });
+                }
+            };
+            
+            return pc;
+        }
+        
+        async function sendSignalingMessage(message) {
+            try {
+                await fetch('/api/webrtc/signaling/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({
+                        ...message,
+                        room_id: ROOM_CONFIG.room_id,
+                        participant_id: participantId
+                    })
+                });
+            } catch (error) {
+                console.error('Signaling error:', error);
+            }
+        }
+        
+        function addOtherParticipants(participantsList) {
+            const participantsContent = document.getElementById('participantsContent');
+            const videoGrid = document.getElementById('videoGrid');
+            
+            // Clear existing participant videos (except AI and local)
+            const existingParticipants = videoGrid.querySelectorAll('[id^="participant-"]:not(#aiContainer):not(#localContainer)');
+            existingParticipants.forEach(el => el.remove());
+            
+            // Clear participant list
+            participantsContent.innerHTML = '';
+            
+            // Add AI to participant list
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'participant-item';
+            aiDiv.innerHTML = `
+                <span class="participant-type ai">ai</span>
+                <span>AI Interviewer</span>
+            `;
+            participantsContent.appendChild(aiDiv);
+            
+            // Add self to participant list
+            const selfDiv = document.createElement('div');
+            selfDiv.className = 'participant-item';
+            selfDiv.innerHTML = `
+                <span class="participant-type ${PARTICIPANT_TYPE}">${PARTICIPANT_TYPE}</span>
+                <span>${DISPLAY_NAME} (You)</span>
+            `;
+            participantsContent.appendChild(selfDiv);
+            
+            // Add other participants
+            participantsList.forEach(participant => {
+                // Add to participant list
+                const div = document.createElement('div');
+                div.className = 'participant-item';
+                div.innerHTML = `
+                    <span class="participant-type ${participant.participant_type}">${participant.participant_type}</span>
+                    <span>${participant.display_name}</span>
+                `;
+                participantsContent.appendChild(div);
+                
+                // Add video container
+                addParticipantVideo(participant);
+            });
+        }
+        
+        function addRemoteVideo(participantId, stream, participantInfo) {
+            const videoGrid = document.getElementById('videoGrid');
+            
+            const container = document.createElement('div');
+            container.className = `video-container ${participantInfo.participant_type}-participant`;
+            container.id = `participant-${participantId}`;
+            
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.srcObject = stream;
+            
+            const label = document.createElement('div');
+            label.className = 'participant-label';
+            label.innerHTML = `
+                <span class="participant-type ${participantInfo.participant_type}">${participantInfo.participant_type}</span>
+                ${participantInfo.display_name}
+            `;
+            
+            const status = document.createElement('div');
+            status.className = 'participant-status';
+            status.innerHTML = `
+                <div class="status-icon unmuted">🎤</div>
+                <div class="status-icon">📹</div>
+            `;
+            
+            container.appendChild(video);
+            container.appendChild(label);
+            container.appendChild(status);
+            
+            videoGrid.appendChild(container);
+            
+            console.log(`✅ Added ${participantInfo.participant_type}: ${participantInfo.display_name} with video/audio`);
+        }
+        
+        function toggleMic() {
+            isAudioEnabled = !isAudioEnabled;
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = isAudioEnabled;
+            });
+            
+            const micBtn = document.getElementById('micBtn');
+            const micStatus = document.getElementById('micStatus');
+            
+            if (isAudioEnabled) {
+                micBtn.classList.remove('muted');
+                micStatus.classList.add('unmuted');
+                micStatus.classList.remove('muted');
+            } else {
+                micBtn.classList.add('muted');
+                micStatus.classList.add('muted');
+                micStatus.classList.remove('unmuted');
+            }
+        }
+        
+        function toggleVideo() {
+            isVideoEnabled = !isVideoEnabled;
+            localStream.getVideoTracks().forEach(track => {
+                track.enabled = isVideoEnabled;
+            });
+            
+            const videoBtn = document.getElementById('videoBtn');
+            const videoStatus = document.getElementById('videoStatus');
+            
+            if (isVideoEnabled) {
+                videoBtn.classList.remove('off');
+                videoStatus.textContent = '📹';
+            } else {
+                videoBtn.classList.add('off');
+                videoStatus.textContent = '📹❌';
+            }
+        }
+        
+        async function toggleScreen() {
+            if (!isScreenSharing) {
+                try {
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: true,
+                        audio: true
+                    });
+                    
+                    isScreenSharing = true;
+                    document.getElementById('screenBtn').style.background = '#4CAF50';
+                    
+                    screenStream.getVideoTracks()[0].onended = () => {
+                        stopScreenShare();
+                    };
+                    
+                } catch (error) {
+                    console.error('Error sharing screen:', error);
+                }
+            } else {
+                stopScreenShare();
+            }
+        }
+        
+        function stopScreenShare() {
+            isScreenSharing = false;
+            document.getElementById('screenBtn').style.background = '#FF9800';
+        }
+        
+        function toggleParticipants() {
+            const participantsList = document.getElementById('participantsList');
+            participantsList.classList.toggle('show');
+        }
+        
+        function startAIInterview() {
+            // Simulate AI interviewer starting
+            setTimeout(() => {
+                const aiContainer = document.getElementById('aiContainer');
+                aiContainer.classList.add('speaking');
+                
+                setTimeout(() => {
+                    aiContainer.classList.remove('speaking');
+                }, 3000);
+            }, 2000);
+        }
+        
+        async function endInterview() {
+            if (confirm('Are you sure you want to end the interview?')) {
+                // Leave room
+                if (participantId) {
+                    await fetch('/api/webrtc/signaling/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': CSRF_TOKEN
+                        },
+                        body: JSON.stringify({
+                            type: 'leave',
+                            room_id: ROOM_CONFIG.room_id,
+                            participant_id: participantId
+                        })
+                    });
+                }
+                
+                // Stop all tracks
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Redirect
+                window.location.href = `/interview-results/${INTERVIEW_UUID}/`;
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initWebRTC);
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+{% comment %} {% load static %}
+<!DOCTYPE html>
 <html>
 <head>
     <title>WebRTC Interview Room</title>
@@ -11,4 +828,4 @@
     <p>This is a placeholder for WebRTC functionality.</p>
     <a href="{% url 'interview_ready' interview.get_uuid %}">Back to Interview Ready</a>
 </body>
-</html>
+</html> {% endcomment %}

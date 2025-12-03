@@ -57,7 +57,7 @@ def generate_elevenlabs_tts(text, voice="female_interview"):
             "model_id": NEW_TTS_MODEL_ID or "coqui"
         }
         logger.info(f"Making Daisy TTS API call for text: {text[:50]}...")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, timeout=8)
         
         logger.info(f"Daisy TTS API Response: Status {response.status_code}")
         if response.status_code != 200:

@@ -37,8 +37,8 @@ urlpatterns = [
     # Schedule interview with specific candidate
     path('schedule-interview/candidate/<int:candidate_id>/', views.schedule_interview_with_candidate, name='schedule_interview_with_candidate'),
     
-    
-    
+    #webrtc url for intreviw ready page 
+    path('interview/webrtc/<uuid:interview_uuid>/', views.webrtc_interview_room, name='webrtc_interview_room'),
     # interview ready page 
     path('interview/ready/<uuid:interview_uuid>/', views.interview_ready, name='interview_ready'),
      # 🗣️ Interview Start + AI Response

@@ -1,0 +1,14 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Interview Room</title>
+</head>
+<body>
+    <h1>WebRTC Interview Room</h1>
+    <p>Interview for: {{ interview.job.title }}</p>
+    <p>Candidate: {{ interview.candidate_name }}</p>
+    <p>This is a placeholder for WebRTC functionality.</p>
+    <a href="{% url 'interview_ready' interview.get_uuid %}">Back to Interview Ready</a>
+</body>
+</html>

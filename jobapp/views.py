@@ -885,6 +885,18 @@ def interview_ready(request, interview_uuid):
         logger.error(f"Interview Ready Error: {e}")
         return HttpResponse(f'Interview ready page could not be loaded. Error: {str(e)}', status=500)
 
+# WebRTC View Function
+def webrtc_interview_room(request, interview_uuid):
+    """
+    WebRTC interview room view
+    """
+    try:
+        interview = get_object_or_404(Interview, uuid=interview_uuid)
+        return render(request, 'jobapp/webrtc_room.html', {
+            'interview': interview,
+        })
+    except Exception as e:
+        return HttpResponse(f'WebRTC room could not be loaded. Error: {str(e)}', status=500)
 
 
 

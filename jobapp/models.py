@@ -46,9 +46,9 @@ DEPARTMENT_CHOICES = [
     ('sales', 'Sales'),
     ('hr', 'Human Resources'),
     ('finance', 'Finance'),
-    ('operations', 'Operations'),
+    ('development', 'Development'),
     ('design', 'Design'),
-    ('product', 'Product'),
+    ('software', 'Software'),
     ('customer_support', 'Customer Support'),
     ('other', 'Other'),
 ]

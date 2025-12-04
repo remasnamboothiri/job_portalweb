@@ -69,7 +69,7 @@ EXPERIENCE_LEVEL_CHOICES = [
     ('entry', 'Entry Level'),
     ('mid', 'Mid Level'),
     ('senior', 'Senior Level'),
-    ('lead', 'Lead/Manager'),
+    
     ('executive', 'Executive'),
 ]
 STATUS_CHOICES = [

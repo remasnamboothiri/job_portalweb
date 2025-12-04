@@ -153,7 +153,7 @@ Never say: "Here's my response", "I'll go with", "Acknowledging", or any meta-co
                 return f"I understand. Let me ask a simple question - what interests you about this {job_title} position?"
         
         logger.info(f"AI API call successful, response length: {len(cleaned_response)}")
-        return cleaned_response
+        return cleaned_response 
         
     except Exception as e:
         logger.error(f"AI API Error: {type(e).__name__}: {str(e)}")

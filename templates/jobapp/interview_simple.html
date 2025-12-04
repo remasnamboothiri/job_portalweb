@@ -659,6 +659,9 @@
             return new Promise((resolve) => {
                 element.textContent = '';
                 let index = 0;
+                console.log(`🎯 Starting typewriter for: "${text.substring(0, 50)}..."`);
+                console.log(`🎵 Audio element provided: ${!!audioElement}`);
+                console.log(`⏱️ Audio duration: ${audioElement?.duration || 'N/A'}`);
             
             // If we have audio, sync with it
             if (audioElement && audioElement.duration) {
@@ -747,7 +750,7 @@
         
         element.textContent = '';
         console.log('⚡ ULTRA FAST: Starting ultra fast typewriter');
-        return createSynchronizedTypewriter(element, text, null, options);
+        return createSynchronizedTypewriter(element, text, audioElement, options);
     }
     
     /**
